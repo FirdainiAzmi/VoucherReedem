@@ -18,7 +18,7 @@ engine = create_engine(DB_URL)
 def init_db():
     with engine.begin() as conn:
         conn.execute(text("""
-        CREATE TABLE IF NOT EXISTS vouchers (
+        CREATE TABLE IF NOT EXISTS vouchers_table (
             code TEXT PRIMARY KEY,
             initial_value INTEGER NOT NULL,
             balance INTEGER NOT NULL,
@@ -26,7 +26,7 @@ def init_db():
         )
         """))
         conn.execute(text("""
-        CREATE TABLE IF NOT EXISTS transactions (
+        CREATE TABLE IF NOT EXISTS transactions_table (
             id SERIAL PRIMARY KEY,
             code TEXT NOT NULL,
             used_amount INTEGER NOT NULL,
@@ -41,7 +41,7 @@ def insert_voucher(code, value):
         now = datetime.utcnow()
         try:
             conn.execute(text(
-                "INSERT INTO vouchers (code, initial_value, balance, created_at) VALUES (:code,:val,:val,:now)"
+                "INSERT INTO vouchers_table (code, initial_value, balance, created_at) VALUES (:code,:val,:val,:now)"
             ), {"code": code, "val": int(value), "now": now})
             return True
         except:
@@ -67,48 +67,59 @@ def import_vouchers_df(df: pd.DataFrame):
 def find_voucher(code):
     with engine.connect() as conn:
         result = conn.execute(text(
-            "SELECT code, initial_value, balance, created_at FROM vouchers WHERE code=:c"
+            "SELECT code, initial_value, balance, created_at FROM vouchers_table WHERE code=:c"
         ), {"c": code})
         return result.fetchone()
 
 def atomic_redeem(code, amount, branch, items):
     with engine.begin() as conn:
-        # check balance
-        result = conn.execute(text("SELECT balance FROM vouchers WHERE code=:c"), {"c": code}).fetchone()
+        result = conn.execute(text("SELECT balance FROM vouchers_table WHERE code=:c"),
+                              {"c": code}).fetchone()
         if not result:
             return False, "Voucher tidak ditemukan.", None
+        
         balance = result[0]
         if balance < amount:
             return False, f"Saldo tidak cukup (sisa: {balance})", balance
-        # deduct
-        conn.execute(text("UPDATE vouchers SET balance=balance-:amt WHERE code=:c"), {"amt": amount, "c": code})
-        # log transaction
-        conn.execute(text(
-            "INSERT INTO transactions (code, used_amount, used_at, branch, items) VALUES (:c,:amt,:now,:branch,:items)"
-        ), {"c": code, "amt": amount, "now": datetime.utcnow(), "branch": branch, "items": items})
+        
+        conn.execute(text("UPDATE vouchers_table SET balance=balance-:amt WHERE code=:c"),
+                     {"amt": amount, "c": code})
+        
+        conn.execute(text("""
+            INSERT INTO transactions_table (code, used_amount, used_at, branch, items)
+            VALUES (:c,:amt,:now,:branch,:items)
+        """), {"c": code, "amt": amount, "now": datetime.utcnow(), "branch": branch, "items": items})
+        
         new_balance = balance - amount
         return True, "Redeem berhasil.", new_balance
 
 def list_vouchers(filter_status=None, search=None):
-    q = "SELECT code, initial_value, balance, created_at FROM vouchers"
+    q = "SELECT code, initial_value, balance, created_at FROM vouchers_table"
     clauses = []
     params = {}
+    
     if filter_status == "aktif":
         clauses.append("balance > 0")
     elif filter_status == "habis":
         clauses.append("balance = 0")
+    
     if search:
         clauses.append("code LIKE :search")
         params["search"] = f"%{search}%"
+    
     if clauses:
         q += " WHERE " + " AND ".join(clauses)
+    
     q += " ORDER BY created_at DESC LIMIT 5000"
+    
     with engine.connect() as conn:
         return pd.read_sql(text(q), conn, params=params)
 
 def list_transactions():
     with engine.connect() as conn:
-        return pd.read_sql(text("SELECT * FROM transactions ORDER BY used_at DESC LIMIT 5000"), conn)
+        return pd.read_sql(
+            text("SELECT * FROM transactions_table ORDER BY used_at DESC LIMIT 5000"), conn
+        )
 
 def df_to_csv_bytes(df: pd.DataFrame):
     buf = BytesIO()
@@ -129,7 +140,7 @@ menu = st.sidebar.radio("Menu", ["Cari & Redeem","Daftar Voucher","Histori Trans
 if menu=="Cari & Redeem":
     code_in = st.text_input("Kode voucher").strip().upper()
 
-    if code_in:  # cek voucher
+    if code_in:
         v = find_voucher(code_in)
         if not v:
             st.error("Voucher tidak ditemukan")
@@ -143,12 +154,9 @@ if menu=="Cari & Redeem":
             if balance <= 0:
                 st.warning("Voucher sudah tidak dapat digunakan, saldo 0. Silakan cek history.")
             else:
-                # Pilih cabang
                 branch = st.selectbox("Pilih cabang", ["Sedati","Tawangsari"])
                 
-                # Pilih menu dan jumlah
                 menu_items = ["Nasi Goreng","Ayam Goreng","Ikan Bakar","Es Teh"]
-                selected_items = []
                 qty_dict = {}
                 total_amount = 0
 
@@ -156,17 +164,8 @@ if menu=="Cari & Redeem":
                 for item in menu_items:
                     qty = st.number_input(f"{item} (pcs)", min_value=0, value=0, step=1, key=f"{item}_{code}")
                     if qty > 0:
-                        selected_items.append(item)
                         qty_dict[item] = qty
-                        # harga per menu (sesuaikan)
-                        if item=="Nasi Goreng":
-                            harga = 20000
-                        elif item=="Ayam Goreng":
-                            harga = 25000
-                        elif item=="Ikan Bakar":
-                            harga = 30000
-                        elif item=="Es Teh":
-                            harga = 5000
+                        harga = {"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000}[item]
                         total_amount += harga * qty
 
                 st.write(f"Total nominal: Rp {total_amount:,}")
@@ -198,4 +197,3 @@ elif menu=="Histori Transaksi":
     else:
         st.dataframe(df_tx)
         st.download_button("Download CSV", data=df_to_csv_bytes(df_tx), file_name="transactions.csv")
-
