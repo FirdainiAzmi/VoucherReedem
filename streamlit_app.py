@@ -9,7 +9,7 @@ from io import BytesIO
 # --------------------
 # Database connection
 # --------------------
-DB_URL = "postgresql://neondb_owner:npg_axNXHM4suSA6@ep-crimson-mountain-a1thvyih-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+DB_URL = st.secrets["DB_URL"]
 engine = create_engine(DB_URL)
 
 # --------------------
@@ -198,3 +198,4 @@ elif menu=="Histori Transaksi":
     else:
         st.dataframe(df_tx)
         st.download_button("Download CSV", data=df_to_csv_bytes(df_tx), file_name="transactions.csv")
+
