@@ -1,7 +1,6 @@
-# streamlit_app_postgres.py
+# streamlit_app.py
 import streamlit as st
 import pandas as pd
-import random, string
 from datetime import datetime
 from sqlalchemy import create_engine, text
 from io import BytesIO
@@ -38,11 +37,11 @@ def init_db():
 
 def insert_voucher(code, value):
     with engine.begin() as conn:
-        now = datetime.utcnow()
         try:
-            conn.execute(text(
-                "INSERT INTO vouchers_table (code, initial_value, balance, created_at) VALUES (:code,:val,:val,:now)"
-            ), {"code": code, "val": int(value), "now": now})
+            conn.execute(text("""
+                INSERT INTO vouchers (code, initial_value, balance, created_at)
+                VALUES (:code, :val, :val, :now)
+            """), {"code": code, "val": int(value), "now": datetime.utcnow()})
             return True
         except:
             return False
@@ -50,14 +49,16 @@ def insert_voucher(code, value):
 def import_vouchers_df(df: pd.DataFrame):
     report = {"total":0, "inserted":0, "dup_file":0, "dup_db":0, "invalid":0}
     seen = set()
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         report["total"] += 1
         code_raw = str(row['code']).strip().upper()
         val = int(row['value'])
+
         if code_raw in seen:
             report["dup_file"] += 1
             continue
         seen.add(code_raw)
+
         if insert_voucher(code_raw, val):
             report["inserted"] += 1
         else:
@@ -66,59 +67,61 @@ def import_vouchers_df(df: pd.DataFrame):
 
 def find_voucher(code):
     with engine.connect() as conn:
-        result = conn.execute(text(
-            "SELECT code, initial_value, balance, created_at FROM vouchers_table WHERE code=:c"
-        ), {"c": code})
+        result = conn.execute(text("""
+            SELECT code, initial_value, balance, created_at
+            FROM vouchers
+            WHERE code = :c
+        """), {"c": code})
         return result.fetchone()
 
 def atomic_redeem(code, amount, branch, items):
     with engine.begin() as conn:
-        result = conn.execute(text("SELECT balance FROM vouchers_table WHERE code=:c"),
+        result = conn.execute(text("SELECT balance FROM vouchers WHERE code=:c"),
                               {"c": code}).fetchone()
         if not result:
             return False, "Voucher tidak ditemukan.", None
-        
+
         balance = result[0]
         if balance < amount:
             return False, f"Saldo tidak cukup (sisa: {balance})", balance
-        
-        conn.execute(text("UPDATE vouchers_table SET balance=balance-:amt WHERE code=:c"),
+
+        conn.execute(text("UPDATE vouchers SET balance = balance - :amt WHERE code = :c"),
                      {"amt": amount, "c": code})
-        
+
         conn.execute(text("""
-            INSERT INTO transactions_table (code, used_amount, used_at, branch, items)
-            VALUES (:c,:amt,:now,:branch,:items)
-        """), {"c": code, "amt": amount, "now": datetime.utcnow(), "branch": branch, "items": items})
-        
-        new_balance = balance - amount
-        return True, "Redeem berhasil.", new_balance
+            INSERT INTO transactions (code, used_amount, used_at, branch, items)
+            VALUES (:c, :amt, :now, :branch, :items)
+        """), {"c": code, "amt": amount, "now": datetime.utcnow(),
+               "branch": branch, "items": items})
+
+        return True, "Redeem berhasil.", balance - amount
 
 def list_vouchers(filter_status=None, search=None):
-    q = "SELECT code, initial_value, balance, created_at FROM vouchers_table"
+    q = "SELECT code, initial_value, balance, created_at FROM vouchers"
     clauses = []
     params = {}
-    
+
     if filter_status == "aktif":
         clauses.append("balance > 0")
     elif filter_status == "habis":
         clauses.append("balance = 0")
-    
+
     if search:
         clauses.append("code LIKE :search")
         params["search"] = f"%{search}%"
-    
+
     if clauses:
         q += " WHERE " + " AND ".join(clauses)
-    
+
     q += " ORDER BY created_at DESC LIMIT 5000"
-    
+
     with engine.connect() as conn:
         return pd.read_sql(text(q), conn, params=params)
 
 def list_transactions():
     with engine.connect() as conn:
         return pd.read_sql(
-            text("SELECT * FROM transactions_table ORDER BY used_at DESC LIMIT 5000"), conn
+            text("SELECT * FROM transactions ORDER BY used_at DESC LIMIT 5000"), conn
         )
 
 def df_to_csv_bytes(df: pd.DataFrame):
@@ -134,7 +137,7 @@ init_db()
 st.set_page_config(page_title="Voucher Admin", layout="wide")
 st.title("🎫 Voucher Admin")
 
-menu = st.sidebar.radio("Menu", ["Cari & Redeem","Daftar Voucher","Histori Transaksi"])
+menu = st.sidebar.radio("Menu", ["Cari & Redeem", "Daftar Voucher", "Histori Transaksi"])
 
 # --- Cari & Redeem ---
 if menu=="Cari & Redeem":
@@ -151,28 +154,28 @@ if menu=="Cari & Redeem":
             st.write(f"Sisa saldo: Rp {balance:,}")
             st.write(f"Dibuat: {created_at}")
 
-            if balance <= 0:
-                st.warning("Voucher sudah tidak dapat digunakan, saldo 0. Silakan cek history.")
-            else:
+            if balance > 0:
                 branch = st.selectbox("Pilih cabang", ["Sedati","Tawangsari"])
-                
+
                 menu_items = ["Nasi Goreng","Ayam Goreng","Ikan Bakar","Es Teh"]
                 qty_dict = {}
                 total_amount = 0
 
-                st.write("Pilih menu yang dibeli dan jumlahnya:")
+                st.write("Menu:")
+                price_map = {"Nasi Goreng":20000, "Ayam Goreng":25000,
+                             "Ikan Bakar":30000, "Es Teh":5000}
+
                 for item in menu_items:
-                    qty = st.number_input(f"{item} (pcs)", min_value=0, value=0, step=1, key=f"{item}_{code}")
+                    qty = st.number_input(item, min_value=0, step=1)
                     if qty > 0:
                         qty_dict[item] = qty
-                        harga = {"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000}[item]
-                        total_amount += harga * qty
+                        total_amount += price_map[item] * qty
 
-                st.write(f"Total nominal: Rp {total_amount:,}")
+                st.write(f"Total: Rp {total_amount:,}")
 
-                if st.button("Redeem", key=f"redeem_{code}"):
+                if st.button("Redeem"):
                     if total_amount == 0:
-                        st.warning("Silakan pilih minimal 1 menu")
+                        st.warning("Pilih minimal 1 menu")
                     else:
                         items_str = ", ".join([f"{k} x{v}" for k,v in qty_dict.items()])
                         ok,msg,newbal = atomic_redeem(code, total_amount, branch, items_str)
@@ -180,21 +183,22 @@ if menu=="Cari & Redeem":
                             st.success(f"{msg} Sisa saldo: Rp {newbal:,}")
                         else:
                             st.error(msg)
+            else:
+                st.warning("Saldo habis")
 
 # --- Daftar Voucher ---
 elif menu=="Daftar Voucher":
     search = st.text_input("Search kode")
     status = st.selectbox("Filter", ["semua","aktif","habis"])
-    df = list_vouchers(filter_status=(None if status=="semua" else status), search=search)
-    st.dataframe(df)
-    st.download_button("Download CSV", data=df_to_csv_bytes(df), file_name="vouchers.csv")
+    df = list_vouchers(None if status=="semua" else status, search)
+    st.dataframe(df, use_container_width=True)
+    st.download_button("Download CSV", df_to_csv_bytes(df), "vouchers.csv")
 
 # --- Histori Transaksi ---
-elif menu=="Histori Transaksi":
+else:
     df_tx = list_transactions()
     if df_tx.empty:
         st.info("Belum ada transaksi")
     else:
-        st.dataframe(df_tx)
-        st.download_button("Download CSV", data=df_to_csv_bytes(df_tx), file_name="transactions.csv")
-
+        st.dataframe(df_tx, use_container_width=True)
+        st.download_button("Download CSV", df_to_csv_bytes(df_tx), "transactions.csv")
