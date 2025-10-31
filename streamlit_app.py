@@ -18,7 +18,7 @@ engine = create_engine(DB_URL)
 def init_db():
     with engine.begin() as conn:
         conn.execute(text("""
-        CREATE TABLE IF NOT EXISTS vouchers_table (
+        CREATE TABLE IF NOT EXISTS vouchers (
             code TEXT PRIMARY KEY,
             initial_value INTEGER NOT NULL,
             balance INTEGER NOT NULL,
@@ -26,7 +26,7 @@ def init_db():
         )
         """))
         conn.execute(text("""
-        CREATE TABLE IF NOT EXISTS transactions_table (
+        CREATE TABLE IF NOT EXISTS transactions (
             id SERIAL PRIMARY KEY,
             code TEXT NOT NULL,
             used_amount INTEGER NOT NULL,
@@ -197,3 +197,4 @@ elif menu=="Histori Transaksi":
     else:
         st.dataframe(df_tx)
         st.download_button("Download CSV", data=df_to_csv_bytes(df_tx), file_name="transactions.csv")
+
