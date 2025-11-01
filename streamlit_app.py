@@ -5,6 +5,9 @@ from datetime import datetime
 from sqlalchemy import create_engine, text
 from io import BytesIO
 
+# AgGrid imports
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+
 # --------------------
 # Config & DB connect
 # --------------------
@@ -113,7 +116,11 @@ def list_vouchers(filter_status=None, search=None, limit=5000):
     params["limit"] = limit
     with engine.connect() as conn:
         df = pd.read_sql(text(q), conn, params=params)
-    df["status"] = df["status"].fillna("inactive")
+    # ensure status not null
+    if "status" in df.columns:
+        df["status"] = df["status"].fillna("inactive")
+    else:
+        df["status"] = "inactive"
     return df
 
 def list_transactions(limit=5000):
@@ -139,8 +146,8 @@ def ensure_session_state():
     st.session_state.setdefault("checkout_total", 0)
     st.session_state.setdefault("new_balance", None)
     st.session_state.setdefault("admin_user", None)  # username if logged in
-    st.session_state.setdefault("page", "list")      # "list" (admin daftar) or "detail"
     st.session_state.setdefault("editing_code", None) # code being edited
+    st.session_state.setdefault("grid_last_selected", None)  # to avoid re-trigger loops
 
 def reset_redeem_state():
     for k in ["redeem_step","entered_code","voucher_row","selected_branch","order_items","checkout_total","new_balance"]:
@@ -149,7 +156,6 @@ def reset_redeem_state():
     ensure_session_state()
 
 def admin_login(username, password):
-    # ADMINS is a dict username->password
     pw = ADMINS.get(username)
     if pw is None:
         return False
@@ -158,7 +164,6 @@ def admin_login(username, password):
 def admin_logout():
     st.session_state.admin_user = None
     st.session_state.editing_code = None
-    st.session_state.page = "list"
 
 # --------------------
 # Init
@@ -174,19 +179,13 @@ st.title("🎫 Voucher Admin")
 
 with st.sidebar:
     st.markdown("## Menu")
-    # Show main nav links; admin-only pages shown only after login
-    st.write("")  # spacer
     # Admin login/logout box
     if st.session_state.admin_user:
         st.success(f"Logged in as **{st.session_state.admin_user}**")
         if st.button("Logout"):
             admin_logout()
-            st.rerun()
+            st.experimental_rerun()
         st.markdown("---")
-        # admin links
-        sidebar_menu = st.radio("Aksi admin", ["Daftar Voucher", "Histori Transaksi", "Cari & Redeem"], index=0)
-        # map to main menu value by storing in a variable
-        main_menu_choice = sidebar_menu
     else:
         st.markdown("### Admin Login")
         user_in = st.text_input("Username", value="")
@@ -195,15 +194,13 @@ with st.sidebar:
             if admin_login(user_in, pass_in):
                 st.session_state.admin_user = user_in
                 st.success("Login berhasil")
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.error("Login gagal — cek username/password")
         st.markdown("---")
-        # always allow public access to redeem
         st.info("Catatan: Halaman Cari & Redeem tetap bisa diakses tanpa login (user biasa).")
-        main_menu_choice = None
 
-# Top-level main menu (visible to all)
+# Sidebar top-level navigation (single)
 if st.session_state.admin_user:
     menu_options = ["Cari & Redeem", "Daftar Voucher", "Histori Transaksi"]
 else:
@@ -231,11 +228,11 @@ if menu == "Cari & Redeem":
                     else:
                         st.session_state.voucher_row = row
                         st.session_state.redeem_step = 2
-                        st.rerun()
+                        st.experimental_rerun()
         with c2:
             if st.button("Reset"):
                 reset_redeem_state()
-                st.rerun()
+                st.experimental_rerun()
     # Step 2: choose branch & items
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
@@ -250,7 +247,7 @@ if menu == "Cari & Redeem":
             st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
             if st.button("Kembali"):
                 reset_redeem_state()
-                st.rerun()
+                st.experimental_rerun()
         else:
             branch_options = ["Sedati", "Tawangsari"]
             if st.session_state.get("selected_branch") not in branch_options:
@@ -260,7 +257,7 @@ if menu == "Cari & Redeem":
                 st.session_state.selected_branch = selected
                 st.session_state.order_items = {}
                 st.session_state.checkout_total = 0
-                st.rerun()
+                st.experimental_rerun()
             # menu per branch
             if st.session_state.selected_branch == "Sedati":
                 menu_map = {"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000}
@@ -287,11 +284,11 @@ if menu == "Cari & Redeem":
                         st.error(f"Saldo tidak cukup. Total: Rp {total:,} — Saldo: Rp {int(balance):,}")
                     else:
                         st.session_state.redeem_step = 3
-                        st.rerun()
+                        st.experimental_rerun()
             with cb:
                 if st.button("Batal / Kembali"):
                     reset_redeem_state()
-                    st.rerun()
+                    st.experimental_rerun()
     # Step 3: confirm & pay
     elif st.session_state.redeem_step == 3:
         row = st.session_state.voucher_row
@@ -316,19 +313,18 @@ if menu == "Cari & Redeem":
                 if ok:
                     st.success("🎉 TRANSAKSI BERHASIL 🎉")
                     st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
-                    # reset but keep admin login state
                     reset_redeem_state()
                 else:
                     st.error(msg)
                     st.session_state.redeem_step = 2
-                    st.rerun()
+                    st.experimental_rerun()
         with cn:
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
-                st.rerun()
+                st.experimental_rerun()
 
 # --------------------
-# Page: Daftar Voucher (admin only)
+# Page: Daftar Voucher (admin only) with AgGrid clickable code cell
 # --------------------
 elif menu == "Daftar Voucher":
     if not st.session_state.admin_user:
@@ -341,80 +337,128 @@ elif menu == "Daftar Voucher":
         if df.empty:
             st.info("Tidak ada voucher sesuai filter")
         else:
-            df_display = df.copy()
-            df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
-            df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
-            # show read-only table
-            st.dataframe(df_display[["code","nama","no_hp","status","initial_value","balance","created_at"]], width="stretch")
-            st.markdown("**Daftar singkat** — gunakan tombol Detail di setiap baris di bawah untuk membuka halaman edit.")
-            # render compact rows with Edit button (max 300)
-            max_rows = min(len(df), 300)
-            for i in range(max_rows):
-                r = df.iloc[i]
-                c_code = r["code"]
-                c_nama = r.get("nama") or "-"
-                c_hp = r.get("no_hp") or "-"
-                c_status = (r.get("status") or "inactive").upper()
-                c_initial = int(r["initial_value"])
-                c_balance = int(r["balance"])
-                col1, col2, col3, col4 = st.columns([2,3,3,2])
-                col1.write(f"**{c_code}**")
-                col2.write(f"{c_nama} — {c_hp}")
-                # status badge simple text, color using markdown
-                if c_status.lower() == "active":
-                    col3.markdown(f"<span style='color:green;font-weight:bold'>{c_status}</span>", unsafe_allow_html=True)
-                else:
-                    col3.markdown(f"<span style='color:gray;font-weight:bold'>{c_status}</span>", unsafe_allow_html=True)
-                if col4.button("Detail", key=f"detail_{c_code}"):
-                    st.session_state.editing_code = c_code
-                    st.session_state.page = "detail"
-                    st.rerun()
-            # CSV export
+            # prepare df for grid: show columns and formatted values
+            df_grid = df.copy()
+            df_grid["initial_value_display"] = df_grid["initial_value"].apply(lambda x: f"Rp {int(x):,}")
+            df_grid["balance_display"] = df_grid["balance"].apply(lambda x: f"Rp {int(x):,}")
+            # We'll show: code (as clickable), nama, no_hp, status, initial_value_display, balance_display, created_at
+            display_df = df_grid[["code","nama","no_hp","status","initial_value_display","balance_display","created_at"]].rename(columns={
+                "initial_value_display":"initial_value",
+                "balance_display":"balance"
+            })
+
+            # Use AgGrid with a JS cell renderer for the code column that acts like a button.
+            # We'll configure grid to NOT select row on general click (suppressRowClickSelection=True).
+            # The JS button will explicitly select the row when clicked (so only clicking the code button triggers selection).
+            cell_renderer_js = JsCode("""
+            class BtnCellRenderer {
+              init(params) {
+                this.params = params;
+                const code = params.value;
+                this.eGui = document.createElement('button');
+                this.eGui.innerText = code;
+                this.eGui.style = "background:none;border:none;color:#0b66c3;cursor:pointer;text-decoration:underline;padding:0;font-weight:600";
+                this.onClick = this.onClick.bind(this);
+                this.eGui.addEventListener('click', this.onClick);
+              }
+              onClick(e) {
+                // Deselect others, select this row
+                params.api.deselectAll();
+                params.node.setSelected(true);
+              }
+              getGui() {
+                return this.eGui;
+              }
+              destroy() {
+                this.eGui.removeEventListener('click', this.onClick);
+              }
+            }
+            """)  # noqa: E501
+
+            # Build grid options
+            gb = GridOptionsBuilder.from_dataframe(display_df)
+            gb.configure_default_column(editable=False, resizable=True)
+            # set code column to use the JS renderer
+            gb.configure_column("code", header_name="Kode", cellRenderer=cell_renderer_js, pinned="left", width=120)
+            gb.configure_column("nama", header_name="Nama", width=180)
+            gb.configure_column("no_hp", header_name="No HP", width=130)
+            gb.configure_column("status", header_name="Status", width=90)
+            gb.configure_column("initial_value", header_name="Nilai Awal", width=120)
+            gb.configure_column("balance", header_name="Saldo", width=120)
+            gb.configure_column("created_at", header_name="Dibuat", width=180)
+            # disable row click selection
+            gb.configure_grid_options(suppressRowClickSelection=True, rowSelection='single')
+            gridOptions = gb.build()
+
+            grid_response = AgGrid(
+                display_df,
+                gridOptions=gridOptions,
+                enable_enterprise_modules=False,
+                allow_unsafe_jscode=True,
+                theme="light"
+            )
+
+            # When the user clicks the code button, the JS selects the row => selected rows become available here.
+            selected = grid_response.get("selected_rows", [])
+            if selected:
+                sel = selected[0]
+                sel_code = sel.get("code")
+                # avoid retrigger loops: check last selected stored in session_state
+                if st.session_state.get("grid_last_selected") != sel_code:
+                    st.session_state["grid_last_selected"] = sel_code
+                    # set editing and move to detail view
+                    st.session_state.editing_code = sel_code
+                    # go to detail page (we keep menu choice same, but show detail area)
+                    st.experimental_rerun()
+
             st.download_button("Download CSV", data=df_to_csv_bytes(df), file_name="vouchers.csv", mime="text/csv")
 
 # --------------------
 # Page: Detail Voucher (admin) - separate view
 # --------------------
-if st.session_state.page == "detail" and st.session_state.editing_code:
+# We show detail view if editing_code is set (triggered by AgGrid click)
+if st.session_state.get("editing_code"):
+    # ensure only show detail when admin on Daftar page or explicitly editing
     if not st.session_state.admin_user:
         st.error("Hanya admin yang dapat mengedit voucher.")
     else:
         code = st.session_state.editing_code
         row = find_voucher(code)
-        if not row:
-            st.error("Voucher tidak ditemukan.")
-            st.session_state.page = "list"
-        else:
+        if row:
             code, initial, balance, created_at, nama, no_hp, status = row
             st.markdown("---")
             st.header(f"Detail Voucher — {code}")
             st.write(f"- Nilai awal: Rp {int(initial):,}")
             st.write(f"- Sisa saldo: Rp {int(balance):,}")
             st.write(f"- Dibuat: {created_at}")
+            # Edit form
             with st.form(key=f"edit_form_{code}"):
                 nama_in = st.text_input("Nama pemilik", value=nama or "")
                 nohp_in = st.text_input("No HP pemilik", value=no_hp or "")
                 status_in = st.selectbox("Status", ["inactive","active"], index=0 if (status or "inactive")!="active" else 1)
                 submitted = st.form_submit_button("Simpan Perubahan")
                 cancel = st.form_submit_button("Batal")
-                # NOTE: form_submit_button returns True for the pressed button; but two buttons both True not ideal,
-                # so we'll check submitted first then cancel
+                # handle submit / cancel
                 if submitted:
-                    # Requirement: if admin sets status=active, ensure nama & nohp not empty
                     if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
                         st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
                     else:
                         ok = update_voucher_detail(code, nama_in.strip() or None, nohp_in.strip() or None, status_in)
                         if ok:
                             st.success("Perubahan tersimpan ✅")
-                            # go back to daftar voucher view
-                            st.session_state.page = "list"
+                            # clear editing_code to hide detail view and return to daftar voucher
                             st.session_state.editing_code = None
-                            st.rerun()
+                            # clear last selection to avoid immediate retrigger
+                            st.session_state.grid_last_selected = None
+                            st.experimental_rerun()
                 elif cancel:
-                    st.session_state.page = "list"
                     st.session_state.editing_code = None
-                    st.rerun()
+                    st.session_state.grid_last_selected = None
+                    st.experimental_rerun()
+        else:
+            st.error("Voucher tidak ditemukan.")
+            st.session_state.editing_code = None
+            st.session_state.grid_last_selected = None
 
 # --------------------
 # Page: Histori Transaksi (admin)
@@ -436,5 +480,3 @@ if menu == "Histori Transaksi":
             df_tx = df_tx.rename(columns={"id":"ID","code":"Kode","used_amount":"Jumlah","used_at":"Waktu","branch":"Cabang","items":"Menu"})
             st.dataframe(df_tx, width="stretch")
             st.download_button("Download CSV", data=df_to_csv_bytes(df_tx), file_name="transactions.csv", mime="text/csv")
-
-    
