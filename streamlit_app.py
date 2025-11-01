@@ -1,4 +1,4 @@
-# streamlit_app.py — Full Final
+# streamlit_app.py — Final Full Version
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -25,7 +25,11 @@ def init_db():
                     code TEXT PRIMARY KEY,
                     initial_value INTEGER NOT NULL,
                     balance INTEGER NOT NULL,
-                    created_at TIMESTAMP NOT NULL
+                    created_at TIMESTAMP NOT NULL,
+                    nama TEXT,
+                    no_hp TEXT,
+                    status TEXT,
+                    edited BOOLEAN DEFAULT FALSE
                 )
             """))
             conn.execute(text("""
@@ -38,10 +42,9 @@ def init_db():
                     items TEXT
                 )
             """))
-            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS nama TEXT"))
-            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS no_hp TEXT"))
-            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS status TEXT"))
-            conn.execute(text("UPDATE vouchers SET status = 'inactive' WHERE status IS NULL"))
+            # Normalize null statuses
+            conn.execute(text("UPDATE vouchers SET status='inactive' WHERE status IS NULL"))
+            conn.execute(text("UPDATE vouchers SET edited=FALSE WHERE edited IS NULL"))
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
         st.stop()
@@ -50,8 +53,8 @@ def find_voucher(code):
     try:
         with engine.connect() as conn:
             row = conn.execute(text("""
-                SELECT code, initial_value, balance, created_at, nama, no_hp, status
-                FROM vouchers WHERE code = :c
+                SELECT code, initial_value, balance, created_at, nama, no_hp, status, edited
+                FROM vouchers WHERE code=:c
             """), {"c": code}).fetchone()
         return row
     except Exception as e:
@@ -63,10 +66,11 @@ def update_voucher_detail(code, nama, no_hp, status):
         with engine.begin() as conn:
             conn.execute(text("""
                 UPDATE vouchers
-                SET nama = :nama,
-                    no_hp = :no_hp,
-                    status = :status
-                WHERE code = :code
+                SET nama=:nama,
+                    no_hp=:no_hp,
+                    status=:status,
+                    edited=TRUE
+                WHERE code=:code
             """), {"nama": nama, "no_hp": no_hp, "status": status, "code": code})
         return True
     except Exception as e:
@@ -76,13 +80,13 @@ def update_voucher_detail(code, nama, no_hp, status):
 def atomic_redeem(code, amount, branch, items):
     try:
         with engine.begin() as conn:
-            r = conn.execute(text("SELECT balance FROM vouchers WHERE code = :c FOR UPDATE"), {"c": code}).fetchone()
+            r = conn.execute(text("SELECT balance FROM vouchers WHERE code=:c FOR UPDATE"), {"c": code}).fetchone()
             if not r:
                 return False, "Voucher tidak ditemukan.", None
             balance = r[0]
             if balance < amount:
                 return False, f"Saldo tidak cukup (sisa: {balance}).", balance
-            conn.execute(text("UPDATE vouchers SET balance = balance - :amt WHERE code = :c"), {"amt": amount, "c": code})
+            conn.execute(text("UPDATE vouchers SET balance=balance-:amt WHERE code=:c"), {"amt": amount, "c": code})
             conn.execute(text("""
                 INSERT INTO transactions (code, used_amount, used_at, branch, items)
                 VALUES (:c, :amt, :now, :branch, :items)
@@ -92,13 +96,13 @@ def atomic_redeem(code, amount, branch, items):
         return False, f"DB error saat redeem: {e}", None
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
-    q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status FROM vouchers"
+    q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, edited FROM vouchers"
     clauses = []
     params = {}
     if filter_status == "aktif":
         clauses.append("status ILIKE 'active'")
     elif filter_status == "habis":
-        clauses.append("balance = 0")
+        clauses.append("balance=0")
     if search:
         clauses.append("code ILIKE :search")
         params["search"] = f"%{search}%"
@@ -122,7 +126,7 @@ def count_vouchers(filter_status=None, search=None):
     if filter_status == "aktif":
         clauses.append("status ILIKE 'active'")
     elif filter_status == "habis":
-        clauses.append("balance = 0")
+        clauses.append("balance=0")
     if search:
         clauses.append("code ILIKE :search")
         params["search"] = f"%{search}%"
@@ -189,7 +193,7 @@ with st.sidebar:
         st.success("Logged in as **admin**")
         if st.button("Logout"):
             admin_logout()
-            st.rerun()
+            st.experimental_rerun()
         st.markdown("---")
         page_choice = st.radio("Pilih halaman", ("Daftar Voucher", "Laporan Global", "Histori Transaksi"),
                                index=("Daftar Voucher","Laporan Global","Histori Transaksi").index(st.session_state.get("page") if st.session_state.get("page") in ("Daftar Voucher","Laporan Global","Histori Transaksi") else "Daftar Voucher"))
@@ -202,11 +206,11 @@ with st.sidebar:
                 st.session_state.admin_logged_in = True
                 st.session_state.page = "Daftar Voucher"
                 st.success("Login admin berhasil")
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.error("Password salah")
         st.markdown("---")
-        st.info("Tanpa login: hanya halaman Cari & Redeem (user) yang bisa diakses.")
+        st.info("Tanpa login: hanya bisa akses halaman Cari & Redeem (user).")
 
 # Force page if not admin
 page = st.session_state.get("page", "Cari & Redeem")
@@ -214,7 +218,7 @@ if not st.session_state.admin_logged_in:
     page = "Cari & Redeem"
 
 # --------------------
-# Page: Cari & Redeem (public)
+# Page: Cari & Redeem
 # --------------------
 def page_redeem():
     st.header("Cari & Redeem (User)")
@@ -233,14 +237,15 @@ def page_redeem():
                     else:
                         st.session_state.voucher_row = row
                         st.session_state.redeem_step = 2
-                        st.rerun()
+                        st.experimental_rerun()
         with c2:
             if st.button("Reset"):
                 reset_redeem_state()
-                st.rerun()
+                st.experimental_rerun()
+
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
-        code, initial, balance, created_at, nama, no_hp, status = row
+        code, initial, balance, created_at, nama, no_hp, status, _ = row
         st.subheader(f"Voucher: {code}")
         st.write(f"- Nilai awal: Rp {int(initial):,}")
         st.write(f"- Sisa saldo: Rp {int(balance):,}")
@@ -252,22 +257,19 @@ def page_redeem():
             st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
             if st.button("Kembali"):
                 reset_redeem_state()
-                st.rerun()
+                st.experimental_rerun()
             return
 
         branch_options = ["Sedati", "Tawangsari"]
         selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
         st.session_state.selected_branch = selected_branch
 
-        if selected_branch == "Sedati":
-            menu_map = {"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000}
-        else:
-            menu_map = {"Nasi Goreng Spesial":25000, "Bakso Kuah":18000, "Es Jeruk":7000, "Teh Manis":3000}
-
+        menu_map = {"Sedati":{"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000},
+                    "Tawangsari":{"Nasi Goreng Spesial":25000, "Bakso Kuah":18000, "Es Jeruk":7000, "Teh Manis":3000}}
         st.markdown("**Pilih menu & jumlah**")
         total = 0
         chosen = {}
-        for item, price in menu_map.items():
+        for item, price in menu_map[selected_branch].items():
             qty = st.number_input(f"{item} (Rp {price:,})", min_value=0, value=0, step=1, key=f"u_{item}_{code}")
             if qty > 0:
                 chosen[item] = int(qty)
@@ -286,22 +288,23 @@ def page_redeem():
                     st.error(f"Saldo tidak cukup. Total: Rp {total:,} — Saldo: Rp {int(balance):,}")
                 else:
                     st.session_state.redeem_step = 3
-                    st.rerun()
+                    st.experimental_rerun()
         with cB:
             if st.button("Batal / Kembali"):
                 reset_redeem_state()
-                st.rerun()
+                st.experimental_rerun()
+
     elif st.session_state.redeem_step == 3:
         row = st.session_state.voucher_row
-        code, initial, balance, created_at, nama, no_hp, status = row
+        code, initial, balance, created_at, nama, no_hp, status, _ = row
         st.header("Konfirmasi Pembayaran")
         st.write(f"- Voucher: {code}")
         st.write(f"- Cabang: {st.session_state.selected_branch}")
         st.write(f"- Sisa sebelum: Rp {int(balance):,}")
         st.write("Detail pesanan:")
         for it, q in st.session_state.order_items.items():
-            prices = {"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000} if st.session_state.selected_branch=="Sedati" else {"Nasi Goreng Spesial":25000, "Bakso Kuah":18000, "Es Jeruk":7000, "Teh Manis":3000}
-            st.write(f"- {it} x{q} — Rp {prices[it]*q:,}")
+            price = menu_map[st.session_state.selected_branch][it]
+            st.write(f"- {it} x{q} — Rp {price*q:,}")
         st.write(f"### Total: Rp {st.session_state.checkout_total:,}")
 
         cy, cn = st.columns([1,1])
@@ -314,23 +317,22 @@ def page_redeem():
                     st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
                     if st.button("OK"):
                         reset_redeem_state()
-                        st.rerun()
+                        st.experimental_rerun()
                 else:
                     st.error(msg)
                     st.session_state.redeem_step = 2
-                    st.rerun()
+                    st.experimental_rerun()
         with cn:
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
-                st.rerun()
+                st.experimental_rerun()
 
 # --------------------
-# Page: Daftar Voucher (admin) — inline edit
+# Page: Daftar Voucher (admin)
 # --------------------
 def page_daftar_voucher():
-    st.header("Daftar Voucher (Admin) — Tabel penuh")
-    st.write("Cari kode, filter status. Jika kode ditemukan, langsung bisa edit di bawah.")
-
+    st.header("Daftar Voucher (Admin)")
+    st.write("Cari voucher dan klik tombol **Edit / Aktifkan** untuk membuka halaman edit terpisah.")
     col1, col2, col3 = st.columns([3,2,1])
     with col1:
         search = st.text_input("Cari kode (partial)", value="")
@@ -340,10 +342,24 @@ def page_daftar_voucher():
         per_page = st.number_input("Per halaman", min_value=5, max_value=200, value=st.session_state.vouchers_per_page, step=5)
         st.session_state.vouchers_per_page = per_page
 
+    total_count = count_vouchers(filter_status if filter_status!="semua" else None, search if search else None)
+    pages = max(1, math.ceil(total_count / st.session_state.vouchers_per_page))
+    idx = st.session_state.vouchers_page_idx
+    colp1, colp2, colp3 = st.columns([1,1,3])
+    with colp1:
+        if st.button("<< Prev"):
+            if st.session_state.vouchers_page_idx > 0:
+                st.session_state.vouchers_page_idx -= 1
+    with colp2:
+        if st.button("Next >>"):
+            if st.session_state.vouchers_page_idx < pages-1:
+                st.session_state.vouchers_page_idx += 1
+    with colp3:
+        st.markdown(f"**Halaman {st.session_state.vouchers_page_idx+1} / {pages} — Total voucher: {total_count}**")
+
     offset = st.session_state.vouchers_page_idx * st.session_state.vouchers_per_page
     df = list_vouchers(filter_status if filter_status!="semua" else None, search if search else None,
                        limit=st.session_state.vouchers_per_page, offset=offset)
-
     if df.empty:
         st.info("Tidak ada voucher sesuai filter/pencarian.")
         return
@@ -354,31 +370,56 @@ def page_daftar_voucher():
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d %H:%M:%S")
     st.dataframe(df_display[["code","nama","no_hp","status","initial_value","balance","created_at"]], use_container_width=True)
 
-    # Inline edit form muncul di bawah search
-    matched_row = df[df["code"] == search.strip().upper()]
-    if not matched_row.empty:
-        v = matched_row.iloc[0]
-        st.markdown("---")
-        st.subheader(f"Edit Voucher: {v['code']}")
-        with st.form(key=f"edit_form_{v['code']}"):
-            nama_in = st.text_input("Nama pemilik", value=v["nama"] or "")
-            nohp_in = st.text_input("No HP pemilik", value=v["no_hp"] or "")
-            status_in = st.selectbox("Status", ["inactive", "active"], index=0 if (v["status"] or "inactive")!="active" else 1)
-            submit = st.form_submit_button("Simpan / Aktifkan")
-            if submit:
-                if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
-                    st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
-                else:
-                    ok = update_voucher_detail(v["code"], nama_in.strip() or None, nohp_in.strip() or None, status_in)
-                    if ok:
-                        st.success(f"Voucher {v['code']} berhasil diperbarui ✅")
-                        st.rerun()
+    # Render Edit buttons per row
+    for _, r in df.iterrows():
+        col_code, col_action = st.columns([3,1])
+        col_code.write(r["code"])
+        if col_action.button("Edit / Aktifkan", key=f"edit_btn_{r['code']}"):
+            st.session_state.edit_code = r["code"]
+            st.session_state.page = "Edit Voucher"
+            st.experimental_rerun()
 
     st.markdown("---")
     st.download_button("Download CSV (tabel saat ini)", data=df_to_csv_bytes(df), file_name="vouchers_page.csv", mime="text/csv")
 
 # --------------------
-# Page: Histori Transaksi (admin)
+# Page: Edit Voucher (admin)
+# --------------------
+def page_edit_voucher():
+    code = st.session_state.get("edit_code")
+    if not code:
+        st.error("Tidak ada voucher yang dipilih untuk diedit.")
+        return
+    row = find_voucher(code)
+    if not row:
+        st.error("Voucher tidak ditemukan.")
+        return
+    code, initial, balance, created_at, nama, no_hp, status, edited = row
+    st.header(f"Edit Voucher — {code}")
+    st.write(f"- Nilai awal: Rp {int(initial):,}")
+    st.write(f"- Sisa saldo: Rp {int(balance):,}")
+    st.write(f"- Dibuat: {created_at}")
+
+    lock_fields = edited
+
+    with st.form(key=f"form_edit_{code}"):
+        nama_in = st.text_input("Nama pemilik", value=nama or "", disabled=lock_fields)
+        nohp_in = st.text_input("No HP pemilik", value=no_hp or "", disabled=lock_fields)
+        status_in = st.selectbox("Status", ["inactive","active"], index=0 if (status!="active") else 1, disabled=lock_fields)
+        submit = st.form_submit_button("Simpan / Aktifkan")
+        if submit:
+            if status_in=="active" and (not nama_in.strip() or not nohp_in.strip()):
+                st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
+            else:
+                ok = update_voucher_detail(code, nama_in.strip() or None, nohp_in.strip() or None, status_in)
+                if ok:
+                    st.success("Perubahan tersimpan ✅")
+                    st.session_state.edit_code = None
+                    st.session_state.page = "Daftar Voucher"
+                    st.experimental_rerun()
+
+# --------------------
+# Page: Histori Transaksi
 # --------------------
 def page_histori():
     st.header("Histori Transaksi (Admin)")
@@ -392,31 +433,28 @@ def page_histori():
     st.download_button("Download CSV Transaksi", data=df_to_csv_bytes(df_tx), file_name="transactions.csv", mime="text/csv")
 
 # --------------------
-# Page: Laporan Global (admin)
+# Page: Laporan Global
 # --------------------
 def page_laporan_global():
-    st.header("Laporan Global (Admin)")
+    st.header("Laporan Global (Grafik & Leaderboard)")
     df_tx = list_transactions(limit=100000)
     if df_tx.empty:
-        st.info("Belum ada transaksi untuk laporan")
+        st.info("Belum ada transaksi")
         return
     df_tx["used_at"] = pd.to_datetime(df_tx["used_at"])
-    df_tx["date"] = df_tx["used_at"].dt.date
-
-    # Cabang: count + sum
+    # Aggregasi per cabang
     branch_agg = df_tx.groupby("branch")["used_amount"].agg(["count","sum"]).reset_index().fillna("Unknown")
-    st.subheader("Total nominal & transaksi per cabang")
+    st.subheader("Total nominal terpakai per cabang")
     chart = alt.Chart(branch_agg).mark_bar().encode(
         x=alt.X("branch:N", title="Cabang"),
-        y=alt.Y("sum:Q", title="Total Nominal Terpakai"),
+        y=alt.Y("sum:Q", title="Total Terpakai"),
         tooltip=["branch","count","sum"]
     )
     st.altair_chart(chart, use_container_width=True)
     st.table(branch_agg.rename(columns={"branch":"Cabang","count":"#Transaksi","sum":"Total (Rp)"}))
 
-    # Top 10 voucher
+    st.subheader("Top 10 voucher menurut total nominal terpakai")
     top_v = df_tx.groupby("code")["used_amount"].sum().reset_index().sort_values("used_amount", ascending=False).head(10)
-    st.subheader("Top 10 voucher berdasarkan total pemakaian")
     chart2 = alt.Chart(top_v).mark_bar().encode(
         x=alt.X("code:N", title="Kode Voucher"),
         y=alt.Y("used_amount:Q", title="Total Terpakai"),
@@ -425,25 +463,16 @@ def page_laporan_global():
     st.altair_chart(chart2, use_container_width=True)
     st.table(top_v.rename(columns={"code":"Kode","used_amount":"Total (Rp)"}))
 
-    # Time series harian
-    daily = df_tx.groupby("date")["used_amount"].sum().reset_index()
     st.subheader("Time series: total harian")
+    df_tx["date"] = df_tx["used_at"].dt.date
+    daily = df_tx.groupby("date")["used_amount"].sum().reset_index()
     chart3 = alt.Chart(daily).mark_line(point=True).encode(
         x=alt.X("date:T", title="Tanggal"),
         y=alt.Y("used_amount:Q", title="Total Nominal"),
         tooltip=["date","used_amount"]
     )
     st.altair_chart(chart3, use_container_width=True)
-
-    # Cumulative total
-    daily["cumsum"] = daily["used_amount"].cumsum()
-    st.subheader("Cumulative total pemakaian")
-    chart4 = alt.Chart(daily).mark_area(opacity=0.3).encode(
-        x="date:T",
-        y="cumsum:Q",
-        tooltip=["date","cumsum"]
-    )
-    st.altair_chart(chart4, use_container_width=True)
+    st.table(daily.rename(columns={"date":"Tanggal","used_amount":"Total (Rp)"}))
 
 # --------------------
 # Router
@@ -452,9 +481,14 @@ if page == "Cari & Redeem":
     page_redeem()
 elif page == "Daftar Voucher":
     if not st.session_state.admin_logged_in:
-        st.error("Hanya admin yang dapat mengakses halaman ini.")
+        st.error("Hanya admin yang dapat mengakses halaman ini. Silakan login di sidebar.")
     else:
         page_daftar_voucher()
+elif page == "Edit Voucher" or st.session_state.get("edit_code"):
+    if not st.session_state.admin_logged_in:
+        st.error("Hanya admin yang dapat mengedit voucher.")
+    else:
+        page_edit_voucher()
 elif page == "Histori Transaksi":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses histori transaksi.")
