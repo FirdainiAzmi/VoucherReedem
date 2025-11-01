@@ -20,16 +20,12 @@ engine = create_engine(DB_URL, future=True)
 def init_db():
     try:
         with engine.begin() as conn:
-            # buat tabel jika belum ada
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS vouchers (
                     code TEXT PRIMARY KEY,
                     initial_value INTEGER NOT NULL,
                     balance INTEGER NOT NULL,
-                    created_at TIMESTAMP NOT NULL,
-                    nama TEXT,
-                    no_hp TEXT,
-                    status TEXT
+                    created_at TIMESTAMP NOT NULL
                 )
             """))
             conn.execute(text("""
@@ -42,19 +38,13 @@ def init_db():
                     items TEXT
                 )
             """))
-            # pastikan kolom edited ada
-            try:
-                conn.execute(text("ALTER TABLE vouchers ADD COLUMN edited BOOLEAN DEFAULT FALSE"))
-            except Exception:
-                pass  # kolom sudah ada, lewati
-
-            # normalisasi default values
-            conn.execute(text("UPDATE vouchers SET status='inactive' WHERE status IS NULL"))
-            conn.execute(text("UPDATE vouchers SET edited=FALSE WHERE edited IS NULL"))
+            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS nama TEXT"))
+            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS no_hp TEXT"))
+            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS status TEXT"))
+            conn.execute(text("UPDATE vouchers SET status = 'inactive' WHERE status IS NULL"))
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
         st.stop()
-
 
 def find_voucher(code):
     try:
@@ -508,4 +498,5 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
