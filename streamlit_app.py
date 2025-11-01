@@ -325,11 +325,13 @@ def page_redeem():
                 st.experimental_rerun()
 
 # --------------------
-# Page: Daftar Voucher (admin)
+# Page: Daftar Voucher (admin) — tombol Edit muncul setelah kode dicari
 # --------------------
 def page_daftar_voucher():
-    st.header("Daftar Voucher (Admin)")
-    st.write("Cari voucher dan klik tombol **Edit / Aktifkan** untuk membuka halaman edit terpisah.")
+    st.header("Daftar Voucher (Admin) — Tabel penuh")
+    st.write("Cari kode voucher untuk menampilkan tombol Edit / Aktifkan.")
+
+    # Controls: search + filter + pagination size
     col1, col2, col3 = st.columns([3,2,1])
     with col1:
         search = st.text_input("Cari kode (partial)", value="")
@@ -339,48 +341,42 @@ def page_daftar_voucher():
         per_page = st.number_input("Per halaman", min_value=5, max_value=200, value=st.session_state.vouchers_per_page, step=5)
         st.session_state.vouchers_per_page = per_page
 
+    # Count & pagination
     total_count = count_vouchers(filter_status if filter_status!="semua" else None, search if search else None)
     pages = max(1, math.ceil(total_count / st.session_state.vouchers_per_page))
     idx = st.session_state.vouchers_page_idx
-    colp1, colp2, colp3 = st.columns([1,1,3])
-    with colp1:
-        if st.button("<< Prev"):
-            if st.session_state.vouchers_page_idx > 0:
-                st.session_state.vouchers_page_idx -= 1
-    with colp2:
-        if st.button("Next >>"):
-            if st.session_state.vouchers_page_idx < pages-1:
-                st.session_state.vouchers_page_idx += 1
-    with colp3:
-        st.markdown(f"**Halaman {st.session_state.vouchers_page_idx+1} / {pages} — Total voucher: {total_count}**")
-
     offset = st.session_state.vouchers_page_idx * st.session_state.vouchers_per_page
+
+    # Load page of vouchers
     df = list_vouchers(filter_status if filter_status!="semua" else None, search if search else None,
                        limit=st.session_state.vouchers_per_page, offset=offset)
+
     if df.empty:
         st.info("Tidak ada voucher sesuai filter/pencarian.")
         return
 
+    # Tampilkan tabel
     df_display = df.copy()
     df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
     df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d %H:%M:%S")
     st.dataframe(df_display[["code","nama","no_hp","status","initial_value","balance","created_at"]], use_container_width=True)
 
-    # Render Edit buttons per row
-    for _, r in df.iterrows():
-        col_code, col_action = st.columns([3,1])
-        col_code.write(r["code"])
-        if col_action.button("Edit / Aktifkan", key=f"edit_btn_{r['code']}"):
-            st.session_state.edit_code = r["code"]
+    # Tombol Edit / Aktifkan hanya untuk voucher pertama yang cocok
+    if not df.empty:
+        first_voucher = df.iloc[0]
+        code = first_voucher["code"]
+        if st.button(f"Edit / Aktifkan voucher {code}"):
+            st.session_state.edit_code = code
             st.session_state.page = "Edit Voucher"
             st.experimental_rerun()
 
+    # Export CSV dari halaman saat ini
     st.markdown("---")
     st.download_button("Download CSV (tabel saat ini)", data=df_to_csv_bytes(df), file_name="vouchers_page.csv", mime="text/csv")
 
 # --------------------
-# Page: Edit Voucher (admin)
+# Page: Edit Voucher
 # --------------------
 def page_edit_voucher():
     code = st.session_state.get("edit_code")
@@ -391,29 +387,37 @@ def page_edit_voucher():
     if not row:
         st.error("Voucher tidak ditemukan.")
         return
-    code, initial, balance, created_at, nama, no_hp, status, edited = row
+    code, initial, balance, created_at, nama, no_hp, status = row
     st.header(f"Edit Voucher — {code}")
     st.write(f"- Nilai awal: Rp {int(initial):,}")
     st.write(f"- Sisa saldo: Rp {int(balance):,}")
     st.write(f"- Dibuat: {created_at}")
 
-    lock_fields = edited
+    # Field edit Nama, No HP, Status
+    edited = st.session_state.get(f"edited_{code}", False)
+    nama_val = nama or ""
+    nohp_val = no_hp or ""
+    status_val = status or "inactive"
 
     with st.form(key=f"form_edit_{code}"):
-        nama_in = st.text_input("Nama pemilik", value=nama or "", disabled=lock_fields)
-        nohp_in = st.text_input("No HP pemilik", value=no_hp or "", disabled=lock_fields)
-        status_in = st.selectbox("Status", ["inactive","active"], index=0 if (status!="active") else 1, disabled=lock_fields)
-        submit = st.form_submit_button("Simpan / Aktifkan")
+        nama_in = st.text_input("Nama pemilik", value=nama_val, disabled=edited)
+        nohp_in = st.text_input("No HP pemilik", value=nohp_val, disabled=edited)
+        status_in = st.selectbox("Status", ["inactive", "active"], index=0 if status_val!="active" else 1, disabled=edited)
+        submit = st.form_submit_button("Simpan Perubahan")
+        cancel = st.form_submit_button("Batal")
         if submit:
-            if status_in=="active" and (not nama_in.strip() or not nohp_in.strip()):
+            if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
                 st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
             else:
                 ok = update_voucher_detail(code, nama_in.strip() or None, nohp_in.strip() or None, status_in)
                 if ok:
                     st.success("Perubahan tersimpan ✅")
-                    st.session_state.edit_code = None
-                    st.session_state.page = "Daftar Voucher"
-                    st.experimental_rerun()
+                    st.session_state[f"edited_{code}"] = True  # lock fields setelah disimpan
+        if cancel:
+            st.session_state.edit_code = None
+            st.session_state.page = "Daftar Voucher"
+            st.experimental_rerun()
+
 
 # --------------------
 # Page: Histori Transaksi
@@ -498,5 +502,6 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
