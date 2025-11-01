@@ -441,11 +441,8 @@ def page_laporan_global():
     avg_saldo = df_vouchers["balance"].mean() if total_voucher>0 else 0
 
     st.write(f"- Total voucher: {total_voucher}")
-    st.write(f"- Total saldo awal: Rp {int(total_saldo_awal):,}")
-    st.write(f"- Total saldo tersisa: Rp {int(total_saldo_tersisa):,}")
     st.write(f"- Voucher aktif: {aktif_count}")
     st.write(f"- Voucher inactive: {inactive_count}")
-    st.write(f"- Rata-rata saldo per voucher: Rp {int(avg_saldo):,}")
 
     st.subheader("📊 Ringkasan Transaksi")
     total_tx = len(df_tx)
@@ -490,15 +487,6 @@ def page_laporan_global():
         )
         st.altair_chart(chart_daily, use_container_width=True)
 
-        # Cumulative total
-        daily["cumsum"] = daily["used_amount"].cumsum()
-        st.subheader("📈 Cumulative total pemakaian")
-        chart_cum = alt.Chart(daily).mark_area(opacity=0.3).encode(
-            x="date:T",
-            y="cumsum:Q",
-            tooltip=["date","cumsum"]
-        )
-        st.altair_chart(chart_cum, use_container_width=True)
 
     st.markdown("---")
     st.download_button("Download CSV Semua Transaksi (filtered)", data=df_to_csv_bytes(df_tx), file_name="transactions_global_filtered.csv", mime="text/csv")
@@ -526,4 +514,5 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
