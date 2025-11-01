@@ -1,4 +1,4 @@
-# streamlit_app.py
+# streamlit_app.py (FINAL)
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -47,7 +47,7 @@ def init_db():
                 items TEXT
             )
             """))
-            # set null status to 'inactive' (one-time idempotent)
+            # Set null status to 'inactive' (idempotent)
             conn.execute(text("UPDATE vouchers SET status = 'inactive' WHERE status IS NULL"))
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
@@ -306,7 +306,10 @@ if menu == "Cari & Redeem":
                 if ok:
                     st.success("🎉 TRANSAKSI BERHASIL 🎉")
                     st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
-                    reset_redeem_state()
+                    # tunggu user klik OK untuk kembali ke awal (explicit)
+                    if st.button("OK"):
+                        reset_redeem_state()
+                        st.rerun()
                 else:
                     st.error(msg)
                     st.session_state.redeem_step = 2
@@ -346,10 +349,10 @@ elif menu == "Daftar Voucher":
                 this.eGui = document.createElement('button');
                 this.eGui.innerText = params.value;
                 this.eGui.style = "background:none;border:none;color:#0b66c3;cursor:pointer;text-decoration:underline;padding:0;font-weight:600";
-                this.eGui.addEventListener('click', () => {
-                  // send CustomEvent with code detail for streamlit_javascript to catch
-                  const ev = new CustomEvent("streamlit:aggrid", { detail: { code: params.value }});
-                  window.dispatchEvent(ev);
+                this.eGui.addEventListener('click', (ev) => {
+                  ev.stopPropagation();
+                  const ev2 = new CustomEvent("streamlit:aggrid", { detail: { code: params.value }});
+                  window.dispatchEvent(ev2);
                 });
               }
               getGui() {
@@ -368,7 +371,9 @@ elif menu == "Daftar Voucher":
             gb.configure_column("initial_value", header_name="Nilai Awal", width=120)
             gb.configure_column("balance", header_name="Saldo", width=120)
             gb.configure_column("created_at", header_name="Dibuat", width=180)
-            gb.configure_grid_options(suppressRowClickSelection=True, rowSelection='single')
+
+            # ENABLE row click selection (fallback) so grid_response['selected_rows'] also works
+            gb.configure_grid_options(suppressRowClickSelection=False, rowSelection='single')
             gridOptions = gb.build()
 
             grid_response = AgGrid(
@@ -376,34 +381,46 @@ elif menu == "Daftar Voucher":
                 gridOptions=gridOptions,
                 enable_enterprise_modules=False,
                 allow_unsafe_jscode=True,
-                theme="light"
+                theme="light",
+                update_mode="MODEL_CHANGED"
             )
 
-            # Use streamlit_javascript to catch the custom event fired by the JS cell renderer
+            # 1) Try to catch JS custom event (click on code button)
             clicked_code = st_javascript("""
             () => {
                 return new Promise(resolve => {
                     function handler(e) {
-                        // e.detail.code contains the voucher code
                         resolve(e.detail.code);
                         window.removeEventListener("streamlit:aggrid", handler);
                     }
+                    const to = setTimeout(() => { window.removeEventListener("streamlit:aggrid", handler); resolve(null); }, 15000);
                     window.addEventListener("streamlit:aggrid", handler);
                 });
             }
             """)
 
+            # 2) Fallback: AgGrid selected_rows
+            selected_rows = grid_response.get("selected_rows") if isinstance(grid_response, dict) else None
+            grid_selected_code = None
+            if selected_rows and len(selected_rows) > 0:
+                row0 = selected_rows[0]
+                grid_selected_code = row0.get("code")
+
+            chosen_code = None
             if clicked_code:
-                # set editing_code (navigates to detail view)
-                st.session_state.editing_code = clicked_code
-                # store last selected to avoid duplicate triggers
-                st.session_state.grid_last_selected = clicked_code
+                chosen_code = clicked_code
+            elif grid_selected_code and grid_selected_code != st.session_state.get("grid_last_selected"):
+                chosen_code = grid_selected_code
+
+            if chosen_code:
+                st.session_state.editing_code = chosen_code
+                st.session_state.grid_last_selected = chosen_code
                 st.rerun()
 
             st.download_button("Download CSV", data=df_to_csv_bytes(df), file_name="vouchers.csv", mime="text/csv")
 
 # --------------------
-# Page: Detail Voucher (admin) - separate full page
+# Page: Detail Voucher (admin) - separate full page (no history, as requested)
 # --------------------
 if st.session_state.get("editing_code"):
     if not st.session_state.admin_user:
@@ -418,12 +435,15 @@ if st.session_state.get("editing_code"):
             st.write(f"- Nilai awal: Rp {int(initial):,}")
             st.write(f"- Sisa saldo: Rp {int(balance):,}")
             st.write(f"- Dibuat: {created_at}")
+            st.write("")  # spacing
+
             with st.form(key=f"edit_form_{code}"):
                 nama_in = st.text_input("Nama pemilik", value=nama or "")
                 nohp_in = st.text_input("No HP pemilik", value=no_hp or "")
+                # status default index: inactive -> 0, active ->1
                 status_in = st.selectbox("Status", ["inactive","active"], index=0 if (status or "inactive")!="active" else 1)
                 submitted = st.form_submit_button("Simpan Perubahan")
-                cancel = st.form_submit_button("Batal")
+                cancelled = st.form_submit_button("Batal")
                 if submitted:
                     if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
                         st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
@@ -431,10 +451,11 @@ if st.session_state.get("editing_code"):
                         ok = update_voucher_detail(code, nama_in.strip() or None, nohp_in.strip() or None, status_in)
                         if ok:
                             st.success("Perubahan tersimpan ✅")
+                            # kembali ke daftar voucher page
                             st.session_state.editing_code = None
                             st.session_state.grid_last_selected = None
                             st.rerun()
-                elif cancel:
+                elif cancelled:
                     st.session_state.editing_code = None
                     st.session_state.grid_last_selected = None
                     st.rerun()
