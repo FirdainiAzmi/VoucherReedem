@@ -184,7 +184,7 @@ with st.sidebar:
         st.success(f"Logged in as **{st.session_state.admin_user}**")
         if st.button("Logout"):
             admin_logout()
-            st.experimental_rerun()
+            st.rerun()
         st.markdown("---")
     else:
         st.markdown("### Admin Login")
@@ -194,7 +194,7 @@ with st.sidebar:
             if admin_login(user_in, pass_in):
                 st.session_state.admin_user = user_in
                 st.success("Login berhasil")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Login gagal — cek username/password")
         st.markdown("---")
@@ -228,11 +228,11 @@ if menu == "Cari & Redeem":
                     else:
                         st.session_state.voucher_row = row
                         st.session_state.redeem_step = 2
-                        st.experimental_rerun()
+                        st.rerun()
         with c2:
             if st.button("Reset"):
                 reset_redeem_state()
-                st.experimental_rerun()
+                st.rerun()
     # Step 2: choose branch & items
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
@@ -247,7 +247,7 @@ if menu == "Cari & Redeem":
             st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
             if st.button("Kembali"):
                 reset_redeem_state()
-                st.experimental_rerun()
+                st.rerun()
         else:
             branch_options = ["Sedati", "Tawangsari"]
             if st.session_state.get("selected_branch") not in branch_options:
@@ -257,7 +257,7 @@ if menu == "Cari & Redeem":
                 st.session_state.selected_branch = selected
                 st.session_state.order_items = {}
                 st.session_state.checkout_total = 0
-                st.experimental_rerun()
+                st.rerun()
             # menu per branch
             if st.session_state.selected_branch == "Sedati":
                 menu_map = {"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000}
@@ -284,11 +284,11 @@ if menu == "Cari & Redeem":
                         st.error(f"Saldo tidak cukup. Total: Rp {total:,} — Saldo: Rp {int(balance):,}")
                     else:
                         st.session_state.redeem_step = 3
-                        st.experimental_rerun()
+                        st.rerun()
             with cb:
                 if st.button("Batal / Kembali"):
                     reset_redeem_state()
-                    st.experimental_rerun()
+                    st.rerun()
     # Step 3: confirm & pay
     elif st.session_state.redeem_step == 3:
         row = st.session_state.voucher_row
@@ -317,11 +317,11 @@ if menu == "Cari & Redeem":
                 else:
                     st.error(msg)
                     st.session_state.redeem_step = 2
-                    st.experimental_rerun()
+                    st.rerun()
         with cn:
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
-                st.experimental_rerun()
+                st.rerun()
 
 # --------------------
 # Page: Daftar Voucher (admin only) with AgGrid clickable code cell
@@ -409,7 +409,7 @@ elif menu == "Daftar Voucher":
                     # set editing and move to detail view
                     st.session_state.editing_code = sel_code
                     # go to detail page (we keep menu choice same, but show detail area)
-                    st.experimental_rerun()
+                    st.rerun()
 
             st.download_button("Download CSV", data=df_to_csv_bytes(df), file_name="vouchers.csv", mime="text/csv")
 
@@ -450,11 +450,11 @@ if st.session_state.get("editing_code"):
                             st.session_state.editing_code = None
                             # clear last selection to avoid immediate retrigger
                             st.session_state.grid_last_selected = None
-                            st.experimental_rerun()
+                            st.rerun()
                 elif cancel:
                     st.session_state.editing_code = None
                     st.session_state.grid_last_selected = None
-                    st.experimental_rerun()
+                    st.rerun()
         else:
             st.error("Voucher tidak ditemukan.")
             st.session_state.editing_code = None
@@ -480,3 +480,5 @@ if menu == "Histori Transaksi":
             df_tx = df_tx.rename(columns={"id":"ID","code":"Kode","used_amount":"Jumlah","used_at":"Waktu","branch":"Cabang","items":"Menu"})
             st.dataframe(df_tx, width="stretch")
             st.download_button("Download CSV", data=df_to_csv_bytes(df_tx), file_name="transactions.csv", mime="text/csv")
+
+            s
