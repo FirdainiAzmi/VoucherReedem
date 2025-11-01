@@ -189,7 +189,7 @@ with st.sidebar:
         st.success("Logged in as **admin**")
         if st.button("Logout"):
             admin_logout()
-            st.experimental_rerun()
+            st.rerun()
         st.markdown("---")
         page_choice = st.radio("Pilih halaman", ("Daftar Voucher", "Laporan Global", "Histori Transaksi"),
                                index=("Daftar Voucher","Laporan Global","Histori Transaksi").index(
@@ -203,7 +203,7 @@ with st.sidebar:
                 st.session_state.admin_logged_in = True
                 st.session_state.page = "Daftar Voucher"
                 st.success("Login admin berhasil")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Password salah")
         st.markdown("---")
@@ -234,11 +234,11 @@ def page_redeem():
                     else:
                         st.session_state.voucher_row = row
                         st.session_state.redeem_step = 2
-                        st.experimental_rerun()
+                        st.rerun()
         with c2:
             if st.button("Reset"):
                 reset_redeem_state()
-                st.experimental_rerun()
+                st.rerun()
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
         code, initial, balance, created_at, nama, no_hp, status = row
@@ -252,7 +252,7 @@ def page_redeem():
             st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
             if st.button("Kembali"):
                 reset_redeem_state()
-                st.experimental_rerun()
+                st.rerun()
             return
         branch_options = ["Sedati", "Tawangsari"]
         selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
@@ -281,11 +281,11 @@ def page_redeem():
                     st.error(f"Saldo tidak cukup. Total: Rp {total:,} — Saldo: Rp {int(balance):,}")
                 else:
                     st.session_state.redeem_step = 3
-                    st.experimental_rerun()
+                    st.rerun()
         with cB:
             if st.button("Batal / Kembali"):
                 reset_redeem_state()
-                st.experimental_rerun()
+                st.rerun()
     elif st.session_state.redeem_step == 3:
         row = st.session_state.voucher_row
         code, initial, balance, created_at, nama, no_hp, status = row
@@ -311,15 +311,15 @@ def page_redeem():
                     st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
                     if st.button("OK"):
                         reset_redeem_state()
-                        st.experimental_rerun()
+                        st.rerun()
                 else:
                     st.error(msg)
                     st.session_state.redeem_step = 2
-                    st.experimental_rerun()
+                    st.rerun()
         with cn:
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
-                st.experimental_rerun()
+                st.rerun()
 
 # --------------------
 # Page: Daftar Voucher (admin) — tombol Edit muncul bawah search
@@ -355,7 +355,7 @@ def page_daftar_voucher():
         if st.button(f"Edit / Aktifkan voucher {search.strip().upper()}"):
             st.session_state.edit_code = search.strip().upper()
             st.session_state.page = "Edit Voucher"
-            st.experimental_rerun()
+            st.rerun()
 
     st.markdown("---")
     st.download_button("Download CSV (tabel saat ini)", data=df_to_csv_bytes(df), file_name="vouchers_page.csv", mime="text/csv")
@@ -393,11 +393,11 @@ def page_edit_voucher():
                     st.success("Perubahan tersimpan ✅")
                     st.session_state.edit_code = None
                     st.session_state.page = "Daftar Voucher"
-                    st.experimental_rerun()
+                    st.rerun()
         if cancel:
             st.session_state.edit_code = None
             st.session_state.page = "Daftar Voucher"
-            st.experimental_rerun()
+            st.rerun()
 
 # --------------------
 # Page: Histori Transaksi (admin)
