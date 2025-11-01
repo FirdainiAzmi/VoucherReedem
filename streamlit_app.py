@@ -411,4 +411,22 @@ def page_edit_voucher():
     st.write(f"- Dibuat: {created_at}")
 
     with st.form(key=f"form_edit_{code}"):
-       
+        nama_in = st.text_input("Nama pemilik", value=nama or "")
+        nohp_in = st.text_input("No HP pemilik", value=no_hp or "")
+        status_in = st.selectbox("Status", ["inactive", "active"], index=0 if (status or "inactive")!="active" else 1)
+        submit = st.form_submit_button("Simpan Perubahan")
+        cancel = st.form_submit_button("Batal")
+        if submit:
+            if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
+                st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
+            else:
+                ok = update_voucher_detail(code, nama_in.strip() or None, nohp_in.strip() or None, status_in)
+                if ok:
+                    st.success("Perubahan tersimpan ✅")
+                    st.session_state.edit_code = None
+                    st.session_state.page = "Daftar Voucher"
+                    st.experimental_rerun()
+        if cancel:
+            st.session_state.edit_code = None
+            st.session_state.page = "Daftar Voucher"
+            st.experimental_rerun()
