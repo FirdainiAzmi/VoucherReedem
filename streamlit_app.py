@@ -1,4 +1,5 @@
 # streamlit_app.py — Full Final
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -354,7 +355,6 @@ def page_daftar_voucher():
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d %H:%M:%S")
     st.dataframe(df_display[["code","nama","no_hp","status","initial_value","balance","created_at"]], use_container_width=True)
 
-    # Inline edit form muncul di bawah search
     matched_row = df[df["code"] == search.strip().upper()]
     if not matched_row.empty:
         v = matched_row.iloc[0]
@@ -378,7 +378,7 @@ def page_daftar_voucher():
     st.download_button("Download CSV (tabel saat ini)", data=df_to_csv_bytes(df), file_name="vouchers_page.csv", mime="text/csv")
 
 # --------------------
-# Page: Histori Transaksi (admin)
+# Page: Histori Transaksi (admin) dengan search voucher
 # --------------------
 def page_histori():
     st.header("Histori Transaksi (Admin)")
@@ -386,64 +386,59 @@ def page_histori():
     if df_tx.empty:
         st.info("Belum ada transaksi")
         return
-    df_tx["used_at"] = pd.to_datetime(df_tx["used_at"])
-    df_tx = df_tx.rename(columns={"id":"ID","code":"Kode","used_amount":"Jumlah","used_at":"Waktu","branch":"Cabang","items":"Menu"})
-    st.dataframe(df_tx, use_container_width=True)
-    st.download_button("Download CSV Transaksi", data=df_to_csv_bytes(df_tx), file_name="transactions.csv", mime="text/csv")
+
+    search_code = st.text_input("Cari kode voucher untuk detail histori")
+    if search_code:
+        df_filtered = df_tx[df_tx["code"].str.contains(search_code.strip().upper(), case=False)]
+        if df_filtered.empty:
+            st.warning(f"Tidak ada transaksi untuk voucher {search_code}")
+        else:
+            st.subheader(f"Detail Voucher: {search_code.strip().upper()}")
+            total_transaksi = len(df_filtered)
+            total_nominal = df_filtered["used_amount"].sum()
+            st.write(f"- Jumlah transaksi: {total_transaksi}")
+            st.write(f"- Total nominal terpakai: Rp {total_nominal:,}")
+            df_display = df_filtered.copy()
+            df_display["used_at"] = pd.to_datetime(df_display["used_at"])
+            df_display = df_display.rename(columns={"id":"ID","code":"Kode","used_amount":"Jumlah","used_at":"Waktu","branch":"Cabang","items":"Menu"})
+            st.dataframe(df_display[["ID","Kode","Waktu","Jumlah","Cabang","Menu"]], use_container_width=True)
+            st.download_button(f"Download CSV {search_code.strip().upper()}", data=df_to_csv_bytes(df_display), file_name=f"transactions_{search_code.strip().upper()}.csv", mime="text/csv")
+    else:
+        df_tx["used_at"] = pd.to_datetime(df_tx["used_at"])
+        df_tx = df_tx.rename(columns={"id":"ID","code":"Kode","used_amount":"Jumlah","used_at":"Waktu","branch":"Cabang","items":"Menu"})
+        st.dataframe(df_tx, use_container_width=True)
+        st.download_button("Download CSV Transaksi", data=df_to_csv_bytes(df_tx), file_name="transactions.csv", mime="text/csv")
 
 # --------------------
 # Page: Laporan Global (admin)
 # --------------------
 def page_laporan_global():
     st.header("Laporan Global (Admin)")
-    df_tx = list_transactions(limit=100000)
-    if df_tx.empty:
-        st.info("Belum ada transaksi untuk laporan")
-        return
-    df_tx["used_at"] = pd.to_datetime(df_tx["used_at"])
-    df_tx["date"] = df_tx["used_at"].dt.date
+    df_vouchers = list_vouchers(limit=5000)
+    df_tx = list_transactions(limit=5000)
+    st.subheader("Ringkasan Voucher")
+    total_voucher = len(df_vouchers)
+    total_saldo_awal = df_vouchers["initial_value"].sum()
+    total_saldo_tersisa = df_vouchers["balance"].sum()
+    st.write(f"- Total voucher: {total_voucher}")
+    st.write(f"- Total saldo awal: Rp {int(total_saldo_awal):,}")
+    st.write(f"- Total saldo tersisa: Rp {int(total_saldo_tersisa):,}")
 
-    # Cabang: count + sum
-    branch_agg = df_tx.groupby("branch")["used_amount"].agg(["count","sum"]).reset_index().fillna("Unknown")
-    st.subheader("Total nominal & transaksi per cabang")
-    chart = alt.Chart(branch_agg).mark_bar().encode(
-        x=alt.X("branch:N", title="Cabang"),
-        y=alt.Y("sum:Q", title="Total Nominal Terpakai"),
-        tooltip=["branch","count","sum"]
-    )
-    st.altair_chart(chart, use_container_width=True)
-    st.table(branch_agg.rename(columns={"branch":"Cabang","count":"#Transaksi","sum":"Total (Rp)"}))
+    st.subheader("Ringkasan Transaksi")
+    total_tx = len(df_tx)
+    total_tx_nominal = df_tx["used_amount"].sum()
+    st.write(f"- Total transaksi: {total_tx}")
+    st.write(f"- Total nominal digunakan: Rp {int(total_tx_nominal):,}")
 
-    # Top 10 voucher
-    top_v = df_tx.groupby("code")["used_amount"].sum().reset_index().sort_values("used_amount", ascending=False).head(10)
-    st.subheader("Top 10 voucher berdasarkan total pemakaian")
-    chart2 = alt.Chart(top_v).mark_bar().encode(
-        x=alt.X("code:N", title="Kode Voucher"),
-        y=alt.Y("used_amount:Q", title="Total Terpakai"),
-        tooltip=["code","used_amount"]
-    )
-    st.altair_chart(chart2, use_container_width=True)
-    st.table(top_v.rename(columns={"code":"Kode","used_amount":"Total (Rp)"}))
-
-    # Time series harian
-    daily = df_tx.groupby("date")["used_amount"].sum().reset_index()
-    st.subheader("Time series: total harian")
-    chart3 = alt.Chart(daily).mark_line(point=True).encode(
-        x=alt.X("date:T", title="Tanggal"),
-        y=alt.Y("used_amount:Q", title="Total Nominal"),
-        tooltip=["date","used_amount"]
-    )
-    st.altair_chart(chart3, use_container_width=True)
-
-    # Cumulative total
-    daily["cumsum"] = daily["used_amount"].cumsum()
-    st.subheader("Cumulative total pemakaian")
-    chart4 = alt.Chart(daily).mark_area(opacity=0.3).encode(
-        x="date:T",
-        y="cumsum:Q",
-        tooltip=["date","cumsum"]
-    )
-    st.altair_chart(chart4, use_container_width=True)
+    # Chart penggunaan voucher per cabang
+    if not df_tx.empty:
+        df_chart = df_tx.groupby("branch")["used_amount"].sum().reset_index()
+        chart = alt.Chart(df_chart).mark_bar().encode(
+            x=alt.X('branch:N', title='Cabang'),
+            y=alt.Y('used_amount:Q', title='Total digunakan'),
+            tooltip=['branch','used_amount']
+        )
+        st.altair_chart(chart, use_container_width=True)
 
 # --------------------
 # Router
