@@ -550,6 +550,12 @@ elif page == "Histori Transaksi":
         st.error("Hanya admin yang dapat mengakses histori transaksi.")
     else:
         page_histori()
+elif page == "Seller":
+    if not st.session_state.admin_logged_in:
+        st.error("Hanya admin yang dapat mengakses halaman Seller.")
+    else:
+        page_seller()
+
 elif page == "Laporan Global":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses laporan.")
@@ -557,11 +563,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
-elif page == "Seller":
-    if not st.session_state.admin_logged_in:
-        st.error("Hanya admin yang dapat mengakses halaman Seller.")
-    else:
-        page_seller()
+
 
 
 
