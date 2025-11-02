@@ -1,4 +1,4 @@
-# streamlit_app.py — Full Final All-in-One with Seller Page
+# streamlit_app.py — Full Final with Seller Page
 
 import streamlit as st
 import pandas as pd
@@ -38,7 +38,6 @@ def init_db():
                     items TEXT
                 )
             """))
-            # Add optional columns if not exist
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS nama TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS no_hp TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS status TEXT"))
@@ -112,7 +111,8 @@ def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
     params["offset"] = offset
     with engine.connect() as conn:
         df = pd.read_sql(text(q), conn, params=params)
-    df["status"] = df.get("status", pd.Series(["inactive"]*len(df))).fillna("inactive")
+    df["status"] = df["status"].fillna("inactive")
+    df["seller"] = df["seller"].fillna("")
     return df
 
 def list_transactions(limit=5000):
@@ -175,8 +175,8 @@ with st.sidebar:
             admin_logout()
             st.rerun()
         st.markdown("---")
-        page_choice = st.radio("Pilih halaman", ("Daftar Voucher", "Seller", "Laporan Global", "Histori Transaksi"),
-                               index=("Daftar Voucher","Seller","Laporan Global","Histori Transaksi").index(st.session_state.get("page") if st.session_state.get("page") in ("Daftar Voucher","Seller","Laporan Global","Histori Transaksi") else "Daftar Voucher"))
+        page_choice = st.radio("Pilih halaman", ("Daftar Voucher", "Laporan Global", "Histori Transaksi", "Seller"),
+                               index=("Daftar Voucher","Laporan Global","Histori Transaksi","Seller").index(st.session_state.get("page") if st.session_state.get("page") in ("Daftar Voucher","Laporan Global","Histori Transaksi","Seller") else "Daftar Voucher"))
         st.session_state.page = page_choice
     else:
         st.markdown("### Admin Login (opsional)")
@@ -198,13 +198,13 @@ if not st.session_state.admin_logged_in:
     page = "Cari & Redeem"
 
 # --------------------
-# Page: Cari & Redeem
+# Page: Cari & Redeem (public)
 # --------------------
 def page_redeem():
     st.header("Cari & Redeem (User)")
     if st.session_state.redeem_step == 1:
         st.session_state.entered_code = st.text_input("Masukkan kode voucher", value=st.session_state.entered_code).strip().upper()
-        if st.button("Submit Kode"):
+        if st.button("Cari Kode"):
             code = st.session_state.entered_code
             if not code:
                 st.error("Kode tidak boleh kosong")
@@ -216,7 +216,7 @@ def page_redeem():
                     st.session_state.voucher_row = row
                     st.session_state.redeem_step = 2
                     st.rerun()
-    elif st.session_state.redeem_step == 2 and st.session_state.voucher_row:
+    elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
         code, initial, balance, created_at, nama, no_hp, status, seller = row
         st.subheader(f"Voucher: {code}")
@@ -237,13 +237,15 @@ def page_redeem():
         selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
         st.session_state.selected_branch = selected_branch
 
-        menu_map = {"Sedati":{"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000},
-                    "Tawangsari":{"Nasi Goreng Spesial":25000, "Bakso Kuah":18000, "Es Jeruk":7000, "Teh Manis":3000}}
+        if selected_branch == "Sedati":
+            menu_map = {"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000}
+        else:
+            menu_map = {"Nasi Goreng Spesial":25000, "Bakso Kuah":18000, "Es Jeruk":7000, "Teh Manis":3000}
 
         st.markdown("**Pilih menu & jumlah**")
         total = 0
         chosen = {}
-        for item, price in menu_map[selected_branch].items():
+        for item, price in menu_map.items():
             qty = st.number_input(f"{item} (Rp {price:,})", min_value=0, value=0, step=1, key=f"u_{item}_{code}")
             if qty > 0:
                 chosen[item] = int(qty)
@@ -253,15 +255,21 @@ def page_redeem():
         st.session_state.checkout_total = total
         st.write(f"**Total sementara: Rp {total:,}**")
 
-        if st.button("Cek & Bayar"):
-            if total == 0:
-                st.warning("Pilih minimal 1 menu")
-            elif total > int(balance):
-                st.error(f"Saldo tidak cukup. Total: Rp {total:,} — Saldo: Rp {int(balance):,}")
-            else:
-                st.session_state.redeem_step = 3
+        cA, cB = st.columns([1,1])
+        with cA:
+            if st.button("Cek & Bayar"):
+                if total == 0:
+                    st.warning("Pilih minimal 1 menu")
+                elif total > int(balance):
+                    st.error(f"Saldo tidak cukup. Total: Rp {total:,} — Saldo: Rp {int(balance):,}")
+                else:
+                    st.session_state.redeem_step = 3
+                    st.rerun()
+        with cB:
+            if st.button("Batal / Kembali"):
+                reset_redeem_state()
                 st.rerun()
-    elif st.session_state.redeem_step == 3 and st.session_state.voucher_row:
+    elif st.session_state.redeem_step == 3:
         row = st.session_state.voucher_row
         code, initial, balance, created_at, nama, no_hp, status, seller = row
         st.header("Konfirmasi Pembayaran")
@@ -270,49 +278,56 @@ def page_redeem():
         st.write(f"- Sisa sebelum: Rp {int(balance):,}")
         st.write("Detail pesanan:")
         for it, q in st.session_state.order_items.items():
-            price = 20000 if st.session_state.selected_branch=="Sedati" else 25000
-            st.write(f"- {it} x{q} — Rp {price*q:,}")
+            prices = {"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000} if st.session_state.selected_branch=="Sedati" else {"Nasi Goreng Spesial":25000, "Bakso Kuah":18000, "Es Jeruk":7000, "Teh Manis":3000}
+            st.write(f"- {it} x{q} — Rp {prices[it]*q:,}")
         st.write(f"### Total: Rp {st.session_state.checkout_total:,}")
 
-        if st.button("Ya, Bayar"):
-            items_str = ", ".join([f"{k} x{v}" for k,v in st.session_state.order_items.items()])
-            ok, msg, newbal = atomic_redeem(code, st.session_state.checkout_total, st.session_state.selected_branch, items_str)
-            if ok:
-                st.success("🎉 TRANSAKSI BERHASIL 🎉")
-                st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
-                if st.button("OK"):
-                    reset_redeem_state()
+        cy, cn = st.columns([1,1])
+        with cy:
+            if st.button("Ya, Bayar"):
+                items_str = ", ".join([f"{k} x{v}" for k,v in st.session_state.order_items.items()])
+                ok, msg, newbal = atomic_redeem(code, st.session_state.checkout_total, st.session_state.selected_branch, items_str)
+                if ok:
+                    st.success("🎉 TRANSAKSI BERHASIL 🎉")
+                    st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
+                    if st.button("OK"):
+                        reset_redeem_state()
+                        st.session_state.redeem_step = 1
+                        st.rerun()
+                else:
+                    st.error(msg)
+                    st.session_state.redeem_step = 2
                     st.rerun()
-            else:
-                st.error(msg)
+        with cn:
+            if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
                 st.rerun()
 
 # --------------------
-# Page: Seller (Admin)
+# Page: Seller (admin-only)
 # --------------------
 def page_seller():
-    st.header("Seller Dashboard (Admin)")
-    df_vouchers = list_vouchers(limit=5000)
-    df_tx = list_transactions(limit=100000)
+    st.header("Halaman Seller (Admin)")
 
-    if df_vouchers.empty:
-        st.info("Belum ada voucher.")
-        return
-
-    # Aggregate per seller
-    seller_agg = df_vouchers.groupby("seller").agg(
-        total_voucher=("code","count"),
-        total_initial=("initial_value","sum"),
-        total_balance=("balance","sum")
+    df = list_vouchers()
+    df_seller = df.groupby("seller").agg(
+        total_voucher=pd.NamedAgg(column="code", aggfunc="count"),
+        total_penjualan=pd.NamedAgg(column="initial_value", aggfunc="sum")
     ).reset_index()
 
-    # Add sold info
-    df_tx_grouped = df_tx.groupby("code")["used_amount"].sum().reset_index()
-    df_vouchers = df_vouchers.merge(df_tx_grouped, how="left", on="code").rename(columns={"used_amount":"total_terpakai"}).fillna(0)
+    st.dataframe(df_seller, use_container_width=True)
 
-    st.subheader("Ringkasan per Seller")
-    st.dataframe(df_vouchers[["code","seller","initial_value","total_terpakai"]].sort_values(["seller","code"]), use_container_width=True)
+    st.subheader("Tambah / Edit Seller pada Voucher")
+    code_input = st.text_input("Kode Voucher")
+    seller_input = st.text_input("Nama Seller")
+    if st.button("Simpan Seller"):
+        row = find_voucher(code_input.strip().upper())
+        if not row:
+            st.error("Voucher tidak ditemukan")
+        else:
+            update_voucher_detail(code_input.strip().upper(), row[4], row[5], row[6], seller_input.strip())
+            st.success(f"Seller '{seller_input.strip()}' berhasil disimpan untuk voucher {code_input.strip().upper()}")
+            st.experimental_rerun()
 
 # --------------------
 # Router
@@ -320,24 +335,12 @@ def page_seller():
 if page == "Cari & Redeem":
     page_redeem()
 elif page == "Daftar Voucher":
-    if st.session_state.admin_logged_in:
-        page_daftar_voucher()
-    else:
-        st.error("Hanya admin yang dapat mengakses halaman ini.")
-elif page == "Seller":
-    if st.session_state.admin_logged_in:
-        page_seller()
-    else:
-        st.error("Hanya admin yang dapat mengakses halaman Seller.")
+    page_daftar_voucher()
 elif page == "Histori Transaksi":
-    if st.session_state.admin_logged_in:
-        page_histori()
-    else:
-        st.error("Hanya admin yang dapat mengakses histori transaksi.")
+    page_histori()
 elif page == "Laporan Global":
-    if st.session_state.admin_logged_in:
-        page_laporan_global()
-    else:
-        st.error("Hanya admin yang dapat mengakses laporan.")
+    page_laporan_global()
+elif page == "Seller":
+    page_seller()
 else:
     st.info("Halaman tidak ditemukan.")
