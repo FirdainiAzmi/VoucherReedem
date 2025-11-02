@@ -554,7 +554,7 @@ elif page == "Seller":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses halaman Seller.")
     else:
-        page_seller()
+        Seller()
 
 elif page == "Laporan Global":
     if not st.session_state.admin_logged_in:
@@ -563,6 +563,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
