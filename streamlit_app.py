@@ -494,7 +494,7 @@ def page_laporan_global():
 # --------------------
 # Page: Seller (admin-only)
 # --------------------
-def page_seller():
+def Seller():
     st.header("Halaman Seller (Admin)")
 
     # Ambil semua voucher
@@ -562,5 +562,6 @@ elif page == "Seller":
         st.error("Hanya admin yang dapat mengakses halaman Seller.")
     else:
         page_seller()
+
 
 
