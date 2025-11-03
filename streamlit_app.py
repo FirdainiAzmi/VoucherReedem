@@ -339,8 +339,15 @@ def page_daftar_voucher():
         st.session_state.vouchers_per_page = 10
     if "search" not in st.session_state:
         st.session_state.search = ""
+    if "reset_search" not in st.session_state:
+        st.session_state.reset_search = False
 
-    # Tampilkan pesan sukses (jika ada)
+    # ===== Reset search jika flag di-set =====
+    if st.session_state.reset_search:
+        st.session_state.search = ""
+        st.session_state.reset_search = False
+
+    # Tampilkan pesan sukses jika ada
     if "voucher_update_success" in st.session_state:
         st.success(st.session_state["voucher_update_success"])
         del st.session_state["voucher_update_success"]
@@ -406,8 +413,8 @@ def page_daftar_voucher():
                         # Tampilkan pesan sukses
                         st.session_state["voucher_update_success"] = f"Voucher {v['code']} berhasil diaktifkan ✅"
                         
-                        # Reset input pencarian & halaman
-                        st.session_state.search = ""
+                        # Reset input pencarian & halaman pakai flag
+                        st.session_state.reset_search = True
                         st.session_state.vouchers_page_idx = 0
                         
                         # Rerun untuk kembali ke halaman awal
@@ -420,6 +427,7 @@ def page_daftar_voucher():
         file_name="vouchers_page.csv",
         mime="text/csv"
     )
+
 # --------------------
 # Page: Histori Transaksi (admin) dengan search voucher
 # --------------------
@@ -663,6 +671,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
