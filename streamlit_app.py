@@ -94,7 +94,7 @@ def atomic_redeem(code, amount, branch, items):
         return False, f"DB error saat redeem: {e}", None
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
-    q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status FROM vouchers"
+    q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller FROM vouchers"
     clauses = []
     params = {}
     if filter_status == "aktif":
@@ -619,6 +619,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
