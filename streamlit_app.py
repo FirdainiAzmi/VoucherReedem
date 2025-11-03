@@ -605,8 +605,7 @@ def page_laporan_global():
 # Page: Seller (admin-only)
 # --------------------
 def page_seller():
-    st.title("🎫 Voucher Admin")
-    st.subheader("Seller • Aktivasi & Detail Voucher")
+    st.subheader("Seller")
 
     # Inisialisasi state
     if "found_voucher" not in st.session_state:
@@ -728,6 +727,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
