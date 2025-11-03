@@ -517,7 +517,6 @@ def page_laporan_global():
         st.write(f"- Voucher inactive: {inactive_count}")
         st.write(f"- Total saldo awal: Rp {int(total_saldo_awal):,}")
         st.write(f"- Total saldo tersisa: Rp {int(total_saldo_tersisa):,}")
-        st.write(f"- Rata-rata saldo tersisa: Rp {int(avg_saldo):,}")
 
         st.markdown("---")
         st.dataframe(df_vouchers, use_container_width=True)
@@ -732,6 +731,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
