@@ -391,13 +391,14 @@ def page_daftar_voucher():
                         status_in
                     )
                     if ok:
+                        # Tampilkan pesan sukses
                         st.success(f"Voucher {v['code']} berhasil diaktifkan ✅")
-                        st.balloons()  # 🎉 efek animasi berhasil
                     
-                        # Reset input & kembali otomatis ke halaman awal
+                        # Reset input & kembali ke halaman awal
                         st.session_state.vouchers_page_idx = 0
                         st.session_state.search = ""
-                        time.sleep(1)  # kasih jeda supaya animasi tampil dulu
+                        
+                        # Rerun supaya UI kembali ke halaman awal
                         st.rerun()
 
 
@@ -652,6 +653,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
