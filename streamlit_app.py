@@ -193,8 +193,8 @@ with st.sidebar:
             admin_logout()
             st.rerun()
         st.markdown("---")
-        page_choice = st.radio("Pilih halaman", ("Daftar Voucher", "Laporan_Global", "Histori Transaksi", "Seller"),
-                               index=("Daftar Voucher","Laporan_Global","Histori Transaksi", "Seller").index(st.session_state.get("page") if st.session_state.get("page") in ("Daftar Voucher","Laporan Global","Histori Transaksi", "Seller") else "Daftar Voucher"))
+        page_choice = st.radio("Pilih halaman", ("Daftar Voucher", "Laporan Global", "Histori Transaksi", "Seller"),
+                               index=("Daftar Voucher","Laporan Global","Histori Transaksi", "Seller").index(st.session_state.get("page") if st.session_state.get("page") in ("Daftar Voucher","Laporan Global","Histori Transaksi", "Seller") else "Daftar Voucher"))
         st.session_state.page = page_choice
     else:
         st.markdown("### Admin Login (opsional)")
@@ -732,6 +732,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
