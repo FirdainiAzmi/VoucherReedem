@@ -591,22 +591,7 @@ def page_seller():
     except Exception as e:
         st.error("Gagal memuat data voucher ❌")
         st.code(str(e))
-Ringkasan kenapa ini aman:
 
-Reset search_input hanya dilakukan sebelum widget st.text_input dibuat → tidak ada konflik perubahan nilai setelah widget dibuat.
-
-Menggunakan flag clear_search memastikan kita tetap bisa meminta rerun() dan otomatis mengosongkan input pada run berikutnya.
-
-Coba ganti fungsi kamu dengan kode di atas — seharusnya error cannot be modified after the widget with key ... is instantiated hilang. Kalau masih muncul, kirimkan error traceback atau sepotong log; saya bantu perbaiki langsung.
-
-
-
-
-
-
-
-You said:
-knp pas input hanya table yang terisi db nya ga teripdate, buat konsepnya sama seperti daftar voucher yang input nama no hp table dan db jg terupdate tolong def page_seller():
     st.title("🎫 Voucher Admin")
     st.subheader("Seller • Aktivasi & Detail Voucher")
 
@@ -732,6 +717,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
