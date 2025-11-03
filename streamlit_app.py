@@ -584,30 +584,30 @@ def page_laporan_global():
 
     # ===== TAB Seller =====
     with tab_seller:
-    st.subheader("📊 Ringkasan Transaksi per Seller")
-
-    # Pastikan df_tx punya kolom seller
-    if "seller" not in df_tx.columns:
-        if "code" in df_tx.columns and "code" in df_vouchers.columns:
-            df_tx["code"] = df_tx["code"].astype(str)
-            df_vouchers["code"] = df_vouchers["code"].astype(str)
-            df_tx = df_tx.merge(df_vouchers[["code","seller"]], on="code", how="left")
+        st.subheader("📊 Ringkasan Transaksi per Seller")
     
-    if "seller" in df_tx.columns and not df_tx["seller"].isnull().all():
-        # Hitung jumlah transaksi per seller
-        seller_count = df_tx.groupby("seller").size().reset_index(name="#Terjual")
-
-        st.table(seller_count.rename(columns={"seller":"Seller"}))
-
-        # Bar chart berdasarkan jumlah transaksi (#Terjual)
-        chart_seller = alt.Chart(seller_count).mark_bar().encode(
-            x=alt.X("seller:N", title="Seller"),
-            y=alt.Y("#Terjual:Q", title="Jumlah Terjual"),
-            tooltip=["seller","#Terjual"]
-        )
-        st.altair_chart(chart_seller, use_container_width=True)
-    else:
-        st.warning("Kolom 'seller' tidak tersedia atau semua kosong pada dataset transaksi.")
+        # Pastikan df_tx punya kolom seller
+        if "seller" not in df_tx.columns:
+            if "code" in df_tx.columns and "code" in df_vouchers.columns:
+                df_tx["code"] = df_tx["code"].astype(str)
+                df_vouchers["code"] = df_vouchers["code"].astype(str)
+                df_tx = df_tx.merge(df_vouchers[["code","seller"]], on="code", how="left")
+        
+        if "seller" in df_tx.columns and not df_tx["seller"].isnull().all():
+            # Hitung jumlah transaksi per seller
+            seller_count = df_tx.groupby("seller").size().reset_index(name="#Terjual")
+    
+            st.table(seller_count.rename(columns={"seller":"Seller"}))
+    
+            # Bar chart berdasarkan jumlah transaksi (#Terjual)
+            chart_seller = alt.Chart(seller_count).mark_bar().encode(
+                x=alt.X("seller:N", title="Seller"),
+                y=alt.Y("#Terjual:Q", title="Jumlah Terjual"),
+                tooltip=["seller","#Terjual"]
+            )
+            st.altair_chart(chart_seller, use_container_width=True)
+        else:
+            st.warning("Kolom 'seller' tidak tersedia atau semua kosong pada dataset transaksi.")
 
 
     # Download CSV
@@ -747,6 +747,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
