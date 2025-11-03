@@ -331,18 +331,23 @@ def page_redeem():
                 if ok:
                     st.success("🎉 TRANSAKSI BERHASIL 🎉")
                     st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
+                    st.session_state["last_redeem_success"] = True
+                else:
+                    st.error(msg)
+                    st.session_state.redeem_step = 2
+                    st.rerun()
+
+                if st.session_state.get("last_redeem_success"):
                     if st.button("OK"):
-                        st.session_state.redeem_step = 10
+                        # reset semua state ke step awal
+                        st.session_state.redeem_step = 1
                         st.session_state.entered_code = ""
                         st.session_state.voucher_row = None
                         st.session_state.order_items = {}
                         st.session_state.checkout_total = 0
                         st.session_state.selected_branch = None
+                        st.session_state["last_redeem_success"] = False
                         st.rerun()
-                else:
-                    st.error(msg)
-                    st.session_state.redeem_step = 2
-                    st.rerun()
         with cn:
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
@@ -725,6 +730,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
