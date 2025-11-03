@@ -380,7 +380,7 @@ def page_daftar_voucher():
     with col1:
         search = st.text_input("Cari kode (partial)", key="search")
     with col2:
-        filter_status = st.selectbox("Filter status", ["semua", "aktif", "habis", "ada seller"])
+        filter_status = st.selectbox("Filter status", ["semua", "aktif", "habis", "seller"])
     with col3:
         per_page = st.number_input(
             "Per halaman", min_value=5, max_value=200,
@@ -743,6 +743,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
