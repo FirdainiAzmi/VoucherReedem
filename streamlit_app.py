@@ -499,10 +499,21 @@ def page_seller():
     st.title("🎫 Voucher Admin")
     st.subheader("Seller • Aktivasi & Detail Voucher")
 
-    # State voucher
+    # Inisialisasi state
     if "found_voucher" not in st.session_state:
-        st.session_state.found_voucher = None
+        st.session_state["found_voucher"] = None
+    if "search_input" not in st.session_state:
+        st.session_state["search_input"] = ""
+    if "clear_search" not in st.session_state:
+        st.session_state["clear_search"] = False
 
+    # Jika ada flag clear_search, reset nilai search_input
+    if st.session_state.get("clear_search"):
+        st.session_state["search_input"] = ""
+        st.session_state["clear_search"] = False
+        # jangan rerun lagi di sini — kita hanya perbaiki state sebelum widget dibuat
+
+    # Buat widget text input (menggunakan key yang sama)
     search_code = st.text_input("Masukkan Kode Voucher", key="search_input")
 
     if st.button("Cari"):
@@ -516,19 +527,19 @@ def page_seller():
                     """), {"code": search_code}).fetchone()
 
                 if result:
-                    st.session_state.found_voucher = result
+                    st.session_state["found_voucher"] = result
                 else:
-                    st.session_state.found_voucher = None
+                    st.session_state["found_voucher"] = None
                     st.error("Voucher tidak ditemukan ❌")
 
             except Exception as e:
-                st.session_state.found_voucher = None
+                st.session_state["found_voucher"] = None
                 st.error("Terjadi kesalahan saat mencari voucher ⚠️")
                 st.code(str(e))
 
-    # ✅ tampilkan detail voucher jika sudah ditemukan
-    if st.session_state.found_voucher:
-        code, initial_value, balance, seller = st.session_state.found_voucher
+    # Tampilkan detail voucher jika ada
+    if st.session_state.get("found_voucher"):
+        code, initial_value, balance, seller = st.session_state["found_voucher"]
 
         st.success("Voucher ditemukan ✅")
         st.write("### Detail Voucher")
@@ -539,6 +550,7 @@ def page_seller():
             "Seller": [seller if seller else "-"]
         })
 
+        # gunakan key berbeda untuk input seller
         seller_input = st.text_input("Nama Seller", value=seller if seller else "", key="seller_input")
 
         if st.button("Simpan Seller"):
@@ -552,9 +564,10 @@ def page_seller():
 
                     st.success("Seller berhasil disimpan ✅")
 
-                    # ✅ Reset UI kembali ke awal setelah simpan
-                    st.session_state.found_voucher = None
-                    st.session_state.search_input = ""
+                    # Set flag untuk mereset search_input pada rerun berikutnya
+                    st.session_state["found_voucher"] = None
+                    st.session_state["clear_search"] = True
+
                     st.rerun()
 
                 except Exception as e:
@@ -562,6 +575,23 @@ def page_seller():
                     st.code(str(e))
             else:
                 st.warning("Nama Seller tidak boleh kosong!")
+
+    # Tampilkan daftar voucher seller terisi
+    st.markdown("---")
+    st.subheader("📋 Daftar Voucher (Seller Terisi)")
+    try:
+        with engine.connect() as conn:
+            df_seller = pd.read_sql(text("""
+                SELECT code, initial_value, balance, seller
+                FROM vouchers
+                WHERE seller IS NOT NULL AND seller != ''
+                ORDER BY code DESC
+            """), conn)
+        st.dataframe(df_seller, use_container_width=True)
+    except Exception as e:
+        st.error("Gagal memuat data voucher ❌")
+        st.code(str(e))
+
 
     # ================== LIST VOUCHER ==================
     st.markdown("---")
@@ -610,6 +640,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
