@@ -499,45 +499,33 @@ def page_seller():
     st.title("🎫 Voucher Admin")
     st.subheader("Seller • Aktivasi & Detail Voucher")
 
-    # Inisialisasi state
-    if "found_voucher" not in st.session_state:
-        st.session_state["found_voucher"] = None
-    if "search_input" not in st.session_state:
-        st.session_state["search_input"] = ""
-    if "clear_search" not in st.session_state:
-        st.session_state["clear_search"] = False
+    # ✅ Inisialisasi session state dengan aman
+    st.session_state.setdefault("found_voucher", None)
+    st.session_state.setdefault("search_input", "")
 
-    # Jika ada flag clear_search, reset nilai search_input
-    if st.session_state.get("clear_search"):
-        st.session_state["search_input"] = ""
-        st.session_state["clear_search"] = False
-        # jangan rerun lagi di sini — kita hanya perbaiki state sebelum widget dibuat
-
-    # Buat widget text input (menggunakan key yang sama)
+    # ✅ Input kode voucher
     search_code = st.text_input("Masukkan Kode Voucher", key="search_input")
 
+    # ✅ Tombol cari voucher
     if st.button("Cari"):
-        if search_code:
-            try:
-                with engine.connect() as conn:
-                    result = conn.execute(text("""
-                        SELECT code, initial_value, balance, seller
-                        FROM vouchers
-                        WHERE code = :code
-                    """), {"code": search_code}).fetchone()
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT code, initial_value, balance, seller
+                    FROM vouchers
+                    WHERE code = :code
+                """), {"code": search_code}).fetchone()
 
-                if result:
-                    st.session_state["found_voucher"] = result
-                else:
-                    st.session_state["found_voucher"] = None
-                    st.error("Voucher tidak ditemukan ❌")
-
-            except Exception as e:
+            if result:
+                st.session_state["found_voucher"] = result
+            else:
                 st.session_state["found_voucher"] = None
-                st.error("Terjadi kesalahan saat mencari voucher ⚠️")
-                st.code(str(e))
+                st.error("Voucher tidak ditemukan ❌")
+        except Exception as e:
+            st.error("Kesalahan saat mencari voucher ⚠️")
+            st.code(str(e))
 
-    # Tampilkan detail voucher jika ada
+    # ✅ Tampilkan detail jika ditemukan
     if st.session_state.get("found_voucher"):
         code, initial_value, balance, seller = st.session_state["found_voucher"]
 
@@ -550,24 +538,25 @@ def page_seller():
             "Seller": [seller if seller else "-"]
         })
 
-        # gunakan key berbeda untuk input seller
         seller_input = st.text_input("Nama Seller", value=seller if seller else "", key="seller_input")
 
+        # ✅ Tombol simpan seller langsung update DB
         if st.button("Simpan Seller"):
-            if seller_input:
+            if seller_input.strip():
                 try:
-                    with engine.begin() as conn2:
+                    with engine.begin() as conn2:  # ✅ Auto commit ✅
                         conn2.execute(text("""
-                            UPDATE vouchers SET seller = :seller
+                            UPDATE vouchers
+                            SET seller = :seller
                             WHERE code = :code
                         """), {"seller": seller_input, "code": code})
 
                     st.success("Seller berhasil disimpan ✅")
-
-                    # Set flag untuk mereset search_input pada rerun berikutnya
+                    
+                    # ✅ Reset state + refresh page
                     st.session_state["found_voucher"] = None
-                    st.session_state["clear_search"] = True
-
+                    st.session_state["search_input"] = ""
+                    st.session_state["seller_input"] = ""
                     st.rerun()
 
                 except Exception as e:
@@ -576,7 +565,6 @@ def page_seller():
             else:
                 st.warning("Nama Seller tidak boleh kosong!")
 
-    # Tampilkan daftar voucher seller terisi
     st.markdown("---")
     st.subheader("📋 Daftar Voucher (Seller Terisi)")
     try:
@@ -591,6 +579,7 @@ def page_seller():
     except Exception as e:
         st.error("Gagal memuat data voucher ❌")
         st.code(str(e))
+
 
 # --------------------
 # Router
@@ -620,6 +609,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
