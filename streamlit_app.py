@@ -340,7 +340,7 @@ def page_redeem():
                 if st.session_state.get("last_redeem_success"):
                     if st.button("OK"):
                         # reset semua state ke step awal
-                        st.session_state.redeem_step = 1
+                        st.session_state.redeem_step = 4
                         st.session_state.entered_code = ""
                         st.session_state.voucher_row = None
                         st.session_state.order_items = {}
@@ -730,6 +730,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
