@@ -466,81 +466,101 @@ def page_histori():
 def page_laporan_global():
     st.header("Laporan Global (Admin)")
 
-    # Filter periode tanggal
-    st.subheader("Filter Periode Transaksi")
-    col1, col2 = st.columns(2)
-    with col1:
-        start_date = st.date_input("Mulai dari", value=None)
-    with col2:
-        end_date = st.date_input("Sampai", value=None)
+    # Tabs untuk membagi laporan
+    tab_voucher, tab_transaksi, tab_seller = st.tabs(["Voucher", "Transaksi", "Seller"])
 
+    # Ambil semua data
     df_vouchers = list_vouchers(limit=5000)
     df_tx = list_transactions(limit=100000)
 
-    # Filter berdasarkan tanggal jika dipilih
-    if start_date:
-        df_tx = df_tx[df_tx["used_at"].dt.date >= start_date]
-    if end_date:
-        df_tx = df_tx[df_tx["used_at"].dt.date <= end_date]
+    # ===== TAB Voucher =====
+    with tab_voucher:
+        st.subheader("📊 Ringkasan Voucher")
+        total_voucher = len(df_vouchers)
+        total_saldo_awal = df_vouchers["initial_value"].sum()
+        total_saldo_tersisa = df_vouchers["balance"].sum()
+        aktif_count = df_vouchers[df_vouchers["status"]=="active"].shape[0]
+        inactive_count = df_vouchers[df_vouchers["status"]!="active"].shape[0]
+        avg_saldo = df_vouchers["balance"].mean() if total_voucher>0 else 0
 
-    st.subheader("📊 Ringkasan Voucher")
-    total_voucher = len(df_vouchers)
-    total_saldo_awal = df_vouchers["initial_value"].sum()
-    total_saldo_tersisa = df_vouchers["balance"].sum()
-    aktif_count = df_vouchers[df_vouchers["status"]=="active"].shape[0]
-    inactive_count = df_vouchers[df_vouchers["status"]!="active"].shape[0]
-    avg_saldo = df_vouchers["balance"].mean() if total_voucher>0 else 0
+        st.write(f"- Total voucher: {total_voucher}")
+        st.write(f"- Voucher aktif: {aktif_count}")
+        st.write(f"- Voucher inactive: {inactive_count}")
+        st.write(f"- Total saldo awal: Rp {int(total_saldo_awal):,}")
+        st.write(f"- Total saldo tersisa: Rp {int(total_saldo_tersisa):,}")
+        st.write(f"- Rata-rata saldo tersisa: Rp {int(avg_saldo):,}")
 
-    st.write(f"- Total voucher: {total_voucher}")
-    st.write(f"- Voucher aktif: {aktif_count}")
-    st.write(f"- Voucher inactive: {inactive_count}")
+        st.markdown("---")
+        st.dataframe(df_vouchers, use_container_width=True)
 
-    st.subheader("📊 Ringkasan Transaksi")
-    total_tx = len(df_tx)
-    total_tx_nominal = df_tx["used_amount"].sum()
-    avg_tx = df_tx["used_amount"].mean() if total_tx>0 else 0
+    # ===== TAB Transaksi =====
+    with tab_transaksi:
+        st.subheader("📊 Ringkasan Transaksi")
+        total_tx = len(df_tx)
+        total_tx_nominal = df_tx["used_amount"].sum()
+        avg_tx = df_tx["used_amount"].mean() if total_tx>0 else 0
 
-    st.write(f"- Total transaksi: {total_tx}")
-    st.write(f"- Total nominal digunakan: Rp {int(total_tx_nominal):,}")
-    st.write(f"- Rata-rata nominal per transaksi: Rp {int(avg_tx):,}")
+        st.write(f"- Total transaksi: {total_tx}")
+        st.write(f"- Total nominal digunakan: Rp {int(total_tx_nominal):,}")
+        st.write(f"- Rata-rata nominal per transaksi: Rp {int(avg_tx):,}")
 
-    if not df_tx.empty:
-        # Transaksi per cabang
-        branch_agg = df_tx.groupby("branch")["used_amount"].agg(["count","sum"]).reset_index().fillna("Unknown")
-        st.subheader("📈 Total nominal & transaksi per cabang")
-        st.table(branch_agg.rename(columns={"branch":"Cabang","count":"#Transaksi","sum":"Total (Rp)"}))
-        chart_branch = alt.Chart(branch_agg).mark_bar().encode(
-            x=alt.X("branch:N", title="Cabang"),
-            y=alt.Y("sum:Q", title="Total Nominal Terpakai"),
-            tooltip=["branch","count","sum"]
+        if not df_tx.empty:
+            # Chart transaksi per cabang
+            branch_agg = df_tx.groupby("branch")["used_amount"].agg(["count","sum"]).reset_index()
+            st.subheader("📈 Total nominal & transaksi per cabang")
+            st.table(branch_agg.rename(columns={"branch":"Cabang","count":"#Transaksi","sum":"Total (Rp)"}))
+            
+            chart_branch = alt.Chart(branch_agg).mark_bar().encode(
+                x=alt.X("branch:N", title="Cabang"),
+                y=alt.Y("sum:Q", title="Total Nominal Terpakai"),
+                tooltip=["branch","count","sum"]
+            )
+            st.altair_chart(chart_branch, use_container_width=True)
+
+            # Top 5 voucher
+            top_v = df_tx.groupby("code")["used_amount"].sum().reset_index().sort_values("used_amount", ascending=False).head(5)
+            st.subheader("🏆 Top 5 voucher berdasarkan total pemakaian")
+            st.table(top_v.rename(columns={"code":"Kode","used_amount":"Total (Rp)"}))
+            
+            chart_v = alt.Chart(top_v).mark_bar().encode(
+                x=alt.X("code:N", title="Kode Voucher"),
+                y=alt.Y("used_amount:Q", title="Total Terpakai"),
+                tooltip=["code","used_amount"]
+            )
+            st.altair_chart(chart_v, use_container_width=True)
+
+            # Time series harian
+            df_tx["date"] = pd.to_datetime(df_tx["used_at"]).dt.date
+            daily = df_tx.groupby("date")["used_amount"].sum().reset_index()
+            st.subheader("📅 Time series harian pemakaian")
+            chart_daily = alt.Chart(daily).mark_line(point=True).encode(
+                x=alt.X("date:T", title="Tanggal"),
+                y=alt.Y("used_amount:Q", title="Total Nominal"),
+                tooltip=["date","used_amount"]
+            )
+            st.altair_chart(chart_daily, use_container_width=True)
+
+    # ===== TAB Seller =====
+    with tab_seller:
+        st.subheader("📊 Ringkasan Transaksi per Seller")
+        seller_agg = df_tx.groupby("seller")["used_amount"].agg(["count","sum"]).reset_index()
+        st.table(seller_agg.rename(columns={"seller":"Seller","count":"#Transaksi","sum":"Total (Rp)"}))
+
+        chart_seller = alt.Chart(seller_agg).mark_bar().encode(
+            x=alt.X("seller:N", title="Seller"),
+            y=alt.Y("sum:Q", title="Total Terpakai"),
+            tooltip=["seller","count","sum"]
         )
-        st.altair_chart(chart_branch, use_container_width=True)
+        st.altair_chart(chart_seller, use_container_width=True)
 
-        # Top 5 voucher
-        top_v = df_tx.groupby("code")["used_amount"].sum().reset_index().sort_values("used_amount", ascending=False).head(5)
-        st.subheader("🏆 Top 5 voucher berdasarkan total pemakaian")
-        st.table(top_v.rename(columns={"code":"Kode","used_amount":"Total (Rp)"}))
-        chart_v = alt.Chart(top_v).mark_bar().encode(
-            x=alt.X("code:N", title="Kode Voucher"),
-            y=alt.Y("used_amount:Q", title="Total Terpakai"),
-            tooltip=["code","used_amount"]
-        )
-        st.altair_chart(chart_v, use_container_width=True)
-
-        # Time series harian
-        df_tx["date"] = pd.to_datetime(df_tx["used_at"]).dt.date
-        daily = df_tx.groupby("date")["used_amount"].sum().reset_index()
-        st.subheader("📅 Time series harian pemakaian")
-        chart_daily = alt.Chart(daily).mark_line(point=True).encode(
-            x=alt.X("date:T", title="Tanggal"),
-            y=alt.Y("used_amount:Q", title="Total Nominal"),
-            tooltip=["date","used_amount"]
-        )
-        st.altair_chart(chart_daily, use_container_width=True)
-
-
+    # Download CSV (opsional, bisa per tab)
     st.markdown("---")
-    st.download_button("Download CSV Semua Transaksi (filtered)", data=df_to_csv_bytes(df_tx), file_name="transactions_global_filtered.csv", mime="text/csv")
+    st.download_button(
+        "Download CSV Semua Transaksi (filtered)",
+        data=df_to_csv_bytes(df_tx),
+        file_name="transactions_global_filtered.csv",
+        mime="text/csv"
+    )
 
 # --------------------
 # Page: Seller (admin-only)
@@ -671,6 +691,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
