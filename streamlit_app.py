@@ -463,15 +463,23 @@ def page_histori():
 # --------------------
 # Page: Laporan Global (admin)
 # --------------------
+import streamlit as st
+import pandas as pd
+import altair as alt
+
 def page_laporan_global():
     st.header("Laporan Global (Admin)")
 
     # Tabs untuk membagi laporan
     tab_voucher, tab_transaksi, tab_seller = st.tabs(["Voucher", "Transaksi", "Seller"])
 
-    # Ambil semua data
+    # Ambil data
     df_vouchers = list_vouchers(limit=5000)
     df_tx = list_transactions(limit=100000)
+
+    # Pastikan kolom tanggal sebagai datetime
+    if "used_at" in df_tx.columns:
+        df_tx["used_at"] = pd.to_datetime(df_tx["used_at"])
 
     # ===== TAB Voucher =====
     with tab_voucher:
@@ -497,15 +505,15 @@ def page_laporan_global():
     with tab_transaksi:
         st.subheader("📊 Ringkasan Transaksi")
         total_tx = len(df_tx)
-        total_tx_nominal = df_tx["used_amount"].sum()
-        avg_tx = df_tx["used_amount"].mean() if total_tx>0 else 0
+        total_tx_nominal = df_tx["used_amount"].sum() if "used_amount" in df_tx.columns else 0
+        avg_tx = df_tx["used_amount"].mean() if total_tx>0 and "used_amount" in df_tx.columns else 0
 
         st.write(f"- Total transaksi: {total_tx}")
         st.write(f"- Total nominal digunakan: Rp {int(total_tx_nominal):,}")
         st.write(f"- Rata-rata nominal per transaksi: Rp {int(avg_tx):,}")
 
-        if not df_tx.empty:
-            # Chart transaksi per cabang
+        if not df_tx.empty and "used_amount" in df_tx.columns:
+            # Transaksi per cabang
             branch_agg = df_tx.groupby("branch")["used_amount"].agg(["count","sum"]).reset_index()
             st.subheader("📈 Total nominal & transaksi per cabang")
             st.table(branch_agg.rename(columns={"branch":"Cabang","count":"#Transaksi","sum":"Total (Rp)"}))
@@ -543,17 +551,26 @@ def page_laporan_global():
     # ===== TAB Seller =====
     with tab_seller:
         st.subheader("📊 Ringkasan Transaksi per Seller")
-        seller_agg = df_tx.groupby("seller")["used_amount"].agg(["count","sum"]).reset_index()
-        st.table(seller_agg.rename(columns={"seller":"Seller","count":"#Transaksi","sum":"Total (Rp)"}))
 
-        chart_seller = alt.Chart(seller_agg).mark_bar().encode(
-            x=alt.X("seller:N", title="Seller"),
-            y=alt.Y("sum:Q", title="Total Terpakai"),
-            tooltip=["seller","count","sum"]
-        )
-        st.altair_chart(chart_seller, use_container_width=True)
+        # Pastikan df_tx punya kolom seller, jika tidak gabungkan dari voucher
+        if "seller" not in df_tx.columns:
+            if "code" in df_tx.columns and "code" in df_vouchers.columns:
+                df_tx = df_tx.merge(df_vouchers[["code","seller"]], on="code", how="left")
+        
+        if "seller" in df_tx.columns:
+            seller_agg = df_tx.groupby("seller")["used_amount"].agg(["count","sum"]).reset_index()
+            st.table(seller_agg.rename(columns={"seller":"Seller","count":"#Transaksi","sum":"Total (Rp)"}))
 
-    # Download CSV (opsional, bisa per tab)
+            chart_seller = alt.Chart(seller_agg).mark_bar().encode(
+                x=alt.X("seller:N", title="Seller"),
+                y=alt.Y("sum:Q", title="Total Terpakai"),
+                tooltip=["seller","count","sum"]
+            )
+            st.altair_chart(chart_seller, use_container_width=True)
+        else:
+            st.warning("Kolom 'seller' tidak tersedia pada dataset transaksi.")
+
+    # Download CSV
     st.markdown("---")
     st.download_button(
         "Download CSV Semua Transaksi (filtered)",
@@ -561,6 +578,7 @@ def page_laporan_global():
         file_name="transactions_global_filtered.csv",
         mime="text/csv"
     )
+
 
 # --------------------
 # Page: Seller (admin-only)
@@ -691,6 +709,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
