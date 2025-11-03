@@ -535,28 +535,30 @@ def page_laporan_global():
 
         if not df_tx.empty and "used_amount" in df_tx.columns:
             # Transaksi per cabang
-            branch_agg = df_tx.groupby("branch")["used_amount"].agg(["count","sum"]).reset_index()
-            st.subheader("📈 Total nominal & transaksi per cabang")
-            st.table(branch_agg.rename(columns={"branch":"Cabang","count":"#Transaksi","sum":"Total (Rp)"}))
-            
-            chart_branch = alt.Chart(branch_agg).mark_bar().encode(
-                x=alt.X("branch:N", title="Cabang"),
-                y=alt.Y("sum:Q", title="Total Nominal Terpakai"),
-                tooltip=["branch","count","sum"]
-            )
-            st.altair_chart(chart_branch, use_container_width=True)
+            if "branch" in df_tx.columns:
+                branch_agg = df_tx.groupby("branch")["used_amount"].agg(["count","sum"]).reset_index()
+                st.subheader("📈 Total nominal & transaksi per cabang")
+                st.table(branch_agg.rename(columns={"branch":"Cabang","count":"#Transaksi","sum":"Total (Rp)"}))
+                
+                chart_branch = alt.Chart(branch_agg).mark_bar().encode(
+                    x=alt.X("branch:N", title="Cabang"),
+                    y=alt.Y("sum:Q", title="Total Nominal Terpakai"),
+                    tooltip=["branch","count","sum"]
+                )
+                st.altair_chart(chart_branch, use_container_width=True)
 
             # Top 5 voucher
-            top_v = df_tx.groupby("code")["used_amount"].sum().reset_index().sort_values("used_amount", ascending=False).head(5)
-            st.subheader("🏆 Top 5 voucher berdasarkan total pemakaian")
-            st.table(top_v.rename(columns={"code":"Kode","used_amount":"Total (Rp)"}))
-            
-            chart_v = alt.Chart(top_v).mark_bar().encode(
-                x=alt.X("code:N", title="Kode Voucher"),
-                y=alt.Y("used_amount:Q", title="Total Terpakai"),
-                tooltip=["code","used_amount"]
-            )
-            st.altair_chart(chart_v, use_container_width=True)
+            if "code" in df_tx.columns:
+                top_v = df_tx.groupby("code")["used_amount"].sum().reset_index().sort_values("used_amount", ascending=False).head(5)
+                st.subheader("🏆 Top 5 voucher berdasarkan total pemakaian")
+                st.table(top_v.rename(columns={"code":"Kode","used_amount":"Total (Rp)"}))
+                
+                chart_v = alt.Chart(top_v).mark_bar().encode(
+                    x=alt.X("code:N", title="Kode Voucher"),
+                    y=alt.Y("used_amount:Q", title="Total Terpakai"),
+                    tooltip=["code","used_amount"]
+                )
+                st.altair_chart(chart_v, use_container_width=True)
 
             # Time series harian
             df_tx["date"] = pd.to_datetime(df_tx["used_at"]).dt.date
@@ -573,12 +575,14 @@ def page_laporan_global():
     with tab_seller:
         st.subheader("📊 Ringkasan Transaksi per Seller")
 
-        # Pastikan df_tx punya kolom seller, jika tidak gabungkan dari voucher
+        # Pastikan df_tx punya kolom seller
         if "seller" not in df_tx.columns:
             if "code" in df_tx.columns and "code" in df_vouchers.columns:
+                df_tx["code"] = df_tx["code"].astype(str)
+                df_vouchers["code"] = df_vouchers["code"].astype(str)
                 df_tx = df_tx.merge(df_vouchers[["code","seller"]], on="code", how="left")
         
-        if "seller" in df_tx.columns:
+        if "seller" in df_tx.columns and not df_tx["seller"].isnull().all():
             seller_agg = df_tx.groupby("seller")["used_amount"].agg(["count","sum"]).reset_index()
             st.table(seller_agg.rename(columns={"seller":"Seller","count":"#Transaksi","sum":"Total (Rp)"}))
 
@@ -589,7 +593,7 @@ def page_laporan_global():
             )
             st.altair_chart(chart_seller, use_container_width=True)
         else:
-            st.warning("Kolom 'seller' tidak tersedia pada dataset transaksi.")
+            st.warning("Kolom 'seller' tidak tersedia atau semua kosong pada dataset transaksi.")
 
     # Download CSV
     st.markdown("---")
@@ -599,6 +603,7 @@ def page_laporan_global():
         file_name="transactions_global_filtered.csv",
         mime="text/csv"
     )
+
 
 
 # --------------------
@@ -727,6 +732,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
