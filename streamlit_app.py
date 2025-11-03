@@ -532,9 +532,10 @@ def page_seller():
                                         UPDATE vouchers SET seller = :seller
                                         WHERE code = :code
                                     """), {"seller": seller_input, "code": code})
-
+                        
                                 st.success(f"Seller berhasil disimpan ✅ ({seller_input})")
-                                st.rerun()
+                        
+                                st.rerun()  # ⬅ TABLE OTOMATIS REFRESH ✅
                             else:
                                 st.warning("Nama Seller tidak boleh kosong!")
 
@@ -590,6 +591,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
