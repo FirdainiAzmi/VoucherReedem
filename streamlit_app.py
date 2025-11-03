@@ -495,28 +495,92 @@ def page_laporan_global():
 # --------------------
 # Page: Seller (admin-only)
 # --------------------
-if st.button("Simpan Seller"):
-    if seller_input:
-        try:
-            with engine.begin() as conn2:
-                conn2.execute(text("""
-                    UPDATE vouchers SET seller = :seller
-                    WHERE code = :code
-                """), {"seller": seller_input, "code": code})
+def page_seller():
+    st.title("🎫 Voucher Admin")
+    st.subheader("Seller • Aktivasi & Detail Voucher")
 
-            st.success(f"Seller berhasil disimpan ✅ ({seller_input})")
+    # State voucher
+    if "found_voucher" not in st.session_state:
+        st.session_state.found_voucher = None
 
-            # reset state biar balik ke awal
-            st.session_state.voucher = None
-            st.session_state.pop("search_code", None)
+    search_code = st.text_input("Masukkan Kode Voucher", key="search_input")
 
-            st.rerun()
+    if st.button("Cari"):
+        if search_code:
+            try:
+                with engine.connect() as conn:
+                    result = conn.execute(text("""
+                        SELECT code, initial_value, balance, seller
+                        FROM vouchers
+                        WHERE code = :code
+                    """), {"code": search_code}).fetchone()
 
-        except Exception as e:
-            st.error("Gagal menyimpan seller ❌")
-            st.code(str(e))
-    else:
-        st.warning("Nama Seller tidak boleh kosong!")
+                if result:
+                    st.session_state.found_voucher = result
+                else:
+                    st.session_state.found_voucher = None
+                    st.error("Voucher tidak ditemukan ❌")
+
+            except Exception as e:
+                st.session_state.found_voucher = None
+                st.error("Terjadi kesalahan saat mencari voucher ⚠️")
+                st.code(str(e))
+
+    # ✅ tampilkan detail voucher jika sudah ditemukan
+    if st.session_state.found_voucher:
+        code, initial_value, balance, seller = st.session_state.found_voucher
+
+        st.success("Voucher ditemukan ✅")
+        st.write("### Detail Voucher")
+        st.table({
+            "Kode Voucher": [code],
+            "Initial Value": [initial_value],
+            "Balance": [balance],
+            "Seller": [seller if seller else "-"]
+        })
+
+        seller_input = st.text_input("Nama Seller", value=seller if seller else "", key="seller_input")
+
+        if st.button("Simpan Seller"):
+            if seller_input:
+                try:
+                    with engine.begin() as conn2:
+                        conn2.execute(text("""
+                            UPDATE vouchers SET seller = :seller
+                            WHERE code = :code
+                        """), {"seller": seller_input, "code": code})
+
+                    st.success("Seller berhasil disimpan ✅")
+
+                    # ✅ Reset UI kembali ke awal setelah simpan
+                    st.session_state.found_voucher = None
+                    st.session_state.search_input = ""
+                    st.rerun()
+
+                except Exception as e:
+                    st.error("Gagal menyimpan seller ❌")
+                    st.code(str(e))
+            else:
+                st.warning("Nama Seller tidak boleh kosong!")
+
+    # ================== LIST VOUCHER ==================
+    st.markdown("---")
+    st.subheader("📋 Daftar Voucher (Seller Terisi)")
+
+    try:
+        with engine.connect() as conn:
+            df_seller = pd.read_sql(text("""
+                SELECT code, initial_value, balance, seller
+                FROM vouchers
+                WHERE seller IS NOT NULL AND seller != ''
+                ORDER BY code DESC
+            """), conn)
+
+        st.dataframe(df_seller, use_container_width=True)
+
+    except Exception as e:
+        st.error("Gagal memuat data voucher ❌")
+        st.code(str(e))
 
 # --------------------
 # Router
@@ -546,6 +610,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
