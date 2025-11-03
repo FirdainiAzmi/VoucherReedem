@@ -193,8 +193,8 @@ with st.sidebar:
             admin_logout()
             st.rerun()
         st.markdown("---")
-        page_choice = st.radio("Pilih halaman", ("Daftar Voucher", "Laporan Global", "Histori Transaksi", "Seller"),
-                               index=("Daftar Voucher","Laporan Global","Histori Transaksi", "Seller").index(st.session_state.get("page") if st.session_state.get("page") in ("Daftar Voucher","Laporan Global","Histori Transaksi", "Seller") else "Daftar Voucher"))
+        page_choice = st.radio("Pilih halaman", ("Daftar Voucher", "Laporan", "Histori Transaksi", "Seller"),
+                               index=("Daftar Voucher","Laporan","Histori Transaksi", "Seller").index(st.session_state.get("page") if st.session_state.get("page") in ("Daftar Voucher","Laporan Global","Histori Transaksi", "Seller") else "Daftar Voucher"))
         st.session_state.page = page_choice
     else:
         st.markdown("### Admin Login (opsional)")
@@ -220,29 +220,35 @@ if not st.session_state.admin_logged_in:
 # --------------------
 def page_redeem():
     st.header("Cari & Redeem (User)")
+
+    # STEP 1: Input kode voucher
     if st.session_state.redeem_step == 1:
-        st.session_state.entered_code = st.text_input("Masukkan kode voucher", value=st.session_state.entered_code).strip().upper()
-        c1, c2 = st.columns([1,1])
-        with c1:
-            if st.button("Submit Kode"):
-                code = st.session_state.entered_code
-                if not code:
-                    st.error("Kode tidak boleh kosong")
+        st.session_state.entered_code = st.text_input(
+            "Masukkan kode voucher", 
+            value=st.session_state.entered_code
+        ).strip().upper()
+
+        if st.button("Submit Kode"):
+            code = st.session_state.entered_code
+            if not code:
+                st.error("Kode tidak boleh kosong")
+            else:
+                row = find_voucher(code)
+                if not row:
+                    st.error("❌ Voucher tidak ditemukan.")
+                    # Reset state & kembali ke awal otomatis
+                    reset_redeem_state()
+                    st.rerun()
                 else:
-                    row = find_voucher(code)
-                    if not row:
-                        st.error("❌ Voucher tidak ditemukan.")
-                    else:
-                        st.session_state.voucher_row = row
-                        st.session_state.redeem_step = 2
-                        st.rerun()
-        with c2:
-            if st.button("Reset"):
-                reset_redeem_state()
-                st.rerun()
+                    st.session_state.voucher_row = row
+                    st.session_state.redeem_step = 2
+                    st.rerun()
+
+    # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
         code, initial, balance, created_at, nama, no_hp, status = row
+
         st.subheader(f"Voucher: {code}")
         st.write(f"- Nilai awal: Rp {int(initial):,}")
         st.write(f"- Sisa saldo: Rp {int(balance):,}")
@@ -257,10 +263,12 @@ def page_redeem():
                 st.rerun()
             return
 
+        # Pilih cabang
         branch_options = ["Sedati", "Tawangsari"]
         selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
         st.session_state.selected_branch = selected_branch
 
+        # Menu per cabang
         if selected_branch == "Sedati":
             menu_map = {"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000}
         else:
@@ -270,7 +278,10 @@ def page_redeem():
         total = 0
         chosen = {}
         for item, price in menu_map.items():
-            qty = st.number_input(f"{item} (Rp {price:,})", min_value=0, value=0, step=1, key=f"u_{item}_{code}")
+            qty = st.number_input(
+                f"{item} (Rp {price:,})", 
+                min_value=0, value=0, step=1, key=f"u_{item}_{code}"
+            )
             if qty > 0:
                 chosen[item] = int(qty)
                 total += price * int(qty)
@@ -293,9 +304,12 @@ def page_redeem():
             if st.button("Batal / Kembali"):
                 reset_redeem_state()
                 st.rerun()
+
+    # STEP 3: Konfirmasi pembayaran
     elif st.session_state.redeem_step == 3:
         row = st.session_state.voucher_row
         code, initial, balance, created_at, nama, no_hp, status = row
+
         st.header("Konfirmasi Pembayaran")
         st.write(f"- Voucher: {code}")
         st.write(f"- Cabang: {st.session_state.selected_branch}")
@@ -310,7 +324,10 @@ def page_redeem():
         with cy:
             if st.button("Ya, Bayar"):
                 items_str = ", ".join([f"{k} x{v}" for k,v in st.session_state.order_items.items()])
-                ok, msg, newbal = atomic_redeem(code, st.session_state.checkout_total, st.session_state.selected_branch, items_str)
+                ok, msg, newbal = atomic_redeem(
+                    code, st.session_state.checkout_total, 
+                    st.session_state.selected_branch, items_str
+                )
                 if ok:
                     st.success("🎉 TRANSAKSI BERHASIL 🎉")
                     st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
@@ -703,6 +720,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
