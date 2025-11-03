@@ -496,63 +496,76 @@ def page_laporan_global():
 # Page: Seller (admin-only)
 # --------------------
 def page_seller():
-    st.header("📦 Manajemen Seller (Admin)")
+    st.title("Seller • Aktivasi & Detail Voucher")
 
-    # Mode halaman seller: 'list' atau 'ajukan'
-    if "seller_mode" not in st.session_state:
-        st.session_state.seller_mode = "list"
+    # Input kode voucher
+    search_code = st.text_input("Masukkan Kode Voucher")
 
-    # Tombol aksi utama
-    if st.session_state.seller_mode == "list":
-        if st.button("➕ Ajukan Seller Baru"):
-            st.session_state.seller_mode = "ajukan"
-            st.rerun()
+    if st.button("Cari Voucher"):
+        if search_code.strip() == "":
+            st.warning("Kode voucher belum diisi!")
+            return
 
-    # ---------------- Ajukan Seller Baru ----------------
-    if st.session_state.seller_mode == "ajukan":
-        st.subheader("📝 Input Data Seller Baru")
+        conn = get_connection()
+        cur = conn.cursor()
 
-        nama_seller = st.text_input("Nama Seller")
-        kode_input = st.text_area(
-            "Masukkan daftar kode voucher yang dibawa (pisahkan dengan koma atau baris baru)",
-            placeholder="Contoh:\nABC001\nABC002\nABC003"
-        )
+        cur.execute("""
+            SELECT code, initial_value, balance, created_at, status,
+                   COALESCE(edited, ''), COALESCE(seller, '')
+            FROM vouchers WHERE code = %s
+        """, (search_code,))
+        voucher = cur.fetchone()
 
-        colA, colB = st.columns([1,1])
-        with colA:
-            if st.button("✅ Simpan Seller"):
-                if not nama_seller.strip():
-                    st.error("Nama seller wajib diisi")
-                elif not kode_input.strip():
-                    st.error("Minimal 1 kode voucher wajib diisi")
-                else:
-                    # Split kode voucher input
-                    kode_list = {
-                        k.strip().upper()
-                        for k in kode_input.replace(",", "\n").split("\n")
-                        if k.strip()
-                    }
+        if not voucher:
+            st.error("Kode voucher tidak ditemukan!")
+            conn.close()
+            return
 
-                    updated = 0
-                    with engine.begin() as conn:
-                        for code in kode_list:
-                            row = conn.execute(text("SELECT code FROM vouchers WHERE code = :c"), {"c": code}).fetchone()
-                            if row:
-                                conn.execute(text("UPDATE vouchers SET seller = :seller WHERE code = :c"),
-                                             {"seller": nama_seller.strip(), "c": code})
-                                updated += 1
+        # Tampilkan detail voucher
+        st.subheader("Detail Voucher")
 
-                    st.success(f"Seller '{nama_seller}' tersimpan! ✅ {updated} voucher berhasil ditautkan.")
-                    st.session_state.seller_mode = "list"
-                    st.rerun()
-
-        with colB:
-            if st.button("❌ Batal"):
-                st.session_state.seller_mode = "list"
-                st.rerun()
+        df = pd.DataFrame([voucher], columns=[
+            "code", "initial_value", "balance",
+            "created_at", "status", "edited", "seller"
+        ])
+        st.table(df)
 
         st.markdown("---")
-        return
+
+        # Form Update
+        st.subheader("Aktifkan / Edit Voucher")
+
+        new_seller = st.text_input("Nama Seller",
+            value=df["seller"][0] if df["seller"][0] else ""
+        )
+        new_status = st.selectbox("Status Voucher",
+            ["active", "inactive"],
+            index=0 if df["status"][0] == "active" else 1
+        )
+
+        if st.button("Simpan Perubahan"):
+            cur.execute("""
+                UPDATE vouchers
+                SET seller=%s, status=%s, edited=NOW()
+                WHERE code=%s
+            """, (new_seller, new_status, search_code))
+            conn.commit()
+            conn.close()
+
+            st.success("✅ Voucher berhasil diperbarui!")
+            st.experimental_rerun()
+
+        conn.close()
+
+    st.markdown("---")
+
+    # Tombol kembali ke Menu Admin
+    if st.button("⬅️ Kembali ke Menu Admin"):
+        st.session_state.current_page = "admin"
+        st.experimental_rerun()
+
+    st.caption("Halaman ini hanya untuk Admin Seller Voucher ✅")
+
 
     # ---------------- Tabel Seller ----------------
     st.subheader("📊 Daftar Seller & Voucher")
@@ -608,6 +621,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
