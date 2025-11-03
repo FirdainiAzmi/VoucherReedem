@@ -491,48 +491,93 @@ def page_laporan_global():
 
     st.markdown("---")
     st.download_button("Download CSV Semua Transaksi (filtered)", data=df_to_csv_bytes(df_tx), file_name="transactions_global_filtered.csv", mime="text/csv")
+
 # --------------------
 # Page: Seller (admin-only)
 # --------------------
-def Seller():
-    st.header("Halaman Seller (Admin)")
+def page_seller():
+    st.header("📦 Manajemen Seller (Admin)")
 
-    # Ambil semua voucher
-    df = list_vouchers()
-    if "seller" not in df.columns:
-        df["seller"] = ""
+    # Mode halaman seller: 'list' atau 'ajukan'
+    if "seller_mode" not in st.session_state:
+        st.session_state.seller_mode = "list"
 
-    # Agregasi total penjualan per seller
-    df_seller = df.groupby("seller").agg(
-        total_voucher=pd.NamedAgg(column="code", aggfunc="count"),
-        total_penjualan=pd.NamedAgg(column="initial_value", aggfunc="sum")
+    # Tombol aksi utama
+    if st.session_state.seller_mode == "list":
+        if st.button("➕ Ajukan Seller Baru"):
+            st.session_state.seller_mode = "ajukan"
+            st.rerun()
+
+    # ---------------- Ajukan Seller Baru ----------------
+    if st.session_state.seller_mode == "ajukan":
+        st.subheader("📝 Input Data Seller Baru")
+
+        nama_seller = st.text_input("Nama Seller")
+        kode_input = st.text_area(
+            "Masukkan daftar kode voucher yang dibawa (pisahkan dengan koma atau baris baru)",
+            placeholder="Contoh:\nABC001\nABC002\nABC003"
+        )
+
+        colA, colB = st.columns([1,1])
+        with colA:
+            if st.button("✅ Simpan Seller"):
+                if not nama_seller.strip():
+                    st.error("Nama seller wajib diisi")
+                elif not kode_input.strip():
+                    st.error("Minimal 1 kode voucher wajib diisi")
+                else:
+                    # Split kode voucher input
+                    kode_list = {
+                        k.strip().upper()
+                        for k in kode_input.replace(",", "\n").split("\n")
+                        if k.strip()
+                    }
+
+                    updated = 0
+                    with engine.begin() as conn:
+                        for code in kode_list:
+                            row = conn.execute(text("SELECT code FROM vouchers WHERE code = :c"), {"c": code}).fetchone()
+                            if row:
+                                conn.execute(text("UPDATE vouchers SET seller = :seller WHERE code = :c"),
+                                             {"seller": nama_seller.strip(), "c": code})
+                                updated += 1
+
+                    st.success(f"Seller '{nama_seller}' tersimpan! ✅ {updated} voucher berhasil ditautkan.")
+                    st.session_state.seller_mode = "list"
+                    st.rerun()
+
+        with colB:
+            if st.button("❌ Batal"):
+                st.session_state.seller_mode = "list"
+                st.rerun()
+
+        st.markdown("---")
+        return
+
+    # ---------------- Tabel Seller ----------------
+    st.subheader("📊 Daftar Seller & Voucher")
+
+    df = list_vouchers(limit=50000)
+    df["seller"] = df["seller"].fillna("")
+
+    seller_group = df[df["seller"]!=""].groupby("seller").agg(
+        total_initial=pd.NamedAgg(column="initial_value", aggfunc="sum"),
+        voucher_list=pd.NamedAgg(column="code", aggfunc=lambda x: ", ".join(x))
     ).reset_index()
 
-    st.dataframe(df_seller, use_container_width=True)
+    if seller_group.empty:
+        st.info("Belum ada seller yang terdaftar.")
+        return
 
-    st.subheader("Tambah / Edit Seller pada Voucher")
-    code_input = st.text_input("Kode Voucher")
-    seller_input = st.text_input("Nama Seller")
-    if st.button("Simpan Seller"):
-        row = find_voucher(code_input.strip().upper())
-        if not row:
-            st.error("Voucher tidak ditemukan")
-        else:
-            # Update seller di voucher, tetap pakai fungsi update existing
-            try:
-                with engine.begin() as conn:
-                    conn.execute(text("""
-                        ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS seller TEXT
-                    """))
-                    conn.execute(text("""
-                        UPDATE vouchers
-                        SET seller = :seller
-                        WHERE code = :code
-                    """), {"seller": seller_input.strip(), "code": code_input.strip().upper()})
-                st.success(f"Seller '{seller_input.strip()}' berhasil disimpan untuk voucher {code_input.strip().upper()}")
-                st.experimental_rerun()
-            except Exception as e:
-                st.error(f"Gagal update seller: {e}")
+    seller_group["total_initial"] = seller_group["total_initial"].apply(lambda x: f"Rp {int(x):,}")
+    seller_group = seller_group.rename(columns={
+        "seller": "Nama Seller",
+        "total_initial": "Total Nilai Awal",
+        "voucher_list": "Daftar Kode Voucher"
+    })
+
+    st.dataframe(seller_group, use_container_width=True)
+
 
 
 # --------------------
@@ -554,7 +599,7 @@ elif page == "Seller":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses halaman Seller.")
     else:
-        Seller()
+        page_seller()
 
 elif page == "Laporan Global":
     if not st.session_state.admin_logged_in:
@@ -563,6 +608,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
