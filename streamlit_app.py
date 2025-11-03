@@ -391,7 +391,7 @@ def page_daftar_voucher():
     offset = st.session_state.vouchers_page_idx * st.session_state.vouchers_per_page
 
     # ===== Ambil data voucher =====
-    if filter_status == "ada seller":
+    if filter_status == "seller":
         # Ambil semua voucher dulu
         df = list_vouchers(limit=5000)  # ambil banyak agar filter di pandas efektif
         # Filter hanya yang ada seller
@@ -743,6 +743,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
