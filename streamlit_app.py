@@ -333,7 +333,7 @@ def page_redeem():
                     st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
                     if st.button("OK"):
                         # reset_redeem_state()
-                        st.session_state.redeem_step = 1
+                        st.session_state.redeem_step = 10
                         st.rerun()
                 else:
                     st.error(msg)
@@ -721,6 +721,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
