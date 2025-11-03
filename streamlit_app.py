@@ -333,10 +333,11 @@ def page_redeem():
                     st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
                     if st.button("OK"):
                         reset_redeem_state()
+                        st.session_state.redeem_step = 4
                         st.rerun()
                 else:
                     st.error(msg)
-                    st.session_state.redeem_step = 4
+                    st.session_state.redeem_step = 2
                     st.rerun()
         with cn:
             if st.button("Tidak, Kembali"):
