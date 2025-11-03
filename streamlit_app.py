@@ -412,7 +412,7 @@ def page_daftar_voucher():
     df_display = df.copy()
     df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
     df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
-    df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+    df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
 
     st.dataframe(
         df_display[["code", "nama", "no_hp", "status", "initial_value", "balance", "created_at", "seller"]],
@@ -751,6 +751,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
