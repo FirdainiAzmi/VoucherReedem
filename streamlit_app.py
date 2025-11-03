@@ -336,7 +336,7 @@ def page_redeem():
                         st.rerun()
                 else:
                     st.error(msg)
-                    st.session_state.redeem_step = 2
+                    st.session_state.redeem_step = 4
                     st.rerun()
         with cn:
             if st.button("Tidak, Kembali"):
@@ -720,6 +720,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
