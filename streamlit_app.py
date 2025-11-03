@@ -463,10 +463,6 @@ def page_histori():
 # --------------------
 # Page: Laporan Global (admin)
 # --------------------
-import streamlit as st
-import pandas as pd
-import altair as alt
-
 def page_laporan_global():
     st.header("Laporan Global (Admin)")
 
@@ -536,6 +532,19 @@ def page_laporan_global():
                 tooltip=["code","used_amount"]
             )
             st.altair_chart(chart_v, use_container_width=True)
+
+             # Top 5 menu
+            if "menu" in df_tx.columns:
+                top_menu = df_tx.groupby("menu")["used_amount"].agg(["count","sum"]).reset_index().sort_values("count", ascending=False).head(5)
+                st.subheader("🍽️ Top 5 Menu Terlaris")
+                st.table(top_menu.rename(columns={"menu":"Menu","count":"#Transaksi","sum":"Total (Rp)"}))
+                
+                chart_menu = alt.Chart(top_menu).mark_bar().encode(
+                    x=alt.X("menu:N", title="Menu"),
+                    y=alt.Y("count:Q", title="Jumlah Terjual"),
+                    tooltip=["menu","count","sum"]
+                )
+                st.altair_chart(chart_menu, use_container_width=True)
 
             # Time series harian
             df_tx["date"] = pd.to_datetime(df_tx["used_at"]).dt.date
@@ -709,6 +718,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
