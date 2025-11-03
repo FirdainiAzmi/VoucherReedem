@@ -592,26 +592,6 @@ def page_seller():
         st.error("Gagal memuat data voucher ❌")
         st.code(str(e))
 
-
-    # ================== LIST VOUCHER ==================
-    st.markdown("---")
-    st.subheader("📋 Daftar Voucher (Seller Terisi)")
-
-    try:
-        with engine.connect() as conn:
-            df_seller = pd.read_sql(text("""
-                SELECT code, initial_value, balance, seller
-                FROM vouchers
-                WHERE seller IS NOT NULL AND seller != ''
-                ORDER BY code DESC
-            """), conn)
-
-        st.dataframe(df_seller, use_container_width=True)
-
-    except Exception as e:
-        st.error("Gagal memuat data voucher ❌")
-        st.code(str(e))
-
 # --------------------
 # Router
 # --------------------
@@ -640,6 +620,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
