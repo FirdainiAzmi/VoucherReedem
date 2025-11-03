@@ -341,7 +341,7 @@ def page_redeem():
                     st.session_state.selected_branch = None
         
                     # Langsung kembali ke halaman awal
-                    st.experimental_rerun()  # bisa pakai st.rerun() juga
+                    st.rerun()  # bisa pakai st.rerun() juga
                 else:
                     st.error(msg)
                     st.session_state.redeem_step = 2
@@ -728,6 +728,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
