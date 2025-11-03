@@ -572,15 +572,19 @@ def page_laporan_global():
                 st.altair_chart(chart_v, use_container_width=True)
 
             # Time series harian
-            df_tx["date"] = pd.to_datetime(df_tx["used_at"]).dt.date
+            # ubah ke datetime tanpa jam
+            df_tx["date"] = pd.to_datetime(df_tx["used_at"]).dt.normalize()  
+            
             daily = df_tx.groupby("date")["used_amount"].sum().reset_index()
+            
             st.subheader("📅 Time series harian pemakaian")
             chart_daily = alt.Chart(daily).mark_line(point=True).encode(
-                x=alt.X("date:T", title="Tanggal"),
+                x=alt.X("date:T", title="Tanggal", axis=alt.Axis(format="%Y-%m-%d")),  # format tanggal
                 y=alt.Y("used_amount:Q", title="Total Nominal"),
-                tooltip=["date","used_amount"]
+                tooltip=[alt.Tooltip("date:T", format="%Y-%m-%d"), "used_amount"]
             )
             st.altair_chart(chart_daily, use_container_width=True)
+
 
     # ===== TAB Seller =====
     with tab_seller:
@@ -747,6 +751,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
