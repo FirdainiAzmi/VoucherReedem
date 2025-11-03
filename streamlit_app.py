@@ -495,101 +495,72 @@ def page_laporan_global():
 # --------------------
 # Page: Seller (admin-only)
 # --------------------
-# --------------------
-# Page: Seller (admin-only)
-# --------------------
 def page_seller():
-    st.title("Seller • Aktivasi & Detail Voucher")
+    st.title("🎫 Voucher Admin")
+    st.subheader("Seller • Aktivasi & Detail Voucher")
 
-    # Input kode voucher
     search_code = st.text_input("Masukkan Kode Voucher")
 
-    if st.button("Cari Voucher"):
-        if search_code.strip() == "":
-            st.warning("Kode voucher belum diisi!")
-            return
+    if st.button("Cari"):
+        if search_code:
+            try:
+                with engine.connect() as conn:
+                    result = conn.execute(text("""
+                        SELECT code, initial_value, balance, created_at, seller
+                        FROM vouchers WHERE code = :code
+                    """), {"code": search_code}).fetchone()
 
-        with engine.connect() as conn:
-            result = conn.execute(text("""
-                SELECT code, initial_value, balance, created_at,
-                       COALESCE(status, 'inactive'),
-                       COALESCE(seller, ''),
-                       COALESCE(edited, '')
-                FROM vouchers WHERE code = :code
-            """), {"code": search_code}).fetchone()
+                    if result:
+                        st.success("Voucher ditemukan ✅")
 
-        if not result:
-            st.error("Kode voucher tidak ditemukan!")
-            return
+                        code, initial_value, balance, created_at, seller = result
 
-        # Convert to DF for display
-        df = pd.DataFrame([result], columns=[
-            "code", "initial_value", "balance",
-            "created_at", "status", "seller", "edited"
-        ])
-        
-        st.subheader("Detail Voucher")
-        st.table(df)
+                        st.write("### Detail Voucher")
+                        st.table({
+                            "Kode Voucher": [code],
+                            "Initial Value": [initial_value],
+                            "Balance": [balance],
+                            "Seller": [seller if seller else "-"]
+                        })
 
-        st.markdown("---")
-        st.subheader("Aktifkan / Edit Voucher")
+                        seller_input = st.text_input("Nama Seller", value=seller if seller else "")
 
-        new_seller = st.text_input("Nama Seller", value=df["seller"][0])
-        new_status = st.selectbox("Status Voucher",
-            ["active", "inactive"],
-            index=0 if df["status"][0] == "active" else 1
-        )
+                        if st.button("Simpan Seller"):
+                            if seller_input:
+                                with engine.begin() as conn2:
+                                    conn2.execute(text("""
+                                        UPDATE vouchers SET seller = :seller
+                                        WHERE code = :code
+                                    """), {"seller": seller_input, "code": code})
 
-        if st.button("Simpan Perubahan"):
-            with engine.begin() as conn:
-                conn.execute(text("""
-                    UPDATE vouchers
-                    SET seller = :seller,
-                        status = :status,
-                        edited = NOW()
-                    WHERE code = :code
-                """), {
-                    "seller": new_seller,
-                    "status": new_status,
-                    "code": search_code
-                })
+                                st.success(f"Seller berhasil disimpan ✅ ({seller_input})")
+                                st.rerun()
+                            else:
+                                st.warning("Nama Seller tidak boleh kosong!")
 
-            st.success("✅ Data voucher berhasil diperbarui!")
-            st.rerun()
+                    else:
+                        st.error("Voucher tidak ditemukan ❌")
+            except Exception as e:
+                st.error("Terjadi kesalahan pada pencarian voucher ⚠️")
+                st.code(str(e))
 
     st.markdown("---")
+    st.subheader("📋 Daftar Voucher (Seller Terisi)")
+    try:
+        with engine.connect() as conn:
+            df_seller = pd.read_sql(text("""
+                SELECT code, initial_value, balance, seller
+                FROM vouchers
+                WHERE seller IS NOT NULL AND seller != ''
+                ORDER BY created_at DESC
+            """), conn)
 
-    # Tombol kembali ke Admin
-    if st.button("⬅️ Kembali ke Menu Admin"):
-        st.session_state.page = "Daftar Voucher"
-        st.rerun()
+        st.dataframe(df_seller, use_container_width=True)
 
-    st.caption("Halaman ini hanya untuk Admin Seller Voucher ✅")
+    except Exception as e:
+        st.error("Gagal memuat data voucher dengan seller ❌")
+        st.code(str(e))
 
-    # ---------------- Tabel Seller ----------------
-    st.subheader("📊 Rekap Seller")
-
-    df = list_vouchers(limit=50000)
-    df["seller"] = df["seller"].fillna("")
-
-    seller_group = df[df["seller"]!=""].groupby("seller").agg(
-        total_initial=pd.NamedAgg(column="initial_value", aggfunc="sum"),
-        jumlah_voucher=pd.NamedAgg(column="code", aggfunc="count")
-    ).reset_index()
-
-    if seller_group.empty:
-        st.info("Belum ada seller yang terdaftar.")
-        return
-
-    seller_group["total_initial"] = seller_group["total_initial"].apply(lambda x: f"Rp {int(x):,}")
-
-    seller_group = seller_group.rename(columns={
-        "seller": "Nama Seller",
-        "total_initial": "Total Nilai Awal",
-        "jumlah_voucher": "Jumlah Voucher"
-    })
-
-    st.dataframe(seller_group, use_container_width=True)
 
 # --------------------
 # Router
@@ -619,6 +590,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
