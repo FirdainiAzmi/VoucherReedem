@@ -358,16 +358,12 @@ def page_daftar_voucher():
     st.header("Daftar Voucher (Admin) — Tabel penuh")
 
     # ===== Inisialisasi session state =====
-    if "vouchers_page_idx" not in st.session_state:
-        st.session_state.vouchers_page_idx = 0
-    if "vouchers_per_page" not in st.session_state:
-        st.session_state.vouchers_per_page = 10
-    if "search" not in st.session_state:
-        st.session_state.search = ""
-    if "reset_search" not in st.session_state:
-        st.session_state.reset_search = False
+    st.session_state.setdefault("vouchers_page_idx", 0)
+    st.session_state.setdefault("vouchers_per_page", 10)
+    st.session_state.setdefault("search", "")
+    st.session_state.setdefault("reset_search", False)
 
-    # ===== Reset search jika flag di-set =====
+    # Reset search jika flag di-set
     if st.session_state.reset_search:
         st.session_state.search = ""
         st.session_state.reset_search = False
@@ -380,24 +376,33 @@ def page_daftar_voucher():
     st.write("Cari kode, filter status. Jika kode ditemukan, langsung bisa edit di bawah.")
 
     # ===== Filter & pagination =====
-    col1, col2, col3 = st.columns([3,2,1])
+    col1, col2, col3 = st.columns([3, 2, 1])
     with col1:
         search = st.text_input("Cari kode (partial)", key="search")
     with col2:
-        filter_status = st.selectbox("Filter status", ["semua","aktif","habis"])
+        filter_status = st.selectbox("Filter status", ["semua", "aktif", "habis", "ada seller"])
     with col3:
-        per_page = st.number_input("Per halaman", min_value=5, max_value=200, value=st.session_state.vouchers_per_page, step=5)
+        per_page = st.number_input(
+            "Per halaman", min_value=5, max_value=200,
+            value=st.session_state.vouchers_per_page, step=5
+        )
         st.session_state.vouchers_per_page = per_page
 
     offset = st.session_state.vouchers_page_idx * st.session_state.vouchers_per_page
 
-    # Ambil data voucher
-    df = list_vouchers(
-        filter_status if filter_status != "semua" else None,
-        search if search else None,
-        limit=st.session_state.vouchers_per_page,
-        offset=offset
-    )
+    # ===== Ambil data voucher =====
+    if filter_status == "ada seller":
+        # Ambil semua voucher dulu
+        df = list_vouchers(limit=5000)  # ambil banyak agar filter di pandas efektif
+        # Filter hanya yang ada seller
+        df = df[df["seller"].notna() & (df["seller"] != "")]
+    else:
+        df = list_vouchers(
+            filter_status if filter_status != "semua" else None,
+            search if search else None,
+            limit=st.session_state.vouchers_per_page,
+            offset=offset
+        )
 
     if df.empty:
         st.info("Tidak ada voucher sesuai filter/pencarian.")
@@ -408,8 +413,11 @@ def page_daftar_voucher():
     df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
     df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d %H:%M:%S")
-    
-    st.dataframe(df_display[["code","nama","no_hp","status","initial_value","balance","created_at"]], use_container_width=True)
+
+    st.dataframe(
+        df_display[["code", "nama", "no_hp", "status", "initial_value", "balance", "created_at", "seller"]],
+        use_container_width=True
+    )
 
     # ===== Form edit voucher jika kode dicari ditemukan =====
     matched_row = df[df["code"] == search.strip().upper()]
@@ -421,7 +429,10 @@ def page_daftar_voucher():
         with st.form(key=f"edit_form_{v['code']}"):
             nama_in = st.text_input("Nama pemilik", value=v["nama"] or "")
             nohp_in = st.text_input("No HP pemilik", value=v["no_hp"] or "")
-            status_in = st.selectbox("Status", ["inactive", "active"], index=0 if (v["status"] or "inactive") != "active" else 1)
+            status_in = st.selectbox(
+                "Status", ["inactive", "active"],
+                index=0 if (v["status"] or "inactive") != "active" else 1
+            )
 
             submit = st.form_submit_button("Simpan / Aktifkan")
             if submit:
@@ -452,6 +463,7 @@ def page_daftar_voucher():
         file_name="vouchers_page.csv",
         mime="text/csv"
     )
+
 
 # --------------------
 # Page: Histori Transaksi (admin) dengan search voucher
@@ -731,6 +743,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
