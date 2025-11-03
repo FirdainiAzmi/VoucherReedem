@@ -391,14 +391,15 @@ def page_daftar_voucher():
                         status_in
                     )
                     if ok:
-                        # ✅ Simpan pesan sukses ➜ tampil setelah reload
-                        st.session_state["voucher_update_success"] = f"✅ Voucher {v['code']} berhasil diaktifkan!"
-
-                        # ✅ Reset ke halaman awal
-                        st.session_state["search"] = ""
-                        st.session_state["vouchers_page_idx"] = 0
-
+                        st.success(f"Voucher {v['code']} berhasil diaktifkan ✅")
+                        st.balloons()  # 🎉 efek animasi berhasil
+                    
+                        # Reset input & kembali otomatis ke halaman awal
+                        st.session_state.vouchers_page_idx = 0
+                        st.session_state.search = ""
+                        time.sleep(1)  # kasih jeda supaya animasi tampil dulu
                         st.rerun()
+
 
     st.markdown("---")
     st.download_button(
@@ -651,6 +652,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
