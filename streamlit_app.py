@@ -330,7 +330,14 @@ def page_redeem():
 # Page: Daftar Voucher (admin) — inline edit
 # --------------------
 def page_daftar_voucher():
+
     st.header("Daftar Voucher (Admin) — Tabel penuh")
+
+    # ✅ Tampilkan pesan sukses setelah rerun
+    if "voucher_update_success" in st.session_state:
+        st.success(st.session_state["voucher_update_success"])
+        del st.session_state["voucher_update_success"]
+
     st.write("Cari kode, filter status. Jika kode ditemukan, langsung bisa edit di bawah.")
 
     col1, col2, col3 = st.columns([3,2,1])
@@ -343,8 +350,12 @@ def page_daftar_voucher():
         st.session_state.vouchers_per_page = per_page
 
     offset = st.session_state.vouchers_page_idx * st.session_state.vouchers_per_page
-    df = list_vouchers(filter_status if filter_status!="semua" else None, search if search else None,
-                       limit=st.session_state.vouchers_per_page, offset=offset)
+    df = list_vouchers(
+        filter_status if filter_status!="semua" else None,
+        search if search else None,
+        limit=st.session_state.vouchers_per_page,
+        offset=offset
+    )
 
     if df.empty:
         st.info("Tidak ada voucher sesuai filter/pencarian.")
@@ -354,6 +365,7 @@ def page_daftar_voucher():
     df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
     df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+
     st.dataframe(df_display[["code","nama","no_hp","status","initial_value","balance","created_at"]], use_container_width=True)
 
     matched_row = df[df["code"] == search.strip().upper()]
@@ -361,22 +373,40 @@ def page_daftar_voucher():
         v = matched_row.iloc[0]
         st.markdown("---")
         st.subheader(f"Edit Voucher: {v['code']}")
+
         with st.form(key=f"edit_form_{v['code']}"):
             nama_in = st.text_input("Nama pemilik", value=v["nama"] or "")
             nohp_in = st.text_input("No HP pemilik", value=v["no_hp"] or "")
             status_in = st.selectbox("Status", ["inactive", "active"], index=0 if (v["status"] or "inactive")!="active" else 1)
+            
             submit = st.form_submit_button("Simpan / Aktifkan")
             if submit:
                 if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
                     st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
                 else:
-                    ok = update_voucher_detail(v["code"], nama_in.strip() or None, nohp_in.strip() or None, status_in)
+                    ok = update_voucher_detail(
+                        v["code"],
+                        nama_in.strip() or None,
+                        nohp_in.strip() or None,
+                        status_in
+                    )
                     if ok:
-                        st.success(f"Voucher {v['code']} berhasil diperbarui ✅")
+                        # ✅ Simpan pesan sukses ➜ tampil setelah reload
+                        st.session_state["voucher_update_success"] = f"✅ Voucher {v['code']} berhasil diaktifkan!"
+
+                        # ✅ Reset ke halaman awal
+                        st.session_state["search"] = ""
+                        st.session_state["vouchers_page_idx"] = 0
+
                         st.rerun()
 
     st.markdown("---")
-    st.download_button("Download CSV (tabel saat ini)", data=df_to_csv_bytes(df), file_name="vouchers_page.csv", mime="text/csv")
+    st.download_button(
+        "Download CSV (tabel saat ini)",
+        data=df_to_csv_bytes(df),
+        file_name="vouchers_page.csv",
+        mime="text/csv"
+    )
 
 # --------------------
 # Page: Histori Transaksi (admin) dengan search voucher
@@ -621,6 +651,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
