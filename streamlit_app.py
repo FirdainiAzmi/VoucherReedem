@@ -329,31 +329,23 @@ def page_redeem():
                     st.session_state.selected_branch, items_str
                 )
                 if ok:
-                    st.success("🎉 TRANSAKSI BERHASIL 🎉")
-                    st.write(f"Sisa saldo sekarang: Rp {int(newbal):,}")
-                    st.session_state["last_redeem_success"] = True
-                    st.session_state.last_redeem_success = True
+                    # Tampilkan pesan sukses singkat
+                    st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
+        
+                    # Reset semua session_state
+                    st.session_state.redeem_step = 1
+                    st.session_state.entered_code = ""
+                    st.session_state.voucher_row = None
+                    st.session_state.order_items = {}
+                    st.session_state.checkout_total = 0
+                    st.session_state.selected_branch = None
+        
+                    # Langsung kembali ke halaman awal
+                    st.experimental_rerun()  # bisa pakai st.rerun() juga
                 else:
                     st.error(msg)
                     st.session_state.redeem_step = 2
                     st.rerun()
-
-                if st.session_state.get("last_redeem_success"):
-                    if st.button("OK"):
-                        st.write("DEBUG: tombol OK diklik")
-                        st.write("Before reset:", st.session_state)
-                        
-                        # reset semua state ke step awal
-                        st.session_state.redeem_step = 4
-                        st.session_state.entered_code = ""
-                        st.session_state.voucher_row = None
-                        st.session_state.order_items = {}
-                        st.session_state.checkout_total = 0
-                        st.session_state.selected_branch = None
-                        st.session_state["last_redeem_success"] = False
-
-                        st.write("After reset:", st.session_state)
-                        st.rerun()
         with cn:
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
@@ -736,6 +728,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
