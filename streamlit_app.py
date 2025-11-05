@@ -268,7 +268,6 @@ def page_redeem():
 
     # STEP 2: Pilih cabang & menu
     # STEP 2: Pilih cabang & menu
-    # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
         code, initial, balance, created_at, nama, no_hp, status = row
@@ -295,14 +294,12 @@ def page_redeem():
         # Ambil menu dari DB
         menu_items = get_menu_from_db(selected_branch)  # list of dict {"nama","harga","kategori","keterangan"}
     
-        # Search global untuk semua menu
+        # Search global
         search_query = st.text_input("🔍 Cari menu (global)")
-    
-        # Filter menu sesuai search
         if search_query:
             menu_items = [item for item in menu_items if search_query.lower() in item["nama"].lower()]
     
-        # Ambil kategori unik dari hasil filter
+        # Ambil kategori unik
         categories = sorted(list(set([item["kategori"] for item in menu_items])))
     
         st.markdown("*Pilih menu & jumlah*")
@@ -328,6 +325,22 @@ def page_redeem():
         st.session_state.order_items = order_items
         st.session_state.checkout_total = checkout_total
         st.write(f"*Total sementara: Rp {checkout_total:,}*")
+    
+        # Tombol Cek & Bayar
+        cA, cB = st.columns([1,1])
+        with cA:
+            if st.button("Cek & Bayar"):
+                if checkout_total == 0:
+                    st.warning("Pilih minimal 1 menu")
+                elif checkout_total > int(balance):
+                    st.error(f"Saldo tidak cukup. Total: Rp {checkout_total:,} — Saldo: Rp {int(balance):,}")
+                else:
+                    st.session_state.redeem_step = 3
+                    st.rerun()
+        with cB:
+            if st.button("Batal / Kembali"):
+                reset_redeem_state()
+                st.rerun()
 
 
     # STEP 3: Konfirmasi pembayaran
@@ -780,6 +793,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
