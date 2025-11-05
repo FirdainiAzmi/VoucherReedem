@@ -367,6 +367,7 @@ def page_redeem():
 
 
     # STEP 3: Konfirmasi pembayaran
+    # STEP 3: Konfirmasi pembayaran
     elif st.session_state.redeem_step == 3:
         row = st.session_state.voucher_row
         code, initial, balance, created_at, nama, no_hp, status = row
@@ -375,42 +376,44 @@ def page_redeem():
         st.write(f"- Voucher: {code}")
         st.write(f"- Cabang: {st.session_state.selected_branch}")
         st.write(f"- Sisa sebelum: Rp {int(balance):,}")
-        st.write("Detail pesanan:")
     
-        # Ambil menu dari DB sesuai cabang untuk harga yang akurat
+        # Ambil menu dari db untuk harga
         menu_items = get_menu_from_db(st.session_state.selected_branch)
-        prices = {item["nama"]: item["harga"] for item in menu_items}
+        price_map = {item['nama']: item['harga'] for item in menu_items}
     
-        for it, q in st.session_state.order_items.items():
-            st.write(f"- {it} x{q} — Rp {prices.get(it,0)*q:,}")
+        # Filter hanya yang dipesan (qty > 0)
+        ordered_items = {k:v for k,v in st.session_state.order_items.items() if v > 0}
+    
+        if not ordered_items:
+            st.warning("Tidak ada menu yang dipilih.")
+            return
+    
+        st.write("Detail pesanan:")
+        for it, q in ordered_items.items():
+            st.write(f"- {it} x{q} — Rp {price_map.get(it,0)*q:,}")
     
         st.write(f"### Total: Rp {st.session_state.checkout_total:,}")
     
-        cy, cn = st.columns([1,1])
-        with cy:
+        # Tombol konfirmasi / kembali
+        cA, cB = st.columns([1,1])
+        with cA:
             if st.button("Ya, Bayar"):
-                items_str = ", ".join([f"{k} x{v}" for k,v in st.session_state.order_items.items()])
+                items_str = ", ".join([f"{k} x{v}" for k,v in ordered_items.items()])
                 ok, msg, newbal = atomic_redeem(
-                    code, st.session_state.checkout_total, 
+                    code, st.session_state.checkout_total,
                     st.session_state.selected_branch, items_str
                 )
                 if ok:
                     st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
     
                     # Reset session_state
-                    st.session_state.redeem_step = 1
-                    st.session_state.entered_code = ""
-                    st.session_state.voucher_row = None
-                    st.session_state.order_items = {}
-                    st.session_state.checkout_total = 0
-                    st.session_state.selected_branch = None
-    
+                    reset_redeem_state()
                     st.rerun()
                 else:
                     st.error(msg)
                     st.session_state.redeem_step = 2
                     st.rerun()
-        with cn:
+        with cB:
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
                 st.rerun()
@@ -816,6 +819,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
