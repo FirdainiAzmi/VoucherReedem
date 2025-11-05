@@ -117,6 +117,29 @@ def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
         df["status"] = "inactive"
     return df
 
+def get_menu_from_db(branch):
+    """
+    Ambil menu dari DB sesuai cabang.
+    branch: "Sedati" atau "Tawangsari"
+    return: list of dict {"nama":..., "harga":..., "kategori":...}
+    """
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql(text("SELECT kategori, nama_item, keterangan, harga_sedati, harga_twsari FROM menu_items"), conn)
+        harga_col = "harga_sedati" if branch == "Sedati" else "harga_twsari"
+        menu_list = []
+        for _, row in df.iterrows():
+            menu_list.append({
+                "nama": row["nama_item"],
+                "harga": row[harga_col],
+                "kategori": row["kategori"]
+            })
+        return menu_list
+    except Exception as e:
+        st.error(f"Gagal ambil menu dari DB: {e}")
+        return []
+
+
 def count_vouchers(filter_status=None, search=None):
     q = "SELECT count(*) FROM vouchers"
     clauses = []
@@ -244,63 +267,63 @@ def page_redeem():
                     st.rerun()
 
     # STEP 2: Pilih cabang & menu
+    # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
         code, initial, balance, created_at, nama, no_hp, status = row
-
+    
         st.subheader(f"Voucher: {code}")
         st.write(f"- Nilai awal: Rp {int(initial):,}")
         st.write(f"- Sisa saldo: Rp {int(balance):,}")
         st.write(f"- Nama: {nama or '-'}")
         st.write(f"- No HP: {no_hp or '-'}")
         st.write(f"- Status: {status or 'inactive'}")
-
+    
         if int(balance) <= 0:
             st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
             if st.button("Kembali"):
                 reset_redeem_state()
                 st.rerun()
             return
-
+    
         # Pilih cabang
         branch_options = ["Sedati", "Tawangsari"]
         selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
         st.session_state.selected_branch = selected_branch
-
-        # Ambil menu dari database sesuai cabang
-        menu_items = get_menu_from_db(selected_branch)  # list of dict: {"nama","harga","kategori"}
+    
+        # Ambil menu dari DB
+        menu_items = get_menu_from_db(selected_branch)
+        if not menu_items:
+            st.warning("Menu belum tersedia untuk cabang ini.")
+            return
+    
         categories = sorted(list(set([item["kategori"] for item in menu_items])))
-
         st.markdown("*Pilih menu & jumlah*")
-
-        # Buat tab per kategori
+    
+        # Tab per kategori
         tabs = st.tabs(categories)
-
         order_items = {}
         checkout_total = 0
-
+    
         for i, cat in enumerate(categories):
             with tabs[i]:
                 cat_items = [item for item in menu_items if item["kategori"] == cat]
-                # Search bar untuk kategori ini
                 search_query = st.text_input(f"🔍 Cari menu di {cat}", key=f"search_{cat}")
                 for item in cat_items:
                     if search_query.lower() in item["nama"].lower() or search_query == "":
                         qty = st.number_input(
                             f"{item['nama']} (Rp {item['harga']:,})",
-                            min_value=0,
-                            value=0,
-                            step=1,
+                            min_value=0, value=0, step=1,
                             key=f"{selected_branch}_{item['nama']}"
                         )
                         if qty > 0:
                             order_items[item['nama']] = qty
                             checkout_total += item['harga'] * qty
-
+    
         st.session_state.order_items = order_items
         st.session_state.checkout_total = checkout_total
         st.write(f"*Total sementara: Rp {checkout_total:,}*")
-
+    
         cA, cB = st.columns([1,1])
         with cA:
             if st.button("Cek & Bayar"):
@@ -764,6 +787,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
