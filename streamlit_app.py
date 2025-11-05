@@ -656,42 +656,42 @@ def page_laporan_global():
 
     # ===== TAB Seller =====
     with tab_seller:
-    st.subheader("📊 Ringkasan Transaksi per Seller")
-
-    # Pastikan df_tx punya kolom seller
-    if "seller" not in df_tx.columns:
-        if "code" in df_tx.columns and "code" in df_vouchers.columns:
-            df_tx["code"] = df_tx["code"].astype(str)
-            df_vouchers["code"] = df_vouchers["code"].astype(str)
-            
-            # Merge df_tx dengan df_vouchers untuk ambil seller dan status/active info
-            df_tx = df_tx.merge(
-                df_vouchers[["code", "seller", "balance", "initial_value"]],
-                on="code",
-                how="left"
-            )
+        st.subheader("📊 Ringkasan Transaksi per Seller")
     
-    if "seller" in df_tx.columns and not df_tx["seller"].isnull().all():
-        # Filter voucher yang aktif saja
-        df_active = df_tx[df_tx["balance"] < df_tx["initial_value"]]
-
-        if not df_active.empty:
-            # Hitung jumlah transaksi per seller dari voucher aktif
-            seller_count = df_active.groupby("seller").size().reset_index(name="#Terjual")
-
-            st.table(seller_count.rename(columns={"seller":"Seller"}))
-
-            # Bar chart berdasarkan jumlah transaksi (#Terjual)
-            chart_seller = alt.Chart(seller_count).mark_bar().encode(
-                x=alt.X("seller:N", title="Seller"),
-                y=alt.Y("#Terjual:Q", title="Jumlah Terjual"),
-                tooltip=["seller","#Terjual"]
-            )
-            st.altair_chart(chart_seller, use_container_width=True)
+        # Pastikan df_tx punya kolom seller
+        if "seller" not in df_tx.columns:
+            if "code" in df_tx.columns and "code" in df_vouchers.columns:
+                df_tx["code"] = df_tx["code"].astype(str)
+                df_vouchers["code"] = df_vouchers["code"].astype(str)
+                
+                # Merge df_tx dengan df_vouchers untuk ambil seller dan status/active info
+                df_tx = df_tx.merge(
+                    df_vouchers[["code", "seller", "balance", "initial_value"]],
+                    on="code",
+                    how="left"
+                )
+        
+        if "seller" in df_tx.columns and not df_tx["seller"].isnull().all():
+            # Filter voucher yang aktif saja
+            df_active = df_tx[df_tx["balance"] < df_tx["initial_value"]]
+    
+            if not df_active.empty:
+                # Hitung jumlah transaksi per seller dari voucher aktif
+                seller_count = df_active.groupby("seller").size().reset_index(name="#Terjual")
+    
+                st.table(seller_count.rename(columns={"seller":"Seller"}))
+    
+                # Bar chart berdasarkan jumlah transaksi (#Terjual)
+                chart_seller = alt.Chart(seller_count).mark_bar().encode(
+                    x=alt.X("seller:N", title="Seller"),
+                    y=alt.Y("#Terjual:Q", title="Jumlah Terjual"),
+                    tooltip=["seller","#Terjual"]
+                )
+                st.altair_chart(chart_seller, use_container_width=True)
+            else:
+                st.info("Belum ada voucher aktif yang terjual.")
         else:
-            st.info("Belum ada voucher aktif yang terjual.")
-    else:
-        st.warning("Kolom 'seller' tidak tersedia atau semua kosong pada dataset transaksi.")
+            st.warning("Kolom 'seller' tidak tersedia atau semua kosong pada dataset transaksi.")
 
 
 
@@ -856,6 +856,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
