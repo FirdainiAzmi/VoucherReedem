@@ -291,26 +291,40 @@ def page_redeem():
         selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
         st.session_state.selected_branch = selected_branch
     
-        # Ambil menu dari database sesuai cabang
-        menu_items = get_menu_from_db(selected_branch)  # list of dict {"nama", "harga", "kategori"}
+        # Ambil menu dari database
+        menu_items = get_menu_from_db(selected_branch)  # list of dict {"nama","harga","kategori"}
         categories = sorted(list(set([item["kategori"] for item in menu_items])))
     
         # Global search
         search_query = st.text_input("🔍 Cari menu (global)", "").strip().lower()
     
-        st.markdown("*Pilih menu & jumlah*")
-        tabs = st.tabs(categories)
-    
         # Pastikan order_items ada di session_state
         if "order_items" not in st.session_state:
             st.session_state.order_items = {}
     
-        # Render menu per kategori
-        for i, cat in enumerate(categories):
-            with tabs[i]:
-                cat_items = [item for item in menu_items if item["kategori"] == cat]
-                for item in cat_items:
-                    if search_query in item["nama"].lower() or search_query == "":
+        st.markdown("*Pilih menu & jumlah*")
+    
+        if search_query:  # Jika ada search, tampilkan semua menu yang cocok tanpa tab
+            filtered_items = [item for item in menu_items if search_query in item['nama'].lower()]
+            if not filtered_items:
+                st.info("Menu tidak ditemukan")
+            for item in filtered_items:
+                key = f"{selected_branch}_{item['nama']}"
+                old_qty = st.session_state.order_items.get(item['nama'], 0)
+                qty = st.number_input(
+                    f"{item['nama']} (Rp {item['harga']:,})",
+                    min_value=0,
+                    value=old_qty,
+                    step=1,
+                    key=key
+                )
+                st.session_state.order_items[item['nama']] = qty
+        else:  # Jika tidak search, tampilkan tab per kategori
+            tabs = st.tabs(categories)
+            for i, cat in enumerate(categories):
+                with tabs[i]:
+                    cat_items = [item for item in menu_items if item["kategori"] == cat]
+                    for item in cat_items:
                         key = f"{selected_branch}_{item['nama']}"
                         old_qty = st.session_state.order_items.get(item['nama'], 0)
                         qty = st.number_input(
@@ -322,17 +336,17 @@ def page_redeem():
                         )
                         st.session_state.order_items[item['nama']] = qty
     
-        # Hitung total dari semua order_items yang >0
+        # Hitung total
         checkout_total = 0
         for it, q in st.session_state.order_items.items():
             if q > 0:
-                # cari harga dari menu_items
-                price = next((m['harga'] for m in menu_items if m['nama']==it), 0)
+                price = next((m['harga'] for m in menu_items if m['nama'] == it), 0)
                 checkout_total += price * q
     
         st.session_state.checkout_total = checkout_total
         st.write(f"*Total sementara: Rp {checkout_total:,}*")
     
+        # Tombol bayar & batal
         cA, cB = st.columns([1,1])
         with cA:
             if st.button("Cek & Bayar"):
@@ -347,6 +361,7 @@ def page_redeem():
             if st.button("Batal / Kembali"):
                 reset_redeem_state()
                 st.rerun()
+
 
 
 
@@ -801,6 +816,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
