@@ -749,30 +749,49 @@ def page_seller():
         })
 
         # gunakan key berbeda untuk input seller
-        seller_input = st.text_input("Nama Seller", value=seller if seller else "", key="seller_input")
-
+        # Input Nama Seller
+        seller_input = st.text_input(
+            "Nama Seller", 
+            value=seller if seller else "", 
+            key="seller_input"
+        )
+        
+        # Input Tanggal Penjualan
+        tanggal_input = st.date_input(
+            "Tanggal Penjualan", 
+            value=pd.to_datetime("today"),  # default hari ini
+            key="tanggal_input"
+        )
+        
         if st.button("Simpan Seller"):
             if seller_input:
                 try:
                     with engine.begin() as conn2:
                         conn2.execute(text("""
-                            UPDATE vouchers SET seller = :seller
+                            UPDATE vouchers 
+                            SET seller = :seller,
+                                tanggal_penjualan = :tanggal_penjualan
                             WHERE code = :code
-                        """), {"seller": seller_input, "code": code})
-
-                    st.success("Seller berhasil disimpan ✅")
-
-                    # Set flag untuk mereset search_input pada rerun berikutnya
+                        """), {
+                            "seller": seller_input, 
+                            "tanggal_penjualan": tanggal_input,  # pastikan tipe kolom DATE di DB
+                            "code": code
+                        })
+        
+                    st.success("Seller dan Tanggal Penjualan berhasil disimpan ✅")
+        
+                    # Reset search input untuk rerun berikutnya
                     st.session_state["found_voucher"] = None
                     st.session_state["clear_search"] = True
-
+        
                     st.rerun()
-
+        
                 except Exception as e:
-                    st.error("Gagal menyimpan seller ❌")
+                    st.error("Gagal menyimpan seller dan tanggal ❌")
                     st.code(str(e))
             else:
                 st.warning("Nama Seller tidak boleh kosong!")
+
 
     # Tampilkan daftar voucher seller terisi
     st.markdown("---")
@@ -819,6 +838,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
