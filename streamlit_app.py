@@ -38,15 +38,7 @@ def init_db():
                     branch TEXT,
                     items TEXT
                 )
-            """))
-            CREATE TABLE IF NOT EXISTS menu_items (
-                id SERIAL PRIMARY KEY,
-                kategori VARCHAR(50) NOT NULL,
-                nama_item VARCHAR(100) NOT NULL,
-                deskripsi TEXT,
-                harga_sedati INT,
-                harga_twsari INT
-            );
+            """)
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS nama TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS no_hp TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS status TEXT"))
@@ -768,6 +760,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
