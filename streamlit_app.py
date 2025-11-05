@@ -245,75 +245,75 @@ def page_redeem():
                     st.rerun()
 
     # STEP 2: Pilih cabang & menu
-       elif st.session_state.redeem_step == 2:
-        row = st.session_state.voucher_row
-        code, initial, balance, created_at, seller = row
-        
-        st.subheader(f"Voucher: {code}")
-        st.write(f"- Nilai awal: Rp {int(initial):,}")
-        st.write(f"- Sisa saldo: Rp {int(balance):,}")
-        st.write(f"- Seller: {seller or '-'}")
-
-        if int(balance) <= 0:
-            st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
-            if st.button("Kembali"):
-                reset_redeem_state()
-                st.rerun()
-            return
-
-        # Pilih cabang
-        branch_options = ["Sedati", "Tawangsari"]
-        selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
-        st.session_state.selected_branch = selected_branch
-
-        # Ambil menu dari DB
-        with engine.connect() as conn:
-            menu_df = pd.read_sql("SELECT * FROM menu_items", conn)
-
-        # Pencarian menu
-        search_item = st.text_input("Cari menu").lower()
-        if search_item:
-            menu_df = menu_df[menu_df["menu_name"].str.lower().str.contains(search_item)]
-
-        st.divider()
-        st.subheader("Pilih Menu")
-
-        total = 0
-        chosen_items = {}
-
-        # Group berdasarkan kategori
-        for kategori in sorted(menu_df["kategori"].unique()):
-            with st.expander(f"🍽 {kategori}"):
-                sub_df = menu_df[menu_df["kategori"] == kategori]
-                for _, r in sub_df.iterrows():
-                    price = r["harga_sedati"] if selected_branch == "Sedati" else r["harga_twsari"]
-                    qty = st.number_input(
-                        f"{r['menu_name']} (Rp {int(price):,})",
-                        min_value=0, step=1, key=f"q_{r['id']}_{code}"
-                    )
-                    if qty > 0:
-                        chosen_items[r['menu_name']] = {"qty": int(qty), "price": int(price)}
-                        total += int(price) * int(qty)
-
-        st.session_state.order_items = chosen_items
-        st.session_state.checkout_total = total
-
-        st.write(f"### 💰 Total: Rp {total:,}")
-
-        colA, colB = st.columns([1,1])
-        with colA:
-            if st.button("Cek & Bayar"):
-                if total == 0:
-                    st.warning("Pilih minimal 1 menu")
-                elif total > int(balance):
-                    st.error("Saldo tidak cukup")
-                else:
-                    st.session_state.redeem_step = 3
+    elif st.session_state.redeem_step == 2:
+            row = st.session_state.voucher_row
+            code, initial, balance, created_at, seller = row
+            
+            st.subheader(f"Voucher: {code}")
+            st.write(f"- Nilai awal: Rp {int(initial):,}")
+            st.write(f"- Sisa saldo: Rp {int(balance):,}")
+            st.write(f"- Seller: {seller or '-'}")
+    
+            if int(balance) <= 0:
+                st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
+                if st.button("Kembali"):
+                    reset_redeem_state()
                     st.rerun()
-        with colB:
-            if st.button("Batal / Kembali"):
-                reset_redeem_state()
-                st.rerun()
+                return
+    
+            # Pilih cabang
+            branch_options = ["Sedati", "Tawangsari"]
+            selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
+            st.session_state.selected_branch = selected_branch
+    
+            # Ambil menu dari DB
+            with engine.connect() as conn:
+                menu_df = pd.read_sql("SELECT * FROM menu_items", conn)
+    
+            # Pencarian menu
+            search_item = st.text_input("Cari menu").lower()
+            if search_item:
+                menu_df = menu_df[menu_df["menu_name"].str.lower().str.contains(search_item)]
+    
+            st.divider()
+            st.subheader("Pilih Menu")
+    
+            total = 0
+            chosen_items = {}
+    
+            # Group berdasarkan kategori
+            for kategori in sorted(menu_df["kategori"].unique()):
+                with st.expander(f"🍽 {kategori}"):
+                    sub_df = menu_df[menu_df["kategori"] == kategori]
+                    for _, r in sub_df.iterrows():
+                        price = r["harga_sedati"] if selected_branch == "Sedati" else r["harga_twsari"]
+                        qty = st.number_input(
+                            f"{r['menu_name']} (Rp {int(price):,})",
+                            min_value=0, step=1, key=f"q_{r['id']}_{code}"
+                        )
+                        if qty > 0:
+                            chosen_items[r['menu_name']] = {"qty": int(qty), "price": int(price)}
+                            total += int(price) * int(qty)
+    
+            st.session_state.order_items = chosen_items
+            st.session_state.checkout_total = total
+    
+            st.write(f"### 💰 Total: Rp {total:,}")
+    
+            colA, colB = st.columns([1,1])
+            with colA:
+                if st.button("Cek & Bayar"):
+                    if total == 0:
+                        st.warning("Pilih minimal 1 menu")
+                    elif total > int(balance):
+                        st.error("Saldo tidak cukup")
+                    else:
+                        st.session_state.redeem_step = 3
+                        st.rerun()
+            with colB:
+                if st.button("Batal / Kembali"):
+                    reset_redeem_state()
+                    st.rerun()
 
 
     # Step 3 — Konfirmasi Pembayaran + Simpan ke DB
@@ -760,6 +760,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
