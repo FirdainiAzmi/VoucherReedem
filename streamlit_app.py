@@ -267,6 +267,7 @@ def page_redeem():
                     st.rerun()
 
     # STEP 2: Pilih cabang & menu
+    # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
         code, initial, balance, created_at, nama, no_hp, status = row
@@ -292,29 +293,26 @@ def page_redeem():
     
         # Ambil menu dari database sesuai cabang
         menu_items = get_menu_from_db(selected_branch)  # list of dict {"nama", "harga", "kategori"}
-    
-        # Ambil semua kategori unik
         categories = sorted(list(set([item["kategori"] for item in menu_items])))
     
-        # Search global
+        # Global search
         search_query = st.text_input("🔍 Cari menu (global)", "").strip().lower()
     
         st.markdown("*Pilih menu & jumlah*")
         tabs = st.tabs(categories)
     
-        # Hitung total sementara
-        checkout_total = 0
-        order_items = st.session_state.get("order_items", {})
+        # Pastikan order_items ada di session_state
+        if "order_items" not in st.session_state:
+            st.session_state.order_items = {}
     
+        # Render menu per kategori
         for i, cat in enumerate(categories):
             with tabs[i]:
                 cat_items = [item for item in menu_items if item["kategori"] == cat]
                 for item in cat_items:
-                    key = f"{selected_branch}_{item['nama']}"
-                    old_qty = order_items.get(item['nama'], 0)
-    
-                    # tampilkan number_input walau tidak sesuai search (dengan label collapse)
                     if search_query in item["nama"].lower() or search_query == "":
+                        key = f"{selected_branch}_{item['nama']}"
+                        old_qty = st.session_state.order_items.get(item['nama'], 0)
                         qty = st.number_input(
                             f"{item['nama']} (Rp {item['harga']:,})",
                             min_value=0,
@@ -322,20 +320,16 @@ def page_redeem():
                             step=1,
                             key=key
                         )
-                    else:
-                        qty = st.number_input(
-                            f"{item['nama']} (Rp {item['harga']:,})",
-                            min_value=0,
-                            value=old_qty,
-                            step=1,
-                            key=key,
-                            label_visibility="collapsed"
-                        )
+                        st.session_state.order_items[item['nama']] = qty
     
-                    order_items[item['nama']] = qty
-                    checkout_total += item['harga'] * qty
+        # Hitung total dari semua order_items yang >0
+        checkout_total = 0
+        for it, q in st.session_state.order_items.items():
+            if q > 0:
+                # cari harga dari menu_items
+                price = next((m['harga'] for m in menu_items if m['nama']==it), 0)
+                checkout_total += price * q
     
-        st.session_state.order_items = order_items
         st.session_state.checkout_total = checkout_total
         st.write(f"*Total sementara: Rp {checkout_total:,}*")
     
@@ -807,6 +801,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
