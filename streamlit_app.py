@@ -236,7 +236,6 @@ def page_redeem():
                 row = find_voucher(code)
                 if not row:
                     st.error("❌ Voucher tidak ditemukan.")
-                    # Reset state & kembali ke awal otomatis
                     reset_redeem_state()
                     st.rerun()
                 else:
@@ -246,119 +245,124 @@ def page_redeem():
 
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
-            row = st.session_state.voucher_row
-            code, initial, balance, created_at, seller = row
-            
-            st.subheader(f"Voucher: {code}")
-            st.write(f"- Nilai awal: Rp {int(initial):,}")
-            st.write(f"- Sisa saldo: Rp {int(balance):,}")
-            st.write(f"- Seller: {seller or '-'}")
-    
-            if int(balance) <= 0:
-                st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
-                if st.button("Kembali"):
-                    reset_redeem_state()
-                    st.rerun()
-                return
-    
-            # Pilih cabang
-            branch_options = ["Sedati", "Tawangsari"]
-            selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
-            st.session_state.selected_branch = selected_branch
-    
-            # Ambil menu dari DB
-            with engine.connect() as conn:
-                menu_df = pd.read_sql("SELECT * FROM menu_items", conn)
-    
-            # Pencarian menu
-            search_item = st.text_input("Cari menu").lower()
-            if search_item:
-                menu_df = menu_df[menu_df["menu_name"].str.lower().str.contains(search_item)]
-    
-            st.divider()
-            st.subheader("Pilih Menu")
-    
-            total = 0
-            chosen_items = {}
-    
-            # Group berdasarkan kategori
-            for kategori in sorted(menu_df["kategori"].unique()):
-                with st.expander(f"🍽 {kategori}"):
-                    sub_df = menu_df[menu_df["kategori"] == kategori]
-                    for _, r in sub_df.iterrows():
-                        price = r["harga_sedati"] if selected_branch == "Sedati" else r["harga_twsari"]
+        row = st.session_state.voucher_row
+        code, initial, balance, created_at, nama, no_hp, status = row
+
+        st.subheader(f"Voucher: {code}")
+        st.write(f"- Nilai awal: Rp {int(initial):,}")
+        st.write(f"- Sisa saldo: Rp {int(balance):,}")
+        st.write(f"- Nama: {nama or '-'}")
+        st.write(f"- No HP: {no_hp or '-'}")
+        st.write(f"- Status: {status or 'inactive'}")
+
+        if int(balance) <= 0:
+            st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
+            if st.button("Kembali"):
+                reset_redeem_state()
+                st.rerun()
+            return
+
+        # Pilih cabang
+        branch_options = ["Sedati", "Tawangsari"]
+        selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
+        st.session_state.selected_branch = selected_branch
+
+        # Ambil menu dari database sesuai cabang
+        menu_items = get_menu_from_db(selected_branch)  # list of dict: {"nama","harga","kategori"}
+        categories = sorted(list(set([item["kategori"] for item in menu_items])))
+
+        st.markdown("*Pilih menu & jumlah*")
+
+        # Buat tab per kategori
+        tabs = st.tabs(categories)
+
+        order_items = {}
+        checkout_total = 0
+
+        for i, cat in enumerate(categories):
+            with tabs[i]:
+                cat_items = [item for item in menu_items if item["kategori"] == cat]
+                # Search bar untuk kategori ini
+                search_query = st.text_input(f"🔍 Cari menu di {cat}", key=f"search_{cat}")
+                for item in cat_items:
+                    if search_query.lower() in item["nama"].lower() or search_query == "":
                         qty = st.number_input(
-                            f"{r['menu_name']} (Rp {int(price):,})",
-                            min_value=0, step=1, key=f"q_{r['id']}_{code}"
+                            f"{item['nama']} (Rp {item['harga']:,})",
+                            min_value=0,
+                            value=0,
+                            step=1,
+                            key=f"{selected_branch}_{item['nama']}"
                         )
                         if qty > 0:
-                            chosen_items[r['menu_name']] = {"qty": int(qty), "price": int(price)}
-                            total += int(price) * int(qty)
-    
-            st.session_state.order_items = chosen_items
-            st.session_state.checkout_total = total
-    
-            st.write(f"### 💰 Total: Rp {total:,}")
-    
-            colA, colB = st.columns([1,1])
-            with colA:
-                if st.button("Cek & Bayar"):
-                    if total == 0:
-                        st.warning("Pilih minimal 1 menu")
-                    elif total > int(balance):
-                        st.error("Saldo tidak cukup")
-                    else:
-                        st.session_state.redeem_step = 3
-                        st.rerun()
-            with colB:
-                if st.button("Batal / Kembali"):
-                    reset_redeem_state()
+                            order_items[item['nama']] = qty
+                            checkout_total += item['harga'] * qty
+
+        st.session_state.order_items = order_items
+        st.session_state.checkout_total = checkout_total
+        st.write(f"*Total sementara: Rp {checkout_total:,}*")
+
+        cA, cB = st.columns([1,1])
+        with cA:
+            if st.button("Cek & Bayar"):
+                if checkout_total == 0:
+                    st.warning("Pilih minimal 1 menu")
+                elif checkout_total > int(balance):
+                    st.error(f"Saldo tidak cukup. Total: Rp {checkout_total:,} — Saldo: Rp {int(balance):,}")
+                else:
+                    st.session_state.redeem_step = 3
                     st.rerun()
-
-
-    # Step 3 — Konfirmasi Pembayaran + Simpan ke DB
-    elif st.session_state.redeem_step == 3:
-        code, initial, balance, created_at, seller = st.session_state.voucher_row
-        total = st.session_state.checkout_total
-        chosen_items = st.session_state.order_items
-        branch = st.session_state.selected_branch
-
-        st.subheader("✅ Konfirmasi Pembayaran")
-        st.write(f"Voucher: {code}")
-        st.write(f"Cabang: {branch}")
-        st.write(f"Total Pembayaran: Rp {total:,}")
-
-        st.json(chosen_items)
-
-        if st.button("Bayar Sekarang ✅"):
-            new_balance = int(balance) - int(total)
-            with engine.begin() as conn:
-                # Update saldo voucher
-                conn.execute(text("""
-                    UPDATE vouchers SET balance = :b WHERE code = :c
-                """), {"b": new_balance, "c": code})
-
-                # Simpan transaksi
-                conn.execute(text("""
-                    INSERT INTO transaksi (code, used_amount, branch, items)
-                    VALUES (:c, :u, :b, :i)
-                """), {
-                    "c": code,
-                    "u": total,
-                    "b": branch,
-                    "i": str(chosen_items)
-                })
-
-            st.success("Pembayaran berhasil ✅")
-            st.write(f"Sisa saldo: Rp {new_balance:,}")
-
-            if st.button("Kembali ke Redeem"):
+        with cB:
+            if st.button("Batal / Kembali"):
                 reset_redeem_state()
                 st.rerun()
 
-        if st.button("Batal"):
-            reset_redeem_state()
-            st.rerun()
+    # STEP 3: Konfirmasi pembayaran
+    elif st.session_state.redeem_step == 3:
+        row = st.session_state.voucher_row
+        code, initial, balance, created_at, nama, no_hp, status = row
+
+        st.header("Konfirmasi Pembayaran")
+        st.write(f"- Voucher: {code}")
+        st.write(f"- Cabang: {st.session_state.selected_branch}")
+        st.write(f"- Sisa sebelum: Rp {int(balance):,}")
+        st.write("Detail pesanan:")
+        prices_map = {
+            "Sedati": {"Nasi Goreng":20000, "Ayam Goreng":25000, "Ikan Bakar":30000, "Es Teh":5000},
+            "Tawangsari": {"Nasi Goreng Spesial":25000, "Bakso Kuah":18000, "Es Jeruk":7000, "Teh Manis":3000}
+        }
+        prices = prices_map.get(st.session_state.selected_branch, {})
+        for it, q in st.session_state.order_items.items():
+            st.write(f"- {it} x{q} — Rp {prices.get(it,0)*q:,}")
+        st.write(f"### Total: Rp {st.session_state.checkout_total:,}")
+
+        cy, cn = st.columns([1,1])
+        with cy:
+            if st.button("Ya, Bayar"):
+                items_str = ", ".join([f"{k} x{v}" for k,v in st.session_state.order_items.items()])
+                ok, msg, newbal = atomic_redeem(
+                    code, st.session_state.checkout_total, 
+                    st.session_state.selected_branch, items_str
+                )
+                if ok:
+                    st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
+
+                    # Reset session_state
+                    st.session_state.redeem_step = 1
+                    st.session_state.entered_code = ""
+                    st.session_state.voucher_row = None
+                    st.session_state.order_items = {}
+                    st.session_state.checkout_total = 0
+                    st.session_state.selected_branch = None
+
+                    st.rerun()
+                else:
+                    st.error(msg)
+                    st.session_state.redeem_step = 2
+                    st.rerun()
+        with cn:
+            if st.button("Tidak, Kembali"):
+                st.session_state.redeem_step = 2
+                st.rerun()
 
 # --------------------
 # Page: Daftar Voucher (admin) — inline edit
@@ -760,6 +764,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
