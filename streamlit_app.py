@@ -263,7 +263,7 @@ def page_redeem():
                     st.rerun()
                 else:
                     # Ambil tanggal_penjualan (pastikan nama kolom sesuai)
-                    col_names = [col.lower() for col in row.index]
+                    col_names = list(row._mapping.keys())
                     if "tanggal_penjualan" in col_names:
                         tanggal_penjualan = row["tanggal_penjualan"]
     
@@ -897,6 +897,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
