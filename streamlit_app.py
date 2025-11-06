@@ -655,41 +655,41 @@ def page_laporan_global():
 
 
     # ===== TAB Seller =====
-with tab_seller:
-    st.subheader("📊 Ringkasan Seller - Voucher Aktif")
-
-    # Pastikan seller ada
-    if "seller" not in df_vouchers.columns:
-        st.warning("Kolom 'seller' tidak tersedia di table vouchers.")
-        st.stop()
-
-    # Isi seller kosong dengan tanda '-'
-    df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
-
-    # Filter hanya voucher aktif
-    df_active = df_vouchers[df_vouchers["status"] == "active"]
-
-    if not df_active.empty:
-        # Hitung jumlah voucher aktif per seller
-        seller_active_count = (
-            df_active.groupby("seller")
-            .size()
-            .reset_index(name="Voucher Aktif")
-            .sort_values(by="Voucher Aktif", ascending=False)
-        )
-
-        st.table(seller_active_count.rename(columns={"seller": "Seller"}))
-
-        # Bar chart
-        chart_seller = alt.Chart(seller_active_count).mark_bar().encode(
-            x=alt.X("seller:N", title="Seller"),
-            y=alt.Y("Voucher Aktif:Q", title="Jumlah Voucher Aktif"),
-            tooltip=["seller", "Voucher Aktif"]
-        )
-        st.altair_chart(chart_seller, use_container_width=True)
-
-    else:
-        st.info("Belum ada voucher yang berstatus aktif.")
+    with tab_seller:   
+        st.subheader("📊 Ringkasan Seller - Voucher Aktif")
+    
+        # Pastikan seller ada
+        if "seller" not in df_vouchers.columns:
+            st.warning("Kolom 'seller' tidak tersedia di table vouchers.")
+            st.stop()
+    
+        # Isi seller kosong dengan tanda '-'
+        df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
+    
+        # Filter hanya voucher aktif
+        df_active = df_vouchers[df_vouchers["status"] == "active"]
+    
+        if not df_active.empty:
+            # Hitung jumlah voucher aktif per seller
+            seller_active_count = (
+                df_active.groupby("seller")
+                .size()
+                .reset_index(name="Voucher Aktif")
+                .sort_values(by="Voucher Aktif", ascending=False)
+            )
+    
+            st.table(seller_active_count.rename(columns={"seller": "Seller"}))
+    
+            # Bar chart
+            chart_seller = alt.Chart(seller_active_count).mark_bar().encode(
+                x=alt.X("seller:N", title="Seller"),
+                y=alt.Y("Voucher Aktif:Q", title="Jumlah Voucher Aktif"),
+                tooltip=["seller", "Voucher Aktif"]
+            )
+            st.altair_chart(chart_seller, use_container_width=True)
+    
+        else:
+            st.info("Belum ada voucher yang berstatus aktif.")
 
     # Download CSV
     st.markdown("---")
@@ -852,6 +852,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
