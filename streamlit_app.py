@@ -302,7 +302,7 @@ def page_redeem():
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
-        code, initial, balance, created_at, nama, no_hp, status = row
+        code, initial, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan= row
     
         st.subheader(f"Voucher: {code}")
         st.write(f"- Nilai awal: Rp {int(initial):,}")
@@ -903,6 +903,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
