@@ -247,12 +247,13 @@ def page_redeem():
     # STEP 1: Input kode voucher
     if st.session_state.redeem_step == 1:
         st.session_state.entered_code = st.text_input(
-            "Masukkan kode voucher", 
+            "Masukkan kode voucher",
             value=st.session_state.entered_code
         ).strip().upper()
     
         if st.button("Submit Kode"):
             code = st.session_state.entered_code
+    
             if not code:
                 st.error("Kode tidak boleh kosong")
                 return
@@ -264,31 +265,36 @@ def page_redeem():
                 st.rerun()
                 return
     
-            # Ambil tanggal_penjualan dari hasil query
-            if hasattr(row, "_mapping"):
-                row_dict = dict(row._mapping)
-            else:
-                row_dict = {}
+            # ✅ Ambil tanggal_penjualan berdasarkan index kolom di DB
+            try:
+                col_names = list(row._fields)  # <— ini yang benar untuk namedtuple
+            except:
+                col_names = []
     
-            tanggal_penjualan = row_dict.get("tanggal_penjualan")
+            if "tanggal_penjualan" in col_names:
+                idx = col_names.index("tanggal_penjualan")
+                tanggal_penjualan = row[idx]
     
-            # ✅ Cek apakah voucher telah dibeli hari ini
-            if tanggal_penjualan:
-                try:
-                    tgl_voucher = (
-                        tanggal_penjualan.date()
-                        if isinstance(tanggal_penjualan, datetime)
-                        else datetime.strptime(str(tanggal_penjualan), "%Y-%m-%d").date()
-                    )
-                    if tgl_voucher == date.today():
-                        st.error("⛔ Voucher tidak bisa digunakan pada tanggal yang sama dengan tanggal penjualan.")
-                        reset_redeem_state()
-                        st.rerun()
-                        return  # ✅ WAJIB supaya tidak lanjut
-                except Exception as e:
-                    st.warning(f"Format tanggal tidak dikenali: {e}")
+                if tanggal_penjualan:
+                    try:
+                        tgl_voucher = (
+                            tanggal_penjualan.date()
+                            if isinstance(tanggal_penjualan, datetime)
+                            else datetime.strptime(str(tanggal_penjualan), "%Y-%m-%d").date()
+                        )
     
-            st.session_state.voucher_row = row_dict
+                        # ✅ Jika hari ini = tanggal penjualan → TIDAK BOLEH redeem
+                        if tgl_voucher == date.today():
+                            st.error("⛔ Voucher tidak bisa digunakan pada tanggal yang sama dengan tanggal pembelian.")
+                            reset_redeem_state()
+                            st.rerun()
+                            return  # penting untuk stop lanjut ke Step 2
+    
+                    except Exception as e:
+                        st.warning(f"Format tanggal tidak dikenali: {e}")
+    
+            # ✅ row tetap tuple, aman untuk next-step unpack
+            st.session_state.voucher_row = row
             st.session_state.redeem_step = 2
             st.rerun()
                 
@@ -387,10 +393,6 @@ def page_redeem():
             if st.button("Batal / Kembali"):
                 reset_redeem_state()
                 st.rerun()
-
-
-
-
 
     # STEP 3: Konfirmasi pembayaran
     # STEP 3: Konfirmasi pembayaran
@@ -901,6 +903,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
