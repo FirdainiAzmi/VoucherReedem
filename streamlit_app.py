@@ -2,7 +2,7 @@
 
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy import create_engine, text
 from io import BytesIO
 import altair as alt
@@ -250,7 +250,7 @@ def page_redeem():
             "Masukkan kode voucher", 
             value=st.session_state.entered_code
         ).strip().upper()
-
+    
         if st.button("Submit Kode"):
             code = st.session_state.entered_code
             if not code:
@@ -262,10 +262,32 @@ def page_redeem():
                     reset_redeem_state()
                     st.rerun()
                 else:
+                    # Ambil tanggal_penjualan (pastikan nama kolom sesuai)
+                    col_names = [col.lower() for col in row.index]
+                    if "tanggal_penjualan" in col_names:
+                        tanggal_penjualan = row["tanggal_penjualan"]
+    
+                        if tanggal_penjualan is not None:
+                            try:
+                                tgl_voucher = (
+                                    tanggal_penjualan.date()
+                                    if isinstance(tanggal_penjualan, datetime)
+                                    else datetime.strptime(str(tanggal_penjualan), "%Y-%m-%d").date()
+                                )
+    
+                                # Cek apakah digunakan pada hari yang sama
+                                if tgl_voucher == date.today():
+                                    st.error("⛔ Voucher tidak bisa digunakan pada tanggal yang sama dengan tanggal penjualan.")
+                                    reset_redeem_state()
+                                    st.rerun()
+    
+                            except Exception as e:
+                                st.warning(f"Format tanggal tidak dikenali: {e}")
+    
                     st.session_state.voucher_row = row
                     st.session_state.redeem_step = 2
                     st.rerun()
-
+                
     # STEP 2: Pilih cabang & menu
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
@@ -875,6 +897,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
