@@ -257,6 +257,39 @@ def page_redeem():
                 st.error("Kode tidak boleh kosong")
             else:
                 row = find_voucher(code)
+
+                col_names = list(row._mapping.keys())
+                st.write("DEBUG — Raw row data:", row)
+            
+                if "tanggal_penjualan" in col_names:
+                    tanggal_penjualan = row["tanggal_penjualan"]
+                    st.write(f"DEBUG — tanggal_penjualan dari DB: {tanggal_penjualan}")
+                    st.write(f"DEBUG — tanggal_hari_ini: {date.today()}")
+            
+                    if tanggal_penjualan is not None:
+                        try:
+                            if isinstance(tanggal_penjualan, datetime):
+                                tgl_voucher = tanggal_penjualan.date()
+                            else:
+                                tgl_voucher = datetime.strptime(str(tanggal_penjualan), "%Y-%m-%d").date()
+            
+                            st.write(f"DEBUG — hasil parsing: {tgl_voucher}")
+            
+                            if tgl_voucher == date.today():
+                                st.error("⛔ Voucher tidak bisa digunakan pada tanggal yang sama dengan tanggal penjualan.")
+                                reset_redeem_state()
+                                st.stop()  # GANTI rerun menjadi stop agar tidak lompat ke step selanjutnya!
+            
+                        except Exception as e:
+                            st.warning(f"DEBUG — Format tanggal tidak dikenali: {e}")
+                else:
+                    st.warning("DEBUG — Kolom tanggal_penjualan tidak ditemukan di row ini")
+            
+                # Jika lolos, lanjut step berikutnya
+                st.session_state.voucher_row = row
+                st.session_state.redeem_step = 2
+                st.rerun()
+                
                 if not row:
                     st.error("❌ Voucher tidak ditemukan.")
                     reset_redeem_state()
@@ -282,7 +315,6 @@ def page_redeem():
                 except Exception as e:
                     st.warning(f"❗ Pengecekan tanggal gagal: {e}")
 
-                # ✅ jika aman → lanjut
                 st.session_state.voucher_row = row
                 st.session_state.redeem_step = 2
                 st.rerun()
@@ -898,6 +930,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
