@@ -494,35 +494,58 @@ def page_daftar_voucher():
         st.markdown("---")
         st.subheader(f"Edit Voucher: {v['code']}")
 
-        with st.form(key=f"edit_form_{v['code']}"):
-            nama_in = st.text_input("Nama pemilik", value=v["nama"] or "")
-            nohp_in = st.text_input("No HP pemilik", value=v["no_hp"] or "")
-            status_in = st.selectbox(
-                "Status", ["inactive", "active"],
-                index=0 if (v["status"] or "inactive") != "active" else 1
-            )
-
-            submit = st.form_submit_button("Simpan / Aktifkan")
-            if submit:
-                if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
-                    st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
-                else:
-                    ok = update_voucher_detail(
-                        v["code"],
-                        nama_in.strip() or None,
-                        nohp_in.strip() or None,
-                        status_in
-                    )
-                    if ok:
-                        # Tampilkan pesan sukses
-                        st.session_state["voucher_update_success"] = f"Voucher {v['code']} berhasil diaktifkan ✅"
-                        
-                        # Reset input pencarian & halaman pakai flag
-                        st.session_state.reset_search = True
-                        st.session_state.vouchers_page_idx = 0
-                        
-                        # Rerun untuk kembali ke halaman awal
-                        st.rerun()
+        seller_data = v.get("seller")
+        
+        if not seller_data or str(seller_data).strip() == "":
+            st.warning("⚠ Voucher ini belum memiliki seller. Tidak dapat mengubah data kepemilikan.")
+            st.info("Silakan tetapkan seller terlebih dahulu di menu pengelolaan voucher.")
+        else:
+            with st.form(key=f"edit_form_{v['code']}"):
+                nama_in = st.text_input("Nama pemilik", value=v["nama"] or "")
+                nohp_in = st.text_input("No HP pemilik", value=v["no_hp"] or "")
+                status_in = st.selectbox(
+                    "Status", ["inactive", "active"],
+                    index=0 if (v["status"] or "inactive") != "active" else 1
+                )
+        
+                submit = st.form_submit_button("Simpan / Aktifkan")
+                if submit:
+                    if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
+                        st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
+                    else:
+                        ok = update_voucher_detail(
+                            v["code"],
+                            nama_in.strip() or None,
+                            nohp_in.strip() or None,
+                            status_in
+                        )
+                        if ok:
+                            st.session_state["voucher_update_success"] = f"Voucher {v['code']} berhasil diperbarui ✅"
+                            st.session_state.reset_search = True
+                            st.session_state.vouchers_page_idx = 0
+                            st.rerun()
+        
+                    submit = st.form_submit_button("Simpan / Aktifkan")
+                    if submit:
+                        if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
+                            st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
+                        else:
+                            ok = update_voucher_detail(
+                                v["code"],
+                                nama_in.strip() or None,
+                                nohp_in.strip() or None,
+                                status_in
+                            )
+                            if ok:
+                                # Tampilkan pesan sukses
+                                st.session_state["voucher_update_success"] = f"Voucher {v['code']} berhasil diaktifkan ✅"
+                                
+                                # Reset input pencarian & halaman pakai flag
+                                st.session_state.reset_search = True
+                                st.session_state.vouchers_page_idx = 0
+                                
+                                # Rerun untuk kembali ke halaman awal
+                                st.rerun()
 
     st.markdown("---")
     st.download_button(
@@ -852,6 +875,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
