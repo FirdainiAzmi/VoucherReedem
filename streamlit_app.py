@@ -287,7 +287,7 @@ def page_redeem():
             
                 # Jika lolos, lanjut step berikutnya
                 st.session_state.voucher_row = row
-                st.session_state.redeem_step = 2
+                st.session_state.redeem_step = 1
                 st.rerun()
                 
                 if not row:
@@ -316,7 +316,7 @@ def page_redeem():
                     st.warning(f"❗ Pengecekan tanggal gagal: {e}")
 
                 st.session_state.voucher_row = row
-                st.session_state.redeem_step = 2
+                st.session_state.redeem_step = 1
                 st.rerun()
 
     # STEP 2: Pilih cabang & menu
@@ -930,6 +930,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
