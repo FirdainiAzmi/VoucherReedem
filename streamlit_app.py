@@ -265,14 +265,15 @@ def page_redeem():
                     st.session_state.voucher_row = row
                     st.session_state.redeem_step = 2
                     st.rerun()
-                    
+
+    # STEP 2: Pilih cabang & menu
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
-        (code, initial_value, balance, created_at, nama, no_hp, status, *_)= row
+        code, initial, balance, created_at, nama, no_hp, status = row
     
         st.subheader(f"Voucher: {code}")
-        st.write(f"- Nilai awal: Rp {int(initial_value):,}")
+        st.write(f"- Nilai awal: Rp {int(initial):,}")
         st.write(f"- Sisa saldo: Rp {int(balance):,}")
         st.write(f"- Nama: {nama or '-'}")
         st.write(f"- No HP: {no_hp or '-'}")
@@ -361,6 +362,10 @@ def page_redeem():
                 reset_redeem_state()
                 st.rerun()
 
+
+
+
+
     # STEP 3: Konfirmasi pembayaran
     # STEP 3: Konfirmasi pembayaran
     elif st.session_state.redeem_step == 3:
@@ -412,6 +417,8 @@ def page_redeem():
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
                 st.rerun()
+
+
 
 
 # --------------------
@@ -870,6 +877,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
