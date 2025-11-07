@@ -2,7 +2,7 @@
 
 import streamlit as st
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime
 from sqlalchemy import create_engine, text
 from io import BytesIO
 import altair as alt
@@ -43,7 +43,6 @@ def init_db():
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS no_hp TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS status TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS seller TEXT"))
-            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS tanggal_penjualan DATE"))
             conn.execute(text("UPDATE vouchers SET status = 'inactive' WHERE status IS NULL"))
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
@@ -267,17 +266,13 @@ def page_redeem():
                     st.session_state.redeem_step = 2
                     st.rerun()
 
-       
-
-
-    # STEP 2: Pilih cabang & menu
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
-        code, initial_value, balance, created_at, nama, no_hp, status = row
+        code, initial, balance, created_at, nama, no_hp, status = row
     
         st.subheader(f"Voucher: {code}")
-        st.write(f"- Nilai awal: Rp {int(initial_value):,}")
+        st.write(f"- Nilai awal: Rp {int(initial):,}")
         st.write(f"- Sisa saldo: Rp {int(balance):,}")
         st.write(f"- Nama: {nama or '-'}")
         st.write(f"- No HP: {no_hp or '-'}")
@@ -366,11 +361,6 @@ def page_redeem():
                 reset_redeem_state()
                 st.rerun()
 
-
-
-
-
-    # STEP 3: Konfirmasi pembayaran
     # STEP 3: Konfirmasi pembayaran
     elif st.session_state.redeem_step == 3:
         row = st.session_state.voucher_row
@@ -421,8 +411,6 @@ def page_redeem():
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
                 st.rerun()
-
-
 
 
 # --------------------
@@ -500,58 +488,35 @@ def page_daftar_voucher():
         st.markdown("---")
         st.subheader(f"Edit Voucher: {v['code']}")
 
-        seller_data = v.get("seller")
-        
-        if not seller_data or str(seller_data).strip() == "":
-            st.warning("⚠ Voucher ini belum memiliki seller. Tidak dapat mengubah data kepemilikan.")
-            st.info("Silakan tetapkan seller terlebih dahulu di menu pengelolaan voucher.")
-        else:
-            with st.form(key=f"edit_form_{v['code']}"):
-                nama_in = st.text_input("Nama pemilik", value=v["nama"] or "")
-                nohp_in = st.text_input("No HP pemilik", value=v["no_hp"] or "")
-                status_in = st.selectbox(
-                    "Status", ["inactive", "active"],
-                    index=0 if (v["status"] or "inactive") != "active" else 1
-                )
-        
-                submit = st.form_submit_button("Simpan / Aktifkan")
-                if submit:
-                    if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
-                        st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
-                    else:
-                        ok = update_voucher_detail(
-                            v["code"],
-                            nama_in.strip() or None,
-                            nohp_in.strip() or None,
-                            status_in
-                        )
-                        if ok:
-                            st.session_state["voucher_update_success"] = f"Voucher {v['code']} berhasil diperbarui ✅"
-                            st.session_state.reset_search = True
-                            st.session_state.vouchers_page_idx = 0
-                            st.rerun()
-        
-                    submit = st.form_submit_button("Simpan / Aktifkan")
-                    if submit:
-                        if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
-                            st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
-                        else:
-                            ok = update_voucher_detail(
-                                v["code"],
-                                nama_in.strip() or None,
-                                nohp_in.strip() or None,
-                                status_in
-                            )
-                            if ok:
-                                # Tampilkan pesan sukses
-                                st.session_state["voucher_update_success"] = f"Voucher {v['code']} berhasil diaktifkan ✅"
-                                
-                                # Reset input pencarian & halaman pakai flag
-                                st.session_state.reset_search = True
-                                st.session_state.vouchers_page_idx = 0
-                                
-                                # Rerun untuk kembali ke halaman awal
-                                st.rerun()
+        with st.form(key=f"edit_form_{v['code']}"):
+            nama_in = st.text_input("Nama pemilik", value=v["nama"] or "")
+            nohp_in = st.text_input("No HP pemilik", value=v["no_hp"] or "")
+            status_in = st.selectbox(
+                "Status", ["inactive", "active"],
+                index=0 if (v["status"] or "inactive") != "active" else 1
+            )
+
+            submit = st.form_submit_button("Simpan / Aktifkan")
+            if submit:
+                if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
+                    st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
+                else:
+                    ok = update_voucher_detail(
+                        v["code"],
+                        nama_in.strip() or None,
+                        nohp_in.strip() or None,
+                        status_in
+                    )
+                    if ok:
+                        # Tampilkan pesan sukses
+                        st.session_state["voucher_update_success"] = f"Voucher {v['code']} berhasil diaktifkan ✅"
+                        
+                        # Reset input pencarian & halaman pakai flag
+                        st.session_state.reset_search = True
+                        st.session_state.vouchers_page_idx = 0
+                        
+                        # Rerun untuk kembali ke halaman awal
+                        st.rerun()
 
     st.markdown("---")
     st.download_button(
@@ -684,41 +649,45 @@ def page_laporan_global():
 
 
     # ===== TAB Seller =====
-    with tab_seller:   
-        st.subheader("📊 Ringkasan Seller - Voucher Aktif")
+    with tab_seller:
+        st.subheader("📊 Ringkasan Transaksi per Seller")
     
-        # Pastikan seller ada
-        if "seller" not in df_vouchers.columns:
-            st.warning("Kolom 'seller' tidak tersedia di table vouchers.")
-            st.stop()
+        # Pastikan df_tx punya kolom seller
+        if "seller" not in df_tx.columns:
+            if "code" in df_tx.columns and "code" in df_vouchers.columns:
+                df_tx["code"] = df_tx["code"].astype(str)
+                df_vouchers["code"] = df_vouchers["code"].astype(str)
+                
+                # Merge df_tx dengan df_vouchers untuk ambil seller dan status/active info
+                df_tx = df_tx.merge(
+                    df_vouchers[["code", "seller", "balance", "initial_value"]],
+                    on="code",
+                    how="left"
+                )
+        
+        if "seller" in df_tx.columns and not df_tx["seller"].isnull().all():
+            # Filter voucher yang aktif saja
+            df_active = df_tx[df_tx["balance"] < df_tx["initial_value"]]
     
-        # Isi seller kosong dengan tanda '-'
-        df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
+            if not df_active.empty:
+                # Hitung jumlah transaksi per seller dari voucher aktif
+                seller_count = df_active.groupby("seller").size().reset_index(name="#Terjual")
     
-        # Filter hanya voucher aktif
-        df_active = df_vouchers[df_vouchers["status"] == "active"]
+                st.table(seller_count.rename(columns={"seller":"Seller"}))
     
-        if not df_active.empty:
-            # Hitung jumlah voucher aktif per seller
-            seller_active_count = (
-                df_active.groupby("seller")
-                .size()
-                .reset_index(name="Voucher Aktif")
-                .sort_values(by="Voucher Aktif", ascending=False)
-            )
-    
-            st.table(seller_active_count.rename(columns={"seller": "Seller"}))
-    
-            # Bar chart
-            chart_seller = alt.Chart(seller_active_count).mark_bar().encode(
-                x=alt.X("seller:N", title="Seller"),
-                y=alt.Y("Voucher Aktif:Q", title="Jumlah Voucher Aktif"),
-                tooltip=["seller", "Voucher Aktif"]
-            )
-            st.altair_chart(chart_seller, use_container_width=True)
-    
+                # Bar chart berdasarkan jumlah transaksi (#Terjual)
+                chart_seller = alt.Chart(seller_count).mark_bar().encode(
+                    x=alt.X("seller:N", title="Seller"),
+                    y=alt.Y("#Terjual:Q", title="Jumlah Terjual"),
+                    tooltip=["seller","#Terjual"]
+                )
+                st.altair_chart(chart_seller, use_container_width=True)
+            else:
+                st.info("Belum ada voucher aktif yang terjual.")
         else:
-            st.info("Belum ada voucher yang berstatus aktif.")
+            st.warning("Kolom 'seller' tidak tersedia atau semua kosong pada dataset transaksi.")
+
+
 
     # Download CSV
     st.markdown("---")
@@ -881,98 +850,4 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
