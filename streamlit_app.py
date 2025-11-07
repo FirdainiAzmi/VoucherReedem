@@ -244,27 +244,28 @@ if not st.session_state.admin_logged_in:
 # --------------------
 def page_redeem():
     st.header("Cari & Redeem (User)")
+
     # STEP 1: Input kode voucher
-     if st.session_state.redeem_step == 1:
-                st.session_state.entered_code = st.text_input(
-                    "Masukkan kode voucher", 
-                    value=st.session_state.entered_code
-                ).strip().upper()
-        
-                if st.button("Submit Kode"):
-                    code = st.session_state.entered_code
-                    if not code:
-                        st.error("Kode tidak boleh kosong")
-                    else:
-                        row = find_voucher(code)
-                        if not row:
-                            st.error("❌ Voucher tidak ditemukan.")
-                            reset_redeem_state()
-                            st.rerun()
-                        else:
-                            st.session_state.voucher_row = row
-                            st.session_state.redeem_step = 2
-                            st.rerun()
+    if st.session_state.redeem_step == 1:
+        st.session_state.entered_code = st.text_input(
+            "Masukkan kode voucher", 
+            value=st.session_state.entered_code
+        ).strip().upper()
+
+        if st.button("Submit Kode"):
+            code = st.session_state.entered_code
+            if not code:
+                st.error("Kode tidak boleh kosong")
+            else:
+                row = find_voucher(code)
+                if not row:
+                    st.error("❌ Voucher tidak ditemukan.")
+                    reset_redeem_state()
+                    st.rerun()
+                else:
+                    st.session_state.voucher_row = row
+                    st.session_state.redeem_step = 2
+                    st.rerun()
 
        
 
@@ -880,6 +881,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
