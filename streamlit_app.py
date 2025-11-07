@@ -86,7 +86,7 @@ def atomic_redeem(code, amount, branch, items):
                 return False, f"Saldo tidak cukup (sisa: {balance}).", balance
             conn.execute(text("UPDATE vouchers SET balance = balance - :amt WHERE code = :c"), {"amt": amount, "c": code})
             conn.execute(text("""
-                INSERT INTO transactions (code, used_amount, used_at, branch, items)
+                INSERT INTO transactions (code, used_amount, tanggal_transaksi, branch, items)
                 VALUES (:c, :amt, :now, :branch, :items)
             """), {"c": code, "amt": amount, "now": datetime.utcnow(), "branch": branch, "items": items})
             return True, "Redeem berhasil.", balance - amount
@@ -94,7 +94,7 @@ def atomic_redeem(code, amount, branch, items):
         return False, f"DB error saat redeem: {e}", None
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
-    q = "SELECT code, initial_value, balance, tanggal_transaksi, nama, no_hp, status, seller FROM vouchers"
+    q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller FROM vouchers"
     clauses = []
     params = {}
     if filter_status == "aktif":
@@ -157,7 +157,7 @@ def count_vouchers(filter_status=None, search=None):
         return int(conn.execute(text(q), params).scalar())
 
 def list_transactions(limit=5000):
-    q = "SELECT * FROM transactions ORDER BY used_at DESC LIMIT :limit"
+    q = "SELECT * FROM transactions ORDER BY tanggal_transaksi DESC LIMIT :limit"
     with engine.connect() as conn:
         return pd.read_sql(text(q), conn, params={"limit": limit})
 
@@ -242,55 +242,34 @@ if not st.session_state.admin_logged_in:
 # Page: Cari & Redeem (public)
 # --------------------
 def page_redeem():
+    st.header("Cari & Redeem (User)")
+
+    # STEP 1: Input kode voucher
     if st.session_state.redeem_step == 1:
         st.session_state.entered_code = st.text_input(
-            "Masukkan kode voucher",
+            "Masukkan kode voucher", 
             value=st.session_state.entered_code
         ).strip().upper()
-    
+
         if st.button("Submit Kode"):
             code = st.session_state.entered_code
-            
             if not code:
                 st.error("Kode tidak boleh kosong")
-                return
-    
-            row = find_voucher(code)
-            if not row:
-                st.error("❌ Voucher tidak ditemukan.")
-                reset_redeem_state()
-                st.rerun()
-            
-            code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
-    
-            # Debug log
-            st.write(f"🧪 Debug: tanggal_penjualan = {tanggal_penjualan}, today = {date.today()}")
-    
-            # Jika belum ada tanggal penjualan
-            if tanggal_penjualan is None:
-                st.warning("⛔ Voucher belum terjual, tidak bisa digunakan.")
-                return
-            
-            # Convert ke date jika masih datetime
-            if isinstance(tanggal_penjualan, datetime):
-                tanggal_penjualan = tanggal_penjualan.date()
-            
-            # Jika dipakai di tanggal yang sama
-            if tanggal_penjualan == date.today():
-                st.error("⛔ Voucher tidak bisa digunakan pada hari penjualan yang sama.")
-                reset_redeem_state()
-                return
-    
-            # ✅ Lewat validasi → lanjut ke step 2
-            st.session_state.voucher_row = row
-            st.session_state.redeem_step = 2
-            st.rerun()
-
+            else:
+                row = find_voucher(code)
+                if not row:
+                    st.error("❌ Voucher tidak ditemukan.")
+                    reset_redeem_state()
+                    st.rerun()
+                else:
+                    st.session_state.voucher_row = row
+                    st.session_state.redeem_step = 2
+                    st.rerun()
 
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
-        code, initial, balance, tanggal_transaksi, nama, no_hp, status = row
+        code, initial, balance, created_at, nama, no_hp, status = row
     
         st.subheader(f"Voucher: {code}")
         st.write(f"- Nilai awal: Rp {int(initial):,}")
@@ -570,13 +549,13 @@ def page_histori():
             st.write(f"- Jumlah transaksi: {total_transaksi}")
             st.write(f"- Total nominal terpakai: Rp {total_nominal:,}")
             df_display = df_filtered.copy()
-            df_display["used_at"] = pd.to_datetime(df_display["used_at"])
-            df_display = df_display.rename(columns={"id":"ID","code":"Kode","used_amount":"Jumlah","used_at":"Waktu","branch":"Cabang","items":"Menu"})
+            df_display["tanggal_transaksi"] = pd.to_datetime(df_display["tanggal_transaksi"])
+            df_display = df_display.rename(columns={"id":"ID","code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Waktu","branch":"Cabang","items":"Menu"})
             st.dataframe(df_display[["ID","Kode","Waktu","Jumlah","Cabang","Menu"]], use_container_width=True)
             st.download_button(f"Download CSV {search_code.strip().upper()}", data=df_to_csv_bytes(df_display), file_name=f"transactions_{search_code.strip().upper()}.csv", mime="text/csv")
     else:
-        df_tx["used_at"] = pd.to_datetime(df_tx["used_at"])
-        df_tx = df_tx.rename(columns={"id":"ID","code":"Kode","used_amount":"Jumlah","used_at":"Waktu","branch":"Cabang","items":"Menu"})
+        df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
+        df_tx = df_tx.rename(columns={"id":"ID","code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Waktu","branch":"Cabang","items":"Menu"})
         st.dataframe(df_tx, use_container_width=True)
         st.download_button("Download CSV Transaksi", data=df_to_csv_bytes(df_tx), file_name="transactions.csv", mime="text/csv")
 
@@ -594,8 +573,8 @@ def page_laporan_global():
     df_tx = list_transactions(limit=100000)
 
     # Pastikan kolom tanggal sebagai datetime
-    if "used_at" in df_tx.columns:
-        df_tx["used_at"] = pd.to_datetime(df_tx["used_at"])
+    if "tanggal_transaksi" in df_tx.columns:
+        df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
 
     # ===== TAB Voucher =====
     with tab_voucher:
@@ -656,7 +635,7 @@ def page_laporan_global():
 
             # Time series harian
             # ubah ke datetime tanpa jam
-            df_tx["date"] = pd.to_datetime(df_tx["used_at"]).dt.normalize()  
+            df_tx["date"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.normalize()  
             
             daily = df_tx.groupby("date")["used_amount"].sum().reset_index()
             
@@ -871,7 +850,6 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
-
 
 
 
