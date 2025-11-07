@@ -243,49 +243,60 @@ if not st.session_state.admin_logged_in:
 # --------------------
 def page_redeem():
     st.header("Cari & Redeem (User)")
-
     # STEP 1: Input kode voucher
     if st.session_state.redeem_step == 1:
         st.session_state.entered_code = st.text_input(
             "Masukkan kode voucher", 
             value=st.session_state.entered_code
         ).strip().upper()
-
+    
         if st.button("Submit Kode"):
             code = st.session_state.entered_code
             if not code:
                 st.error("Kode tidak boleh kosong")
             else:
                 row = find_voucher(code)
-                
+    
                 if not row:
                     st.error("❌ Voucher tidak ditemukan.")
                     reset_redeem_state()
                     st.rerun()
-
-                # ✅ CEK TANGGAL PENJUALAN SEBELUM LANJUT
+    
+                # ✅ Ambil kolom tanggal_penjualan jika ada
+                col_names = list(row._mapping.keys())
+                tanggal_penjualan = None
+    
+                if "tanggal_penjualan" in col_names:
+                    tanggal_penjualan = row["tanggal_penjualan"]
+    
+                # ✅ Jika belum ada tanggal penjualan → tolak
+                if tanggal_penjualan is None:
+                    st.error("⚠ Voucher belum bisa digunakan. Tanggal penjualan belum diatur oleh admin.")
+                    reset_redeem_state()
+                    st.stop()
+    
+                # ✅ Parsing tanggal
                 try:
-                    col_names = list(row._mapping.keys())  # kolom hasil query
-                    if "tanggal_penjualan" in col_names:
-                        tanggal_penjualan = row["tanggal_penjualan"]
-
-                        if tanggal_penjualan:
-                            # pastikan jadi objek date
-                            if hasattr(tanggal_penjualan, "date"):
-                                tgl_voucher = tanggal_penjualan.date()
-                            else:
-                                tgl_voucher = datetime.strptime(str(tanggal_penjualan), "%Y-%m-%d").date()
-
-                            if tgl_voucher == date.today():
-                                st.error("⛔ Voucher tidak bisa digunakan pada tanggal yang sama dengan tanggal penjualan.")
-                                reset_redeem_state()
-                                st.stop()  # ✅ stop langsung, tanpa lanjut ke step 2
-                except Exception as e:
-                    st.warning(f"❗ Pengecekan tanggal gagal: {e}")
-
+                    if isinstance(tanggal_penjualan, datetime):
+                        tgl_vcr = tanggal_penjualan.date()
+                    else:
+                        tgl_vcr = datetime.strptime(str(tanggal_penjualan), "%Y-%m-%d").date()
+                except:
+                    st.error("Format tanggal pada sistem tidak valid. Hubungi admin.")
+                    reset_redeem_state()
+                    st.stop()
+    
+                # ✅ Cek hari yang sama
+                if tgl_vcr == date.today():
+                    st.error("⛔ Voucher belum bisa ditukar pada hari penjualan yang sama. Silakan kembali besok.")
+                    reset_redeem_state()
+                    st.stop()
+    
+                # ✅ Jika semua lolos → lanjut step 2
                 st.session_state.voucher_row = row
                 st.session_state.redeem_step = 2
                 st.rerun()
+
 
     # STEP 2: Pilih cabang & menu
     # STEP 2: Pilih cabang & menu
@@ -898,6 +909,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
