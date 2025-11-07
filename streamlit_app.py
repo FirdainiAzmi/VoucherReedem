@@ -43,6 +43,7 @@ def init_db():
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS no_hp TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS status TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS seller TEXT"))
+            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS tanggal_penjualan DATE"))
             conn.execute(text("UPDATE vouchers SET status = 'inactive' WHERE status IS NULL"))
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
@@ -909,6 +910,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
