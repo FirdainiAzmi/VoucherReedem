@@ -856,6 +856,7 @@ def page_laporan_global():
     with tab_seller:
         st.subheader("📊 Analisis Seller")
     
+        # Pastikan kolom seller tersedia
         if "seller" not in df_vouchers.columns:
             st.warning("Kolom 'seller' tidak tersedia di tabel vouchers.")
             st.stop()
@@ -863,50 +864,54 @@ def page_laporan_global():
         df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
     
         # ========================= #
-        # Filter Tanggal Voucher Dibuat
+        # Filter Tanggal
         # ========================= #
-        df_vouchers["created_at"] = pd.to_datetime(df_vouchers["created_at"])
-        min_date = df_vouchers["created_at"].min()
-        max_date = df_vouchers["created_at"].max()
+        min_date = pd.to_datetime(df_vouchers["created_at"]).min()
+        max_date = pd.to_datetime(df_vouchers["created_at"]).max()
     
-        date_filter_seller = st.date_input(
-            "Filter Tanggal Voucher Dibuat",
+        date_filter = st.date_input(
+            "📅 Filter Tanggal Voucher Dibuat",
             [min_date, max_date],
             key="seller_date_filter"
         )
     
-        df_filtered_seller = df_vouchers[
-            (df_vouchers["created_at"] >= pd.to_datetime(date_filter_seller[0])) &
-            (df_vouchers["created_at"] <= pd.to_datetime(date_filter_seller[1]))
+        df_filtered_seller = df_vouchers.copy()
+        df_filtered_seller["created_at"] = pd.to_datetime(df_filtered_seller["created_at"])
+        df_filtered_seller = df_filtered_seller[
+            (df_filtered_seller["created_at"] >= pd.to_datetime(date_filter[0])) &
+            (df_filtered_seller["created_at"] <= pd.to_datetime(date_filter[1]))
         ]
     
         # ========================= #
         # Filter Cabang
         # ========================= #
         if "branch" in df_filtered_seller.columns:
-            cabang_list_seller = ["Semua"] + sorted(df_filtered_seller["branch"].dropna().unique().tolist())
+            cabang_list = ["Semua"] + sorted(df_filtered_seller["branch"].dropna().unique().tolist())
             selected_branch_seller = st.selectbox(
-                "Filter Cabang Penjual",
-                cabang_list_seller,
+                "🏬 Filter Cabang Seller",
+                cabang_list,
                 key="seller_branch_filter"
             )
     
             if selected_branch_seller != "Semua":
-                df_filtered_seller = df_filtered_seller[df_filtered_seller["branch"] == selected_branch_seller]
+                df_filtered_seller = df_filtered_seller[
+                    df_filtered_seller["branch"] == selected_branch_seller
+                ]
     
         # ========================= #
-        # Metrics Summary
+        # Card Metrics
         # ========================= #
         total_seller = df_filtered_seller["seller"].nunique()
         total_voucher = len(df_filtered_seller)
     
-        st.write(f"👤 Total Seller Aktif: **{total_seller}**")
-        st.write(f"🎟️ Total Voucher Dibawa Seller: **{total_voucher:,}**")
+        st.success(f"👤 Total Seller: **{total_seller}**")
+        st.info(f"🎟️ Total Voucher Dibawa Seller: **{total_voucher:,}**")
     
         # ========================= #
-        # Voucher Aktif per Seller
+        # Voucher Aktif Per Seller
         # ========================= #
         st.subheader("✅ Voucher Aktif per Seller")
+    
         df_active = df_filtered_seller[df_filtered_seller["status"] == "active"]
     
         if not df_active.empty:
@@ -916,18 +921,26 @@ def page_laporan_global():
                 .reset_index(name="Voucher Aktif")
                 .sort_values(by="Voucher Aktif", ascending=False)
             )
+    
             st.table(seller_active.rename(columns={"seller": "Seller"}))
-            st.bar_chart(seller_active, x="Seller", y="Voucher Aktif")
+            st.bar_chart(seller_active, x="seller", y="Voucher Aktif")
+    
         else:
             st.info("Tidak ada voucher aktif.")
     
         # ========================= #
-        # Voucher Sudah Dipakai per Seller
+        # Voucher Terpakai Per Seller
         # ========================= #
-        st.subheader("🔥 Total Pemakaian Voucher per Seller")
+        st.subheader("🔥 Total Voucher Sudah Digunakan per Seller")
     
-        if not df_tx.empty and "code" in df_filtered_seller.columns:
-            df_join = df_tx.merge(df_filtered_seller[["code", "seller"]], on="code", how="inner")
+        if "code" in df_filtered_seller.columns and not df_tx.empty:
+    
+            # Join table transaksi ke voucher (ambil seller)
+            df_join = df_tx.merge(
+                df_filtered_seller[["code", "seller"]],
+                on="code",
+                how="inner"
+            )
     
             used_by_seller = (
                 df_join.groupby("seller")["code"]
@@ -937,43 +950,10 @@ def page_laporan_global():
             )
     
             st.table(used_by_seller.rename(columns={"seller": "Seller"}))
-            st.bar_chart(used_by_seller, x="Seller", y="Total Pemakaian Voucher")
-    
-            # ========================= #
-            # Pie Chart Aktif vs Terpakai
-            # ========================= #
-            st.subheader("📊 Proporsi Voucher Aktif vs Terpakai")
-            active_count = len(df_active)
-            used_count = len(df_join["code"].unique())
-    
-            fig, ax = plt.subplots()
-            ax.pie(
-                [active_count, used_count],
-                labels=["Aktif", "Terpakai"],
-                autopct="%1.1f%%"
-            )
-            st.pyplot(fig)
+            st.bar_chart(used_by_seller, x="seller", y="Total Pemakaian Voucher")
     
         else:
-            st.info("Belum ada transaksi terkait seller ini.")
-    
-        # ========================= #
-        # Export CSV
-        # ========================= #
-        st.subheader("⬇️ Export Laporan Seller")
-    
-        export_data = df_filtered_seller.copy()
-        csv_export_seller = export_data.to_csv(index=False).encode("utf-8")
-    
-        st.download_button(
-            "📥 Download CSV Laporan Seller",
-            csv_export_seller,
-            "laporan_seller.csv",
-            "text/csv"
-        )
-
-
-
+            st.info("Belum ada data transaksi digunakan seller.")
 
 # --------------------
 # Page: Seller (admin-only)
@@ -1114,6 +1094,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
