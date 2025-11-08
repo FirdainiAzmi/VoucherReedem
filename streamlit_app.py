@@ -791,39 +791,45 @@ def page_laporan_global():
             )
             st.table(top_voucher)
             st.bar_chart(top_voucher, x="code", y="Jumlah Transaksi")
+       
         # =============================== #
-        # 🍽️ Top 5 Menu Paling Banyak Dibeli
+        # 🍽️ Top 5 Menu Terlaris
         # =============================== #
-        st.subheader("🍽️ Top 5 Menu Terlaris")
         
+        # Query tergantung cabang yang dipilih
         if selected_cabang == "Semua":
             query_menu = """
-                SELECT nama_item, 
-                (COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0)) AS total_terjual
+                SELECT nama_item,
+                COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0) AS Terjual
                 FROM menu_items
             """
         else:
             column = "terjual_twsari" if selected_cabang == "Tawangsari" else "terjual_sedati"
             query_menu = f"""
-                SELECT nama_item, 
-                COALESCE({column},0) AS total_terjual
+                SELECT nama_item,
+                COALESCE({column},0) AS Terjual
                 FROM menu_items
             """
         
-        df_menu = pd.read_sql(query_menu, engine)
-        df_menu = df_menu.sort_values("total_terjual", ascending=False).head(5)
+        df_menu = pd.read_sql(query_menu, conn)
+        df_menu = df_menu.rename(columns={"nama_item": "Menu"})  # ✅ Rename langsung
+        
+        # Ambil Top 5
+        df_menu = df_menu.sort_values("Terjual", ascending=False).head(5)
+        
+        st.subheader("🍽️ Top 5 Menu Terlaris")
         
         if df_menu.empty:
             st.info("Belum ada data penjualan menu.")
         else:
-            st.table(df_menu.rename(columns={"nama_item": "Menu", "total_terjual": "Terjual"}))
-        
+            # ✅ Bar Chart aja
             chart_menu = alt.Chart(df_menu).mark_bar().encode(
-                x=alt.X("Menu:N"),
-                y=alt.Y("Terjual:Q"),
+                x=alt.X("Menu:N", title="Menu"),
+                y=alt.Y("Terjual:Q", title="Jumlah Terjual"),
                 tooltip=["Menu", "Terjual"]
             )
             st.altair_chart(chart_menu, use_container_width=True)
+
 
 
     
@@ -1019,6 +1025,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
