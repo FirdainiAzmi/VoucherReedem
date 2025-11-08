@@ -248,59 +248,52 @@ def page_redeem():
     # STEP 1: Input kode voucher
     if st.session_state.redeem_step == 1:
         st.session_state.entered_code = st.text_input(
-            "Masukkan kode voucher",
+            "Masukkan kode voucher", 
             value=st.session_state.entered_code
         ).strip().upper()
     
         if st.button("Submit Kode"):
             code = st.session_state.entered_code
-    
             if not code:
                 st.error("Kode tidak boleh kosong")
-                return
+            else:
+                row = find_voucher(code)
+                if not row:
+                    st.error("❌ Voucher tidak ditemukan.")
+                    reset_redeem_state()
+                    st.rerun()
     
-            row = find_voucher(code)
+                # Ambil data row
+                code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
     
-            if not row:
-                st.error("❌ Voucher tidak ditemukan.")
-                reset_redeem_state()
+                # ✅ Validasi status
+                if status.lower() != "active":
+                    st.error("⛔ Voucher belum dapat digunakan. Status masih INACTIVE.")
+                    reset_redeem_state()
+                    st.rerun()
+    
+                # ✅ Validasi tanggal_penjualan
+                if tanggal_penjualan is None:
+                    st.error("⛔ Voucher belum bisa digunakan. Tanggal penjualan belum tercatat.")
+                    reset_redeem_state()
+                    st.rerun()
+    
+                # Ubah ke tipe date
+                if hasattr(tanggal_penjualan, "date"):
+                    tgl_penjualan = tanggal_penjualan.date()
+                else:
+                    tgl_penjualan = datetime.strptime(str(tanggal_penjualan), "%Y-%m-%d").date()
+    
+                # ✅ Tidak boleh dipakai HARI YANG SAMA
+                if tgl_penjualan == date.today():
+                    st.error("⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher dibeli.")
+                    reset_redeem_state()
+                    st.rerun()
+    
+                # ✅ Jika semua valid → lanjut
+                st.session_state.voucher_row = row
+                st.session_state.redeem_step = 2
                 st.rerun()
-    
-            # --- Extract kolom dengan aman ---
-            cols = row._mapping
-            status = cols.get("status", "").lower()
-            tgl_penjualan = cols.get("tanggal_penjualan", None)
-    
-            # --- Validasi status inactive ---
-            if status == "inactive":
-                st.error("⚠ Voucher belum dapat digunakan karena belum diaktifkan.")
-                return
-    
-            # --- Validasi tanggal penjualan ---
-            today = pd.to_datetime("today")
-            if tgl_penjualan is None:
-                st.error("⚠ Voucher belum dapat digunakan karena belum memiliki tanggal penjualan.")
-                return
-    
-            # Convert timestamp/datetime/str ke date
-            if isinstance(tgl_penjualan, datetime.datetime):
-                tgl_penjualan = tgl_penjualan.date()
-            elif isinstance(tgl_penjualan, str):
-                try:
-                    tgl_penjualan = datetime.datetime.strptime(tgl_penjualan, "%Y-%m-%d").date()
-                except:
-                    st.error("⚠ Format tanggal_penjualan tidak valid di database.")
-                    return
-    
-            if tgl_penjualan == today:
-                st.warning("⚠ Voucher hanya bisa digunakan H+1 setelah pembelian.")
-                return
-    
-            # ✅ Semua valid → lanjut Step 2
-            st.session_state.voucher_row = row
-            st.session_state.redeem_step = 2
-            st.rerun()
-
 
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
@@ -912,6 +905,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
