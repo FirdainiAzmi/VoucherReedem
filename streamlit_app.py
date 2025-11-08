@@ -793,58 +793,48 @@ def page_laporan_global():
             st.bar_chart(top_voucher, x="code", y="Jumlah Transaksi")
        
         # =============================== #
-        # 🍽️ Top 5 Menu Terlaris
+        # 🍽 Top 5 Menu Terlaris
         # =============================== #
-        st.subheader("🍽️ Top 5 Menu Terlaris")
         
-        # Lihat kolom yang tersedia di menu_items
-        df_check = pd.read_sql("SELECT * FROM menu_items LIMIT 1", engine)
-        st.write("Kolom tersedia:", df_check.columns.tolist())
+        st.subheader("🍽 Top 5 Menu Terlaris")
         
-        # Tentukan kolom terjual berdasarkan cabang
-        if selected_cabang == "Semua":
-            if all(col in df_check.columns for col in ["terjual_twsari", "terjual_sedati"]):
-                query_menu = """
-                    SELECT nama_item,
-                    COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0) AS Terjual
-                    FROM menu_items
-                """
+        try:
+            # Query tergantung cabang yang dipilih
+            if "selected_cabang" not in locals():
+                st.warning("Silakan pilih cabang terlebih dahulu untuk melihat menu terlaris.")
             else:
-                st.error("❌ Kolom penjualan tidak ditemukan! Pastikan kolom terjual ada di database.")
-                st.stop()
+                if selected_cabang == "Semua":
+                    query_menu = """
+                        SELECT nama_item,
+                        COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0) AS Terjual
+                        FROM menu_items
+                    """
+                else:
+                    column = "terjual_twsari" if selected_cabang == "Tawangsari" else "terjual_sedati"
+                    query_menu = f"""
+                        SELECT nama_item,
+                        COALESCE({column},0) AS Terjual
+                        FROM menu_items
+                    """
         
-        else:
-            if selected_cabang == "Tawangsari":
-                column = "terjual_twsari"
-            else:
-                column = "terjual_sedati"
+                df_menu = pd.read_sql(query_menu, engine)
+                df_menu = df_menu.rename(columns={"nama_item": "Menu"})
         
-            if column not in df_check.columns:
-                st.error(f"❌ Kolom {column} tidak ditemukan di menu_items.")
-                st.stop()
+                if "Terjual" not in df_menu.columns:
+                    st.info("Kolom 'Terjual' tidak ditemukan di hasil query.")
+                elif df_menu.empty:
+                    st.info("Belum ada data penjualan menu.")
+                else:
+                    df_menu = df_menu.sort_values("Terjual", ascending=False).head(5)
+                    chart_menu = alt.Chart(df_menu).mark_bar().encode(
+                        x=alt.X("Menu:N", title="Menu"),
+                        y=alt.Y("Terjual:Q", title="Jumlah Terjual"),
+                        tooltip=["Menu", "Terjual"]
+                    )
+                    st.altair_chart(chart_menu, use_container_width=True)
         
-            query_menu = f"""
-                SELECT nama_item,
-                COALESCE({column},0) AS Terjual
-                FROM menu_items
-            """
-        
-        df_menu = pd.read_sql(query_menu, engine)
-        
-        if df_menu.empty:
-            st.info("ℹ️ Belum ada data penjualan menu.")
-            st.stop()
-        
-        df_menu = df_menu.rename(columns={"nama_item": "Menu"})
-        df_menu = df_menu.sort_values("Terjual", ascending=False).head(5)
-        
-        chart_menu = alt.Chart(df_menu).mark_bar().encode(
-            x="Menu:N",
-            y="Terjual:Q",
-            tooltip=["Menu", "Terjual"]
-        )
-        
-        st.altair_chart(chart_menu, use_container_width=True)
+        except Exception as e:
+            st.error(f"Gagal memuat data menu terlaris: {e}")
 
 
 
@@ -1042,6 +1032,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
