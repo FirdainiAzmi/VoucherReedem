@@ -810,7 +810,7 @@ def page_laporan_global():
                 FROM menu_items
             """
         
-        df_menu = pd.read_sql(query_menu, conn)
+        df_menu = pd.read_sql(query_menu, engine)
         df_menu = df_menu.sort_values("total_terjual", ascending=False).head(5)
         
         if df_menu.empty:
@@ -1019,6 +1019,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
