@@ -7,7 +7,7 @@ import altair as alt
 import matplotlib.pyplot as plt
 import math
 import traceback 
-from database import get_db_connection
+from database import engine
 
 DB_URL = st.secrets["DB_URL"]
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
@@ -71,11 +71,9 @@ def update_voucher_detail(code, nama, no_hp, status):
     except Exception as e:
         st.error(f"Gagal update voucher: {e}")
         return False
-import traceback
 
 def atomic_redeem(code, used_amount, branch, items_str):
     try:
-        engine = get_db_connection()
         conn = engine.raw_connection()
         cur = conn.cursor()
 
@@ -90,20 +88,17 @@ def atomic_redeem(code, used_amount, branch, items_str):
             conn.rollback()
             return False, "Saldo tidak cukup", balance
 
-        # Update saldo voucher
         new_balance = balance - used_amount
         cur.execute(
             "UPDATE vouchers SET balance=%s, status='used' WHERE code=%s",
             (new_balance, code)
         )
 
-        # Insert transaksi
         cur.execute("""
             INSERT INTO voucher_transactions (code, used_amount, branch, items)
             VALUES (%s, %s, %s, %s)
         """, (code, used_amount, branch, items_str))
 
-        # ✅ Update penjualan per item per branch
         items = [x.strip() for x in items_str.split(",")]
 
         for i in items:
@@ -129,8 +124,12 @@ def atomic_redeem(code, used_amount, branch, items_str):
         return False, str(e), None
 
     finally:
-        cur.close()
-        conn.close()
+        try:
+            cur.close()
+            conn.close()
+        except:
+            pass
+
 
 # def atomic_redeem(code, used_amount, branch, items_str):
 #     try:
@@ -1041,6 +1040,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
