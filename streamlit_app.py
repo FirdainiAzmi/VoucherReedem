@@ -901,16 +901,22 @@ def page_laporan_global():
         # ========================= #
         # Card Metrics
         # ========================= #
+        
+        # Hanya voucher yang benar-benar dibawa seller
         df_seller_only = df_filtered_seller[df_filtered_seller["seller"] != "-"]
         
+        # ✅ Total Seller (count unique seller)
         total_seller = df_seller_only["seller"].nunique()
+        
+        # ✅ Total Voucher Dibawa Seller (count voucher)
         total_voucher = len(df_seller_only)
         
-        st.success(f"👤 Total Seller Aktif Membawa Voucher: **{total_seller}**")
+        st.success(f"👤 Total Seller: **{total_seller}**")
         st.info(f"🎟️ Total Voucher Dibawa Seller: **{total_voucher:,}**")
         
-        # Pakai df_seller_only untuk summary berikutnya
+        # Filter voucher aktif oleh seller
         df_active = df_seller_only[df_seller_only["status"] == "active"]
+
     
         # ========================= #
         # Voucher Aktif Per Seller
@@ -1099,6 +1105,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
