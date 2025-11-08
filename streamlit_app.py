@@ -251,21 +251,53 @@ def page_redeem():
             "Masukkan kode voucher", 
             value=st.session_state.entered_code
         ).strip().upper()
-
+    
         if st.button("Submit Kode"):
             code = st.session_state.entered_code
+    
             if not code:
                 st.error("Kode tidak boleh kosong")
             else:
                 row = find_voucher(code)
+    
                 if not row:
                     st.error("❌ Voucher tidak ditemukan.")
                     reset_redeem_state()
                     st.rerun()
-                else:
-                    st.session_state.voucher_row = row
-                    st.session_state.redeem_step = 2
-                    st.rerun()
+    
+                # Ambil kolom yang diperlukan
+                status = row.get("status", "").lower()
+                tgl_penjualan = row.get("tanggal_penjualan")
+    
+                # Validasi status inactive
+                if status == "inactive":
+                    st.error("⚠ Voucher belum dapat digunakan karena belum diaktifkan.")
+                    return
+    
+                # Validasi tanggal penjualan vs tanggal hari ini
+                today = datetime.date.today()
+    
+                if tgl_penjualan is None:
+                    st.error("⚠ Voucher belum dapat digunakan karena belum memiliki tanggal penjualan.")
+                    return
+    
+                if isinstance(tgl_penjualan, str):  # jika masih bentuk string, convert ke date
+                    try:
+                        tgl_penjualan = datetime.datetime.strptime(tgl_penjualan, "%Y-%m-%d").date()
+                    except:
+                        st.error("⚠ Format tanggal penjualan tidak valid di database.")
+                        return
+    
+                if tgl_penjualan == today:
+                    st.warning("⚠ Voucher belum bisa ditukarkan karena penukaran hanya bisa dilakukan H+1.")
+                    return
+    
+                # Jika semua validasi lolos → lanjut ke step 2
+                st.session_state.voucher_row = row
+                st.session_state.redeem_step = 2
+                st.rerun()
+
+
 
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
@@ -877,6 +909,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
