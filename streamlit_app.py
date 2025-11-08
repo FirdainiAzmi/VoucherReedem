@@ -71,23 +71,60 @@ def update_voucher_detail(code, nama, no_hp, status):
         st.error(f"Gagal update voucher: {e}")
         return False
 
-def atomic_redeem(code, amount, branch, items):
+def atomic_redeem(code, used_amount, branch, items_str):
     try:
-        with engine.begin() as conn:
-            r = conn.execute(text("SELECT balance FROM vouchers WHERE code = :c FOR UPDATE"), {"c": code}).fetchone()
-            if not r:
-                return False, "Voucher tidak ditemukan.", None
-            balance = r[0]
-            if balance < amount:
-                return False, f"Saldo tidak cukup (sisa: {balance}).", balance
-            conn.execute(text("UPDATE vouchers SET balance = balance - :amt WHERE code = :c"), {"amt": amount, "c": code})
-            conn.execute(text("""
-                INSERT INTO transactions (code, used_amount, tanggal_transaksi, branch, items)
-                VALUES (:c, :amt, :now, :branch, :items)
-            """), {"c": code, "amt": amount, "now": datetime.utcnow(), "branch": branch, "items": items})
-            return True, "Redeem berhasil.", balance - amount
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT balance FROM vouchers WHERE code=%s FOR UPDATE", (code,))
+                row = cur.fetchone()
+                if not row:
+                    return False, "Voucher tidak ditemukan", None
+
+                balance = row[0]
+                if balance < used_amount:
+                    return False, "Saldo tidak cukup", balance
+
+                # Update saldo voucher
+                new_balance = balance - used_amount
+                cur.execute("UPDATE vouchers SET balance=%s, status='used' WHERE code=%s", (new_balance, code))
+
+                # Insert transaksi
+                cur.execute("""
+                    INSERT INTO voucher_transactions (code, used_amount, branch, items)
+                    VALUES (%s, %s, %s, %s)
+                """, (code, used_amount, branch, items_str))
+
+                # ✅ UPDATE JUMLAH TERJUAL PER CABANG
+                # items_str format: "Item A x2, Item B x1"
+                items = [x.strip() for x in items_str.split(",")]
+
+                for i in items:
+                    if " x" not in i:
+                        continue
+                    nama_item, qty = i.split(" x")
+                    qty = int(qty)
+
+                    if branch == "Tawangsari":
+                        cur.execute("""
+                            UPDATE menu_items
+                            SET terjual_twsari = COALESCE(terjual_twsari,0) + %s
+                            WHERE nama_item = %s
+                        """, (qty, nama_item))
+                    
+                    elif branch == "Sedati":
+                        cur.execute("""
+                            UPDATE menu_items
+                            SET terjual_sedati = COALESCE(terjual_sedati,0) + %s
+                            WHERE nama_item = %s
+                        """, (qty, nama_item))
+
+                conn.commit()
+                return True, "Transaksi berhasil", new_balance
+
     except Exception as e:
-        return False, f"DB error saat redeem: {e}", None
+        traceback.print_exc()
+        return False, str(e), None
+
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
     q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan FROM vouchers"
@@ -370,68 +407,51 @@ def page_redeem():
 
     # STEP 3: Konfirmasi pembayaran
     elif st.session_state.redeem_step == 3:
-        row = st.session_state.voucher_row
-        code, initial, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
-    
-        st.header("Konfirmasi Pembayaran")
-        st.write(f"- Voucher: {code}")
-        st.write(f"- Cabang: {st.session_state.selected_branch}")
-        st.write(f"- Sisa Voucher: Rp {int(balance):,}")
-    
-        menu_items = get_menu_from_db(st.session_state.selected_branch)
-        price_map = {item['nama']: item['harga'] for item in menu_items}
-    
-        ordered_items = {k:v for k,v in st.session_state.order_items.items() if v > 0}
-    
-        if not ordered_items:
-            st.warning("Tidak ada menu yang dipilih.")
-            return
-    
-        st.write("Detail pesanan:")
-        for it, q in ordered_items.items():
-            st.write(f"- {it} x{q} — Rp {price_map.get(it,0)*q:,}")
-    
-        st.write(f"### Total: Rp {st.session_state.checkout_total:,}")
-    
-        # Tombol konfirmasi / kembali
-        cA, cB = st.columns([1,1])
-        with cA:
-            if st.button("Ya, Bayar"):
-                items_str = ", ".join([f"{k} x{v}" for k,v in ordered_items.items()])
-                ok, msg, newbal = atomic_redeem(
-                    code, st.session_state.checkout_total,
-                    st.session_state.selected_branch, items_str
-                )
-                if ok:
-                    try:
-                        conn = get_connection()
-                        cur = conn.cursor()
-                
-                        for item_name, qty in ordered_items.items():
-                            cur.execute("""
-                                UPDATE menu 
-                                SET jumlah_terjual = COALESCE(jumlah_terjual, 0) + %s
-                                WHERE nama = %s AND cabang = %s
-                            """, (qty, item_name, st.session_state.selected_branch))
-                
-                        conn.commit()
-                        cur.close()
-                        conn.close()
-                
-                    except Exception as e:
-                        st.error(f"⚠ Error update jumlah terjual: {e}")
-                
-                    st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
-                    reset_redeem_state()
+            row = st.session_state.voucher_row
+            code, initial, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
+        
+            st.header("Konfirmasi Pembayaran")
+            st.write(f"- Voucher: {code}")
+            st.write(f"- Cabang: {st.session_state.selected_branch}")
+            st.write(f"- Sisa Voucher: Rp {int(balance):,}")
+        
+            menu_items = get_menu_from_db(st.session_state.selected_branch)
+            price_map = {item['nama']: item['harga'] for item in menu_items}
+        
+            ordered_items = {k:v for k,v in st.session_state.order_items.items() if v > 0}
+        
+            if not ordered_items:
+                st.warning("Tidak ada menu yang dipilih.")
+                return
+        
+            st.write("Detail pesanan:")
+            for it, q in ordered_items.items():
+                st.write(f"- {it} x{q} — Rp {price_map.get(it,0)*q:,}")
+        
+            st.write(f"### Total: Rp {st.session_state.checkout_total:,}")
+        
+            # Tombol konfirmasi / kembali
+            cA, cB = st.columns([1,1])
+            with cA:
+                if st.button("Ya, Bayar"):
+                    items_str = ", ".join([f"{k} x{v}" for k,v in ordered_items.items()])
+                    ok, msg, newbal = atomic_redeem(
+                        code, st.session_state.checkout_total,
+                        st.session_state.selected_branch, items_str
+                    )
+                    if ok:
+                        st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
+                        reset_redeem_state()
+                        st.rerun()
+                    else:
+                        st.error(msg)
+                        st.session_state.redeem_step = 2
+                        st.rerun()
+            with cB:
+                if st.button("Tidak, Kembali"):
+                    st.session_state.redeem_step = 2
                     st.rerun()
-                    # else:
-                    #     st.error(msg)
-                    #     st.session_state.redeem_step = 2
-                    #     st.rerun()
-        with cB:
-            if st.button("Tidak, Kembali"):
-                st.session_state.redeem_step = 2
-                st.rerun()
+
 
 # Page: Aktivasi Voucher (admin) — inline edit
 def page_daftar_voucher():
@@ -960,6 +980,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
