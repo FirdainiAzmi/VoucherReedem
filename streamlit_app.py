@@ -464,17 +464,44 @@ def page_daftar_voucher():
         st.info("Tidak ada voucher sesuai filter/pencarian.")
         return
 
-    # Format tampilan tabel
-    df_display = df.copy()
-    df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
-    df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
-    df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
-    df_display["tanggal_penjualan"] = pd.to_datetime(df_display["tanggal_penjualan"]).dt.strftime("%Y-%m-%d")
+    # # Format tampilan tabel
+    # df_display = df.copy()
+    # df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
+    # df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
+    # df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
+    # df_display["tanggal_penjualan"] = pd.to_datetime(df_display["tanggal_penjualan"]).dt.strftime("%Y-%m-%d")
     
-    st.dataframe(
-        df_display[["code", "nama", "no_hp", "status", "initial_value", "balance", "created_at", "seller", "tanggal_penjualan"]],
-        use_container_width=True
-    )
+    # st.dataframe(
+    #     df_display[["code", "nama", "no_hp", "status", "initial_value", "balance", "created_at", "seller", "tanggal_penjualan"]],
+    #     use_container_width=True
+    # )
+
+    # df_display = df.copy()
+    df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
+        df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
+        df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
+        
+        # Cek aman untuk tanggal_penjualan
+        if "tanggal_penjualan" in df_display.columns:
+            df_display["tanggal_penjualan"] = (
+                pd.to_datetime(df_display["tanggal_penjualan"], errors="coerce")
+                .dt.strftime("%Y-%m-%d")
+                .fillna("-")
+            )
+        else:
+            df_display["tanggal_penjualan"] = "-"
+        
+        st.dataframe(
+            df_display[
+                [
+                    "code", "nama", "no_hp", "status",
+                    "initial_value", "balance", "created_at",
+                    "seller", "tanggal_penjualan"
+                ]
+            ],
+            use_container_width=True
+        )
+    
 
     # ===== Form edit voucher jika kode dicari ditemukan =====
     matched_row = df[df["code"] == search.strip().upper()]
@@ -835,6 +862,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
