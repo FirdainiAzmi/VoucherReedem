@@ -854,98 +854,124 @@ def page_laporan_global():
 
     # ===== TAB Seller =====
     with tab_seller:
-        st.subheader("📊 Ringkasan Seller - Voucher Berdasarkan Filter")
+        st.subheader("📊 Analisis Seller")
     
-        # ==================================
-        # ✅ Filter Tanggal Transaksi
-        # ==================================
-        if "tanggal_transaksi" in df_tx.columns:
-            df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
-            min_date = df_tx["tanggal_transaksi"].min()
-            max_date = df_tx["tanggal_transaksi"].max()
-            
-            date_filter = st.date_input("Filter Tanggal Transaksi", [min_date, max_date])
-            df_tx = df_tx[
-                (df_tx["tanggal_transaksi"] >= pd.to_datetime(date_filter[0])) &
-                (df_tx["tanggal_transaksi"] <= pd.to_datetime(date_filter[1]))
-            ]
+        if "seller" not in df_vouchers.columns:
+            st.warning("Kolom 'seller' tidak tersedia di tabel vouchers.")
+            st.stop()
     
-        # ==================================
-        # ✅ Filter Cabang
-        # ==================================
-        if "branch" in df_tx.columns:
-            branch_list = ["Semua"] + sorted(df_tx["branch"].dropna().unique().tolist())
-            selected_branch = st.selectbox("Filter Cabang", branch_list)
-    
-            if selected_branch != "Semua":
-                df_tx = df_tx[df_tx["branch"] == selected_branch]
-    
-        # ==================================
-        # ✅ Voucher + Seller Reference
-        # ==================================
         df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
     
-        # Merge transaksi dengan voucher untuk semua analitik seller
-        df_merge = df_tx.merge(df_vouchers[["code", "seller", "status"]], on="code", how="left")
+        # ========================= #
+        # Filter Tanggal Voucher Dibuat
+        # ========================= #
+        df_vouchers["created_at"] = pd.to_datetime(df_vouchers["created_at"])
+        min_date = df_vouchers["created_at"].min()
+        max_date = df_vouchers["created_at"].max()
     
-    
-        # =============================
-        # 📌 A. Voucher Aktif per Seller
-        # =============================
-        st.write("### ✅ Voucher Aktif per Seller")
-        df_active = df_merge[df_merge["status"] == "active"]
-    
-        seller_active = (
-            df_active.groupby("seller")
-            .size()
-            .reset_index(name="Voucher Aktif")
-            .sort_values(by="Voucher Aktif", ascending=False)
+        date_filter_seller = st.date_input(
+            "Filter Tanggal Voucher Dibuat",
+            [min_date, max_date],
+            key="seller_date_filter"
         )
     
-        st.table(seller_active.rename(columns={"seller": "Seller"}))
-        st.bar_chart(seller_active, x="seller", y="Voucher Aktif")
+        df_filtered_seller = df_vouchers[
+            (df_vouchers["created_at"] >= pd.to_datetime(date_filter_seller[0])) &
+            (df_vouchers["created_at"] <= pd.to_datetime(date_filter_seller[1]))
+        ]
     
+        # ========================= #
+        # Filter Cabang
+        # ========================= #
+        if "branch" in df_filtered_seller.columns:
+            cabang_list_seller = ["Semua"] + sorted(df_filtered_seller["branch"].dropna().unique().tolist())
+            selected_branch_seller = st.selectbox(
+                "Filter Cabang Penjual",
+                cabang_list_seller,
+                key="seller_branch_filter"
+            )
     
-        # =========================================
-        # 📌 B. Total Voucher Dibawa Seller
-        # =========================================
-        st.write("### 📦 Total Voucher Dibawa Seller")
+            if selected_branch_seller != "Semua":
+                df_filtered_seller = df_filtered_seller[df_filtered_seller["branch"] == selected_branch_seller]
     
-        seller_total = (
-            df_vouchers.groupby("seller")
-            .size()
-            .reset_index(name="Total Voucher Dibawa")
-            .sort_values(by="Total Voucher Dibawa", ascending=False)
+        # ========================= #
+        # Metrics Summary
+        # ========================= #
+        total_seller = df_filtered_seller["seller"].nunique()
+        total_voucher = len(df_filtered_seller)
+    
+        st.write(f"👤 Total Seller Aktif: **{total_seller}**")
+        st.write(f"🎟️ Total Voucher Dibawa Seller: **{total_voucher:,}**")
+    
+        # ========================= #
+        # Voucher Aktif per Seller
+        # ========================= #
+        st.subheader("✅ Voucher Aktif per Seller")
+        df_active = df_filtered_seller[df_filtered_seller["status"] == "active"]
+    
+        if not df_active.empty:
+            seller_active = (
+                df_active.groupby("seller")
+                .size()
+                .reset_index(name="Voucher Aktif")
+                .sort_values(by="Voucher Aktif", ascending=False)
+            )
+            st.table(seller_active.rename(columns={"seller": "Seller"}))
+            st.bar_chart(seller_active, x="Seller", y="Voucher Aktif")
+        else:
+            st.info("Tidak ada voucher aktif.")
+    
+        # ========================= #
+        # Voucher Sudah Dipakai per Seller
+        # ========================= #
+        st.subheader("🔥 Total Pemakaian Voucher per Seller")
+    
+        if not df_tx.empty and "code" in df_filtered_seller.columns:
+            df_join = df_tx.merge(df_filtered_seller[["code", "seller"]], on="code", how="inner")
+    
+            used_by_seller = (
+                df_join.groupby("seller")["code"]
+                .count()
+                .reset_index(name="Total Pemakaian Voucher")
+                .sort_values(by="Total Pemakaian Voucher", ascending=False)
+            )
+    
+            st.table(used_by_seller.rename(columns={"seller": "Seller"}))
+            st.bar_chart(used_by_seller, x="Seller", y="Total Pemakaian Voucher")
+    
+            # ========================= #
+            # Pie Chart Aktif vs Terpakai
+            # ========================= #
+            st.subheader("📊 Proporsi Voucher Aktif vs Terpakai")
+            active_count = len(df_active)
+            used_count = len(df_join["code"].unique())
+    
+            fig, ax = plt.subplots()
+            ax.pie(
+                [active_count, used_count],
+                labels=["Aktif", "Terpakai"],
+                autopct="%1.1f%%"
+            )
+            st.pyplot(fig)
+    
+        else:
+            st.info("Belum ada transaksi terkait seller ini.")
+    
+        # ========================= #
+        # Export CSV
+        # ========================= #
+        st.subheader("⬇️ Export Laporan Seller")
+    
+        export_data = df_filtered_seller.copy()
+        csv_export_seller = export_data.to_csv(index=False).encode("utf-8")
+    
+        st.download_button(
+            "📥 Download CSV Laporan Seller",
+            csv_export_seller,
+            "laporan_seller.csv",
+            "text/csv"
         )
-    
-        st.table(seller_total.rename(columns={"seller": "Seller"}))
-        st.bar_chart(seller_total, x="seller", y="Total Voucher Dibawa")
-    
-    
-        # ======================================================
-        # 📌 C. Total Penukaran Voucher Dari Setiap Seller
-        # ======================================================
-        st.write("### 🔁 Total Penukaran Voucher per Seller")
-    
-        seller_redeem = (
-            df_merge.groupby("seller")
-            .size()
-            .reset_index(name="Total Penukaran")
-            .sort_values(by="Total Penukaran", ascending=False)
-        )
-    
-        st.table(seller_redeem.rename(columns={"seller": "Seller"}))
-        st.bar_chart(seller_redeem, x="seller", y="Total Penukaran")
 
-
-    # Download CSV
-    st.markdown("---")
-    st.download_button(
-        "Download CSV Semua Transaksi (filtered)",
-        data=df_to_csv_bytes(df_tx),
-        file_name="transactions_global_filtered.csv",
-        mime="text/csv"
-    )
 
 
 
@@ -1088,5 +1114,6 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
