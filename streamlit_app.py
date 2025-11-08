@@ -460,11 +460,22 @@ def page_redeem():
                         st.session_state.selected_branch, items_str
                     )
                     if ok:
+                        # simpan newbal di session_state agar bisa diakses di luar
+                        st.session_state.newbal = newbal
                         st.session_state.show_success = True
                     else:
                         st.error(msg)
                         st.session_state.redeem_step = 2
                         st.rerun()
+                
+                # Tampilkan "pop-up" manual hanya jika transaksi berhasil
+                if st.session_state.get("show_success"):
+                    st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(st.session_state.newbal):,}")
+                    if st.button("Tutup"):
+                        reset_redeem_state()
+                        st.session_state.show_success = False
+                        st.rerun()
+
                 
                 # Tampilkan "pop-up" manual
                 if st.session_state.get("show_success"):
@@ -1107,6 +1118,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
