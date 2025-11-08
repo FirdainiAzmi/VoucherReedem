@@ -761,56 +761,6 @@ def page_laporan_global():
             mime="text/csv"
     )
 
-    # with tab_transaksi:
-    #     st.subheader("📊 Ringkasan Transaksi")
-    #     total_tx = len(df_tx)
-    #     total_tx_nominal = df_tx["used_amount"].sum() if "used_amount" in df_tx.columns else 0
-    #     avg_tx = df_tx["used_amount"].mean() if total_tx>0 and "used_amount" in df_tx.columns else 0
-
-    #     st.write(f"- Total transaksi: {total_tx}")
-    #     st.write(f"- Total nominal digunakan: Rp {int(total_tx_nominal):,}")
-    #     st.write(f"- Rata-rata nominal per transaksi: Rp {int(avg_tx):,}")
-
-    #     if not df_tx.empty and "used_amount" in df_tx.columns:
-    #         # Transaksi per cabang
-    #         if "branch" in df_tx.columns:
-    #             branch_agg = df_tx.groupby("branch")["used_amount"].agg(["count","sum"]).reset_index()
-    #             st.subheader("📈 Total nominal & transaksi per cabang")
-    #             st.table(branch_agg.rename(columns={"branch":"Cabang","count":"#Transaksi","sum":"Total (Rp)"}))
-                
-    #             chart_branch = alt.Chart(branch_agg).mark_bar().encode(
-    #                 x=alt.X("branch:N", title="Cabang"),
-    #                 y=alt.Y("sum:Q", title="Total Nominal Terpakai"),
-    #                 tooltip=["branch","count","sum"]
-    #             )
-    #             st.altair_chart(chart_branch, use_container_width=True)
-
-    #         # Top 5 voucher
-    #         if "code" in df_tx.columns:
-    #             top_v = df_tx.groupby("code")["used_amount"].sum().reset_index().sort_values("used_amount", ascending=False).head(5)
-    #             st.subheader("🏆 Top 5 voucher berdasarkan total pemakaian")
-    #             st.table(top_v.rename(columns={"code":"Kode","used_amount":"Total (Rp)"}))
-                
-    #             chart_v = alt.Chart(top_v).mark_bar().encode(
-    #                 x=alt.X("code:N", title="Kode Voucher"),
-    #                 y=alt.Y("used_amount:Q", title="Total Terpakai"),
-    #                 tooltip=["code","used_amount"]
-    #             )
-    #             st.altair_chart(chart_v, use_container_width=True)
-
-    #         # Time series harian
-    #         df_tx["date"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.normalize()  
-            
-    #         daily = df_tx.groupby("date")["used_amount"].sum().reset_index()
-            
-    #         st.subheader("📅 Time series harian pemakaian")
-    #         chart_daily = alt.Chart(daily).mark_line(point=True).encode(
-    #             x=alt.X("date:T", title="Tanggal", axis=alt.Axis(format="%Y-%m-%d")),  # format tanggal
-    #             y=alt.Y("used_amount:Q", title="Total Nominal"),
-    #             tooltip=[alt.Tooltip("date:T", format="%Y-%m-%d"), "used_amount"]
-    #         )
-    #         st.altair_chart(chart_daily, use_container_width=True)
-
 
     # ===== TAB Seller =====
     with tab_seller:   
@@ -992,6 +942,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
