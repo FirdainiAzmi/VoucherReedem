@@ -471,7 +471,7 @@ def page_daftar_voucher():
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
 
     st.dataframe(
-        df_display[["code", "nama", "no_hp", "status", "initial_value", "balance", "created_at", "seller", "tanggal_penjualan"]],
+        df_display[["code", "nama", "no_hp", "status", "initial_value", "balance", "created_at", "seller"]],
         use_container_width=True
     )
 
@@ -834,6 +834,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
