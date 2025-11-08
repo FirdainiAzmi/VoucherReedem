@@ -6,7 +6,6 @@ from io import BytesIO
 import altair as alt
 import matplotlib.pyplot as plt
 import math
-import traceback 
 
 DB_URL = st.secrets["DB_URL"]
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
@@ -999,6 +998,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
