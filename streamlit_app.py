@@ -660,39 +660,17 @@ def page_laporan_global():
     # # ===== TAB Voucher =====
     with tab_voucher:
         st.subheader("📊 Laporan Voucher")
-        
+    
         vouchers = pd.read_sql("SELECT * FROM vouchers", engine)
         transactions = pd.read_sql("SELECT * FROM transactions", engine)
-        
+    
         # Ensure numeric & date columns
         vouchers["initial_value"] = vouchers["initial_value"].fillna(0).astype(float)
         vouchers["balance"] = vouchers["balance"].fillna(0).astype(float)
         vouchers["tanggal_penjualan"] = pd.to_datetime(vouchers["tanggal_penjualan"], errors="coerce")
         transactions["tanggal_transaksi"] = pd.to_datetime(transactions.get("tanggal_transaksi"), errors="coerce")
-        
-        # 🔹 Filter Cabang
-        if "branch" in vouchers.columns:
-            cabang_list = ["Semua"] + sorted(vouchers["branch"].dropna().unique().tolist())
-            selected_cabang = st.selectbox("Filter Cabang", cabang_list)
-            if selected_cabang != "Semua":
-                vouchers = vouchers[vouchers["branch"] == selected_cabang]
-                transactions = transactions[transactions["branch"] == selected_cabang]
     
-        # 🔹 Filter Tanggal (hanya tanggal, tanpa jam)
-        vouchers = vouchers.dropna(subset=["tanggal_penjualan"])
-        transactions = transactions.dropna(subset=["tanggal_transaksi"])
-        
-        min_date = min(vouchers["tanggal_penjualan"].dt.date.min(), transactions["tanggal_transaksi"].dt.date.min())
-        max_date = max(vouchers["tanggal_penjualan"].dt.date.max(), transactions["tanggal_transaksi"].dt.date.max())
-        
-        start_date, end_date = st.date_input("Pilih Rentang Tanggal", [min_date, max_date])
-        
-        vouchers = vouchers[(vouchers["tanggal_penjualan"].dt.date >= start_date) & 
-                            (vouchers["tanggal_penjualan"].dt.date <= end_date)]
-        transactions = transactions[(transactions["tanggal_transaksi"].dt.date >= start_date) & 
-                                    (transactions["tanggal_transaksi"].dt.date <= end_date)]
-    
-        # ===== Perhitungan =====
+        # Perhitungan
         vouchers["used_value"] = vouchers["initial_value"] - vouchers["balance"]
         summary = {
             "total_voucher_dijual": len(vouchers),
@@ -703,48 +681,49 @@ def page_laporan_global():
             "total_voucher_inaktif": len(vouchers[vouchers["status"] != "active"]),
         }
     
-        # ===== Summary Cards =====
+        # ✅ Summary Cards
         col1, col2, col3 = st.columns(3)
         col1.metric("🎫 Total Voucher Dijual", summary["total_voucher_dijual"])
         col2.metric("✅ Total Voucher Terpakai", summary["total_voucher_terpakai"])
         col3.metric("💰 Saldo Belum Terpakai", f"Rp {summary['total_saldo_belum_terpakai']:,.0f}")
-        
+    
         col4, col5, col6 = st.columns(3)
         col4.metric("💸 Saldo Sudah Terpakai", f"Rp {summary['total_saldo_sudah_terpakai']:,.0f}")
         col5.metric("📌 Voucher Aktif", summary["total_voucher_aktif"])
         col6.metric("🚫 Voucher Inaktif", summary["total_voucher_inaktif"])
-        
+    
         st.markdown("---")
-        
-        # ===== Grafik Penukaran Voucher per Hari =====
+    
+        # ✅ Grafik Penukaran Voucher per Hari
         if not transactions.empty:
             redeem_daily = transactions.groupby(transactions["tanggal_transaksi"].dt.date).size()
             st.subheader("📈 Penukaran Voucher per Hari")
             st.line_chart(redeem_daily)
         else:
             st.info("Belum ada transaksi penukaran voucher ✅")
-        
+    
         st.markdown("---")
-        
-        # ===== Grafik Total Nilai Transaksi =====
+    
+        # ✅ Grafik Total Nilai Transaksi
         if not transactions.empty:
             total_transaksi = transactions.groupby(transactions["tanggal_transaksi"].dt.date)["used_amount"].sum()
             st.subheader("📊 Total Nilai Transaksi per Hari")
             st.bar_chart(total_transaksi)
         
         st.markdown("---")
-        
-        # ===== Pie Chart Status Voucher Breakdown =====
+    
+        # ✅ Pie Chart Status Voucher Breakdown
         st.subheader("🧩 Status Voucher")
         status_count = vouchers["status"].value_counts()
         fig, ax = plt.subplots()
         ax.pie(status_count, labels=status_count.index, autopct="%1.1f%%")
         ax.axis("equal")
         st.pyplot(fig)
-        
-        st.markdown("---")
     
-        # ===== Export CSV =====
+        st.markdown("---")
+
+    
+        # ✅ Export CSV
         csv = vouchers.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="📥 Download Laporan Voucher (CSV)",
@@ -752,7 +731,6 @@ def page_laporan_global():
             file_name="voucher_report.csv",
             mime="text/csv",
         )
-
 
     # ===== TAB Transaksi =====
     with tab_transaksi:
@@ -1121,6 +1099,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
