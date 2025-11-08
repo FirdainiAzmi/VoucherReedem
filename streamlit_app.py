@@ -737,7 +737,7 @@ def page_laporan_global():
         # =============================== #
         # 🍽️ Top 5 Menu Paling Banyak Dibeli
         # =============================== #
-        if "menu_name" in df_filtered.columns:
+        if "nama_item" in df_filtered.columns:
             st.subheader("🍽️ Top 5 Menu Terjual")
             top_menu = (
                 df_filtered.groupby("nama_item")["nama_item"].count()
@@ -992,6 +992,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
