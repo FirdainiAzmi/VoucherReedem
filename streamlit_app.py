@@ -82,22 +82,63 @@ def update_voucher_detail(code, nama, no_hp, status):
         return False
 
 def atomic_redeem(code, amount, branch, items):
+    import sqlite3
+    from datetime import datetime
+
+    conn = sqlite3.connect("database.db")
+    c = conn.cursor()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     try:
-        with engine.begin() as conn:
-            r = conn.execute(text("SELECT balance FROM vouchers WHERE code = :c FOR UPDATE"), {"c": code}).fetchone()
-            if not r:
-                return False, "Voucher tidak ditemukan.", None
-            balance = r[0]
-            if balance < amount:
-                return False, f"Saldo tidak cukup (sisa: {balance}).", balance
-            conn.execute(text("UPDATE vouchers SET balance = balance - :amt WHERE code = :c"), {"amt": amount, "c": code})
-            conn.execute(text("""
-                INSERT INTO transactions (code, used_amount, tanggal_transaksi, branch, items)
-                VALUES (:c, :amt, :now, :branch, :items)
-            """), {"c": code, "amt": amount, "now": datetime.utcnow(), "branch": branch, "items": items})
-            return True, "Redeem berhasil.", balance - amount
+        # === 1️⃣ Lock voucher row ===
+        c.execute("SELECT balance FROM vouchers WHERE code=? FOR UPDATE", (code,))
+        row = c.fetchone()
+        if not row:
+            return False, "Voucher tidak ditemukan", 0
+
+        balance = row[0]
+        if amount > balance:
+            return False, "Saldo tidak cukup", balance
+
+        # === 2️⃣ Update balance voucher ===
+        new_balance = balance - amount
+        c.execute("UPDATE vouchers SET balance=? WHERE code=?", (new_balance, code))
+
+        # === 3️⃣ Simpan transaksi ===
+        c.execute("""
+            INSERT INTO transactions (code, amount, branch, items, redeemed_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (code, amount, branch, items, now))
+
+        # === 4️⃣ Update jumlah_terjual di tabel menu ===
+        # items = string seperti "Nasi Goreng x2, Mie Goreng x1"
+        item_pairs = [i.strip() for i in items.split(",") if "x" in i]
+        for pair in item_pairs:
+            nama, qty = pair.rsplit("x", 1)
+            nama = nama.strip()
+            qty = int(qty.strip())
+
+            # Tentukan nama kolom terjual berdasarkan cabang
+            if branch.lower() == "sedati":
+                col = "terjual_sedati"
+            elif branch.lower() == "tawangsari":
+                col = "terjual_twsari"
+
+            # Update jumlah terjual di kolom cabang sesuai
+            c.execute(f"""
+                UPDATE menu 
+                SET {col} = {col} + ? 
+                WHERE nama = ?
+            """, (qty, nama))
+
+        conn.commit()
+        return True, "Transaksi berhasil", new_balance
+
     except Exception as e:
-        return False, f"DB error saat redeem: {e}", None
+        conn.rollback()
+        return False, f"Error: {str(e)}", 0
+    finally:
+        conn.close()
 
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
@@ -954,6 +995,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
