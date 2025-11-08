@@ -424,10 +424,10 @@ def page_redeem():
                 st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
                 reset_redeem_state()
                 st.rerun()
-                else:
-                    st.error(msg)
-                    st.session_state.redeem_step = 2
-                    st.rerun()
+                # else:
+                #     st.error(msg)
+                #     st.session_state.redeem_step = 2
+                #     st.rerun()
         with cB:
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
@@ -960,6 +960,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
