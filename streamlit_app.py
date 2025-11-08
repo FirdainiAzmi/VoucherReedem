@@ -811,7 +811,7 @@ def page_laporan_global():
                 FROM menu_items
             """
         
-        df_menu = pd.read_sql(query_menu, conn)
+        df_menu = pd.read_sql(query_menu, engine)
         df_menu = df_menu.rename(columns={"nama_item": "Menu"})  # ✅ Rename langsung
         
         # Ambil Top 5
@@ -1025,6 +1025,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
