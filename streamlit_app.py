@@ -460,13 +460,16 @@ def page_redeem():
                         st.session_state.selected_branch, items_str
                     )
                     if ok:
-                        st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
-                        reset_redeem_state()
-                        st.rerun()
+                        # Tampilkan modal sukses
+                        with st.modal("Transaksi Berhasil", key="success_modal"):
+                            st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
+                            st.write("Tutup pop-up ini untuk kembali ke awal.")
+                            st.button("Tutup", on_click=reset_redeem_state)
                     else:
                         st.error(msg)
                         st.session_state.redeem_step = 2
                         st.rerun()
+
             with cB:
                 if st.button("Tidak, Kembali"):
                     st.session_state.redeem_step = 2
@@ -1099,6 +1102,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
