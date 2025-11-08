@@ -938,33 +938,27 @@ def page_laporan_global():
     
         else:
             st.info("Tidak ada voucher aktif.")
-    
+
         # ========================= #
-        # Voucher Terpakai Per Seller
+        # 🎟️ Total Voucher Dibawa per Seller
         # ========================= #
-        st.subheader("🔥 Total Voucher Sudah Digunakan per Seller")
-    
-        if "code" in df_filtered_seller.columns and not df_tx.empty:
-    
-            # Join table transaksi ke voucher (ambil seller)
-            df_join = df_tx.merge(
-                df_filtered_seller[["code", "seller"]],
-                on="code",
-                how="inner"
+        st.subheader("🎟️ Total Voucher Dibawa per Seller")
+        
+        if not df_seller_only.empty:
+            voucher_by_seller = (
+                df_seller_only.groupby("seller")
+                .size()
+                .reset_index(name="Total Voucher Dibawa")
+                .sort_values(by="Total Voucher Dibawa", ascending=False)
             )
-    
-            used_by_seller = (
-                df_join.groupby("seller")["code"]
-                .count()
-                .reset_index(name="Total Pemakaian Voucher")
-                .sort_values(by="Total Pemakaian Voucher", ascending=False)
-            )
-    
-            st.table(used_by_seller.rename(columns={"seller": "Seller"}))
-            st.bar_chart(used_by_seller, x="seller", y="Total Pemakaian Voucher")
-    
+        
+            st.table(voucher_by_seller.rename(columns={"seller": "Seller"}))
+        
+            st.bar_chart(voucher_by_seller, x="seller", y="Total Voucher Dibawa")
+        
         else:
-            st.info("Belum ada data transaksi digunakan seller.")
+            st.info("Belum ada seller yang membawa voucher.")
+
 
 # --------------------
 # Page: Seller (admin-only)
@@ -1105,6 +1099,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
