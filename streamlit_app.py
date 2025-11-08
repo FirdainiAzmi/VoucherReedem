@@ -806,14 +806,14 @@ def page_laporan_global():
                 if selected_cabang == "Semua":
                     query_menu = """
                         SELECT nama_item,
-                        COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0) AS Terjual
+                        COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0) AS "Terjual"
                         FROM menu_items
                     """
                 else:
                     column = "terjual_twsari" if selected_cabang == "Tawangsari" else "terjual_sedati"
                     query_menu = f"""
                         SELECT nama_item,
-                        COALESCE({column},0) AS Terjual
+                        COALESCE({column},0) AS "Terjual"
                         FROM menu_items
                     """
         
@@ -1032,6 +1032,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
