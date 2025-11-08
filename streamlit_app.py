@@ -795,18 +795,32 @@ def page_laporan_global():
         # =============================== #
         # 🍽️ Top 5 Menu Paling Banyak Dibeli
         # =============================== #
-        if "nama_item" in df_filtered.columns:
-            st.subheader("🍽️ Top 5 Menu Terjual")
-            top_menu = (
-                df_filtered.groupby("nama_item")["nama_item"].count()
-                .sort_values(ascending=False)
-                .head(5)
-                .reset_index(name="Jumlah Pembelian")
-            )
-            st.table(top_menu)
-            st.bar_chart(top_menu, x="nama_item", y="Jumlah Pembelian")
+# ✅ Top 5 Menu Terlaris berdasarkan cabang yang dipilih
+        if selected_branch == "Semua Cabang":
+            query_menu = "SELECT nama_item, (COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0)) AS total_terjual FROM menu_items"
         else:
-            st.warning("⚠️ Kolom menu_name tidak ditemukan. Pastikan ada data nama menu.")
+            column = "terjual_twsari" if selected_branch == "Tawangsari" else "terjual_sedati"
+            query_menu = f"SELECT nama_item, COALESCE({column},0) AS total_terjual FROM menu_items"
+        
+        df_menu = pd.read_sql(query_menu, conn)
+        
+        df_menu = df_menu.sort_values("total_terjual", ascending=False).head(5)
+        
+        st.subheader("🍽️ Top 5 Menu Terlaris")
+        
+        if df_menu.empty:
+            st.info("Belum ada data penjualan menu.")
+        else:
+            st.table(df_menu.rename(columns={"nama_item": "Menu", "total_terjual": "Terjual"}))
+        
+            # chart
+            chart_menu = alt.Chart(df_menu).mark_bar().encode(
+                x=alt.X("Menu:N", title="Menu"),
+                y=alt.Y("Terjual:Q", title="Jumlah Terjual"),
+                tooltip=["Menu", "Terjual"]
+            )
+            st.altair_chart(chart_menu, use_container_width=True)
+
     
         # =============================== #
         # ⬇️ Export Data
@@ -1000,6 +1014,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
