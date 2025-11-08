@@ -10,9 +10,11 @@ import traceback
 from database import get_db_connection
 
 # Config & DB connect
-DB_URL = st.secrets["DB_URL"]
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
-engine = create_engine(DB_URL, future=True)
+@st.cache_resource
+def get_db_connection():
+    DB_URL = st.secrets["DB_URL"]
+    ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
+    engine = create_engine(DB_URL, future=True)
 
 # Database
 def init_db():
@@ -982,6 +984,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
