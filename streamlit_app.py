@@ -798,7 +798,7 @@ def page_laporan_global():
         st.subheader("🍽️ Top 5 Menu Terlaris")
         
         # Lihat kolom yang tersedia di menu_items
-        df_check = pd.read_sql("SELECT * FROM menu_items LIMIT 1", conn)
+        df_check = pd.read_sql("SELECT * FROM menu_items LIMIT 1", engine)
         st.write("Kolom tersedia:", df_check.columns.tolist())
         
         # Tentukan kolom terjual berdasarkan cabang
@@ -1042,6 +1042,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
