@@ -463,19 +463,6 @@ def page_daftar_voucher():
     if df.empty:
         st.info("Tidak ada voucher sesuai filter/pencarian.")
         return
-
-    # # Format tampilan tabel
-    # df_display = df.copy()
-    # df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
-    # df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
-    # df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
-    # df_display["tanggal_penjualan"] = pd.to_datetime(df_display["tanggal_penjualan"]).dt.strftime("%Y-%m-%d")
-    
-    # st.dataframe(
-    #     df_display[["code", "nama", "no_hp", "status", "initial_value", "balance", "created_at", "seller", "tanggal_penjualan"]],
-    #     use_container_width=True
-    # )
-
     df_display = df.copy()
     df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
     df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
@@ -611,24 +598,109 @@ def page_laporan_global():
     if "tanggal_transaksi" in df_tx.columns:
         df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
 
-    # ===== TAB Voucher =====
+    # # ===== TAB Voucher =====
     with tab_voucher:
-        st.subheader("📊 Ringkasan Voucher")
-        total_voucher = len(df_vouchers)
-        total_saldo_awal = df_vouchers["initial_value"].sum()
-        total_saldo_tersisa = df_vouchers["balance"].sum()
-        aktif_count = df_vouchers[df_vouchers["status"]=="active"].shape[0]
-        inactive_count = df_vouchers[df_vouchers["status"]!="active"].shape[0]
-        avg_saldo = df_vouchers["balance"].mean() if total_voucher>0 else 0
-
-        st.write(f"- Total voucher: {total_voucher}")
-        st.write(f"- Voucher aktif: {aktif_count}")
-        st.write(f"- Voucher inactive: {inactive_count}")
-        st.write(f"- Total saldo awal: Rp {int(total_saldo_awal):,}")
-        st.write(f"- Total saldo tersisa: Rp {int(total_saldo_tersisa):,}")
-
+        st.subheader("📊 Laporan Voucher")
+    
+        vouchers = pd.read_sql("SELECT * FROM vouchers", engine)
+        transactions = pd.read_sql("SELECT * FROM transactions", engine)
+    
+        # Ensure numeric & date columns
+        vouchers["initial_value"] = vouchers["initial_value"].fillna(0).astype(float)
+        vouchers["balance"] = vouchers["balance"].fillna(0).astype(float)
+        vouchers["tanggal_penjualan"] = pd.to_datetime(vouchers["tanggal_penjualan"], errors="coerce")
+        transactions["tanggal_transaksi"] = pd.to_datetime(transactions.get("tanggal_transaksi"), errors="coerce")
+    
+        # Perhitungan
+        vouchers["used_value"] = vouchers["initial_value"] - vouchers["balance"]
+        summary = {
+            "total_voucher_dijual": len(vouchers),
+            "total_voucher_terpakai": len(transactions["code"].unique()),
+            "total_saldo_belum_terpakai": vouchers["balance"].sum(),
+            "total_saldo_sudah_terpakai": vouchers["used_value"].sum(),
+            "total_voucher_aktif": len(vouchers[vouchers["status"] == "active"]),
+            "total_voucher_inaktif": len(vouchers[vouchers["status"] != "active"]),
+        }
+    
+        # ✅ Summary Cards
+        col1, col2, col3 = st.columns(3)
+        col1.metric("🎫 Total Voucher Dijual", summary["total_voucher_dijual"])
+        col2.metric("✅ Total Voucher Terpakai", summary["total_voucher_terpakai"])
+        col3.metric("💰 Saldo Belum Terpakai", f"Rp {summary['total_saldo_belum_terpakai']:,.0f}")
+    
+        col4, col5, col6 = st.columns(3)
+        col4.metric("💸 Saldo Sudah Terpakai", f"Rp {summary['total_saldo_sudah_terpakai']:,.0f}")
+        col5.metric("📌 Voucher Aktif", summary["total_voucher_aktif"])
+        col6.metric("🚫 Voucher Inaktif", summary["total_voucher_inaktif"])
+    
         st.markdown("---")
-        st.dataframe(df_vouchers, use_container_width=True)
+    
+        # ✅ Grafik Penukaran Voucher per Hari
+        if not transactions.empty:
+            redeem_daily = transactions.groupby(transactions["tanggal_transaksi"].dt.date).size()
+            st.subheader("📈 Penukaran Voucher per Hari")
+            st.line_chart(redeem_daily)
+        else:
+            st.info("Belum ada transaksi penukaran voucher ✅")
+    
+        st.markdown("---")
+    
+        # ✅ Grafik Total Nilai Transaksi
+        if not transactions.empty:
+            total_transaksi = transactions.groupby(transactions["tanggal_transaksi"].dt.date)["used_amount"].sum()
+            st.subheader("📊 Total Nilai Transaksi per Hari")
+            st.bar_chart(total_transaksi)
+        
+        st.markdown("---")
+    
+        # ✅ Pie Chart Status Voucher Breakdown
+        st.subheader("🧩 Status Voucher")
+        status_count = vouchers["status"].value_counts()
+        fig, ax = plt.subplots()
+        ax.pie(status_count, labels=status_count.index, autopct="%1.1f%%")
+        ax.axis("equal")
+        st.pyplot(fig)
+    
+        st.markdown("---")
+    
+        # # ✅ Tabel Detail Voucher
+        # vouchers_display = vouchers.copy()
+        # vouchers_display["initial_value"] = vouchers_display["initial_value"].apply(lambda x: f"Rp {x:,.0f}")
+        # vouchers_display["balance"] = vouchers_display["balance"].apply(lambda x: f"Rp {x:,.0f}")
+        # vouchers_display["tanggal_penjualan"] = vouchers_display["tanggal_penjualan"].dt.strftime("%Y-%m-%d")
+    
+        # st.subheader("📋 Detail Voucher")
+        # st.dataframe(
+        #     vouchers_display[["code", "nama", "no_hp", "status", "initial_value", "balance", "tanggal_penjualan", "seller"]],
+        #     width="stretch"
+        # )
+    
+        # ✅ Export CSV
+        csv = vouchers.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Download Laporan Voucher (CSV)",
+            data=csv,
+            file_name="voucher_report.csv",
+            mime="text/csv",
+        )
+
+    # with tab_voucher:
+    #     st.subheader("📊 Ringkasan Voucher")
+    #     total_voucher = len(df_vouchers)
+    #     total_saldo_awal = df_vouchers["initial_value"].sum()
+    #     total_saldo_tersisa = df_vouchers["balance"].sum()
+    #     aktif_count = df_vouchers[df_vouchers["status"]=="active"].shape[0]
+    #     inactive_count = df_vouchers[df_vouchers["status"]!="active"].shape[0]
+    #     avg_saldo = df_vouchers["balance"].mean() if total_voucher>0 else 0
+
+    #     st.write(f"- Total voucher: {total_voucher}")
+    #     st.write(f"- Voucher aktif: {aktif_count}")
+    #     st.write(f"- Voucher inactive: {inactive_count}")
+    #     st.write(f"- Total saldo awal: Rp {int(total_saldo_awal):,}")
+    #     st.write(f"- Total saldo tersisa: Rp {int(total_saldo_tersisa):,}")
+
+    #     st.markdown("---")
+    #     st.dataframe(df_vouchers, use_container_width=True)
 
     # ===== TAB Transaksi =====
     with tab_transaksi:
@@ -862,6 +934,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
