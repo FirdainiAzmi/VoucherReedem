@@ -9,7 +9,6 @@ import math
 import traceback 
 from database import get_db_connection
 
-engine = get_db_connection()
 DB_URL = st.secrets["DB_URL"]
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
 engine = create_engine(DB_URL, future=True)
@@ -72,60 +71,120 @@ def update_voucher_detail(code, nama, no_hp, status):
     except Exception as e:
         st.error(f"Gagal update voucher: {e}")
         return False
+import traceback
 
 def atomic_redeem(code, used_amount, branch, items_str):
     try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT balance FROM vouchers WHERE code=%s FOR UPDATE", (code,))
-                row = cur.fetchone()
-                if not row:
-                    return False, "Voucher tidak ditemukan", None
+        engine = get_db_connection()
+        conn = engine.raw_connection()
+        cur = conn.cursor()
 
-                balance = row[0]
-                if balance < used_amount:
-                    return False, "Saldo tidak cukup", balance
+        cur.execute("SELECT balance FROM vouchers WHERE code=%s FOR UPDATE", (code,))
+        row = cur.fetchone()
+        if not row:
+            conn.rollback()
+            return False, "Voucher tidak ditemukan", None
 
-                # Update saldo voucher
-                new_balance = balance - used_amount
-                cur.execute("UPDATE vouchers SET balance=%s, status='used' WHERE code=%s", (new_balance, code))
+        balance = row[0]
+        if balance < used_amount:
+            conn.rollback()
+            return False, "Saldo tidak cukup", balance
 
-                # Insert transaksi
-                cur.execute("""
-                    INSERT INTO voucher_transactions (code, used_amount, branch, items)
-                    VALUES (%s, %s, %s, %s)
-                """, (code, used_amount, branch, items_str))
+        # Update saldo voucher
+        new_balance = balance - used_amount
+        cur.execute(
+            "UPDATE vouchers SET balance=%s, status='used' WHERE code=%s",
+            (new_balance, code)
+        )
 
-                # ✅ UPDATE JUMLAH TERJUAL PER CABANG
-                # items_str format: "Item A x2, Item B x1"
-                items = [x.strip() for x in items_str.split(",")]
+        # Insert transaksi
+        cur.execute("""
+            INSERT INTO voucher_transactions (code, used_amount, branch, items)
+            VALUES (%s, %s, %s, %s)
+        """, (code, used_amount, branch, items_str))
 
-                for i in items:
-                    if " x" not in i:
-                        continue
-                    nama_item, qty = i.split(" x")
-                    qty = int(qty)
+        # ✅ Update penjualan per item per branch
+        items = [x.strip() for x in items_str.split(",")]
 
-                    if branch == "Tawangsari":
-                        cur.execute("""
-                            UPDATE menu_items
-                            SET terjual_twsari = COALESCE(terjual_twsari,0) + %s
-                            WHERE nama_item = %s
-                        """, (qty, nama_item))
-                    
-                    elif branch == "Sedati":
-                        cur.execute("""
-                            UPDATE menu_items
-                            SET terjual_sedati = COALESCE(terjual_sedati,0) + %s
-                            WHERE nama_item = %s
-                        """, (qty, nama_item))
+        for i in items:
+            if " x" not in i:
+                continue
+            nama_item, qty = i.split(" x")
+            qty = int(qty)
 
-                conn.commit()
-                return True, "Transaksi berhasil", new_balance
+            column = "terjual_twsari" if branch == "Tawangsari" else "terjual_sedati"
+
+            cur.execute(f"""
+                UPDATE menu_items
+                SET {column} = COALESCE({column},0) + %s
+                WHERE nama_item = %s
+            """, (qty, nama_item))
+
+        conn.commit()
+        return True, "Transaksi berhasil", new_balance
 
     except Exception as e:
         traceback.print_exc()
+        conn.rollback()
         return False, str(e), None
+
+    finally:
+        cur.close()
+        conn.close()
+
+# def atomic_redeem(code, used_amount, branch, items_str):
+#     try:
+#         with get_db_connection() as conn:
+#             with conn.cursor() as cur:
+#                 cur.execute("SELECT balance FROM vouchers WHERE code=%s FOR UPDATE", (code,))
+#                 row = cur.fetchone()
+#                 if not row:
+#                     return False, "Voucher tidak ditemukan", None
+
+#                 balance = row[0]
+#                 if balance < used_amount:
+#                     return False, "Saldo tidak cukup", balance
+
+#                 # Update saldo voucher
+#                 new_balance = balance - used_amount
+#                 cur.execute("UPDATE vouchers SET balance=%s, status='used' WHERE code=%s", (new_balance, code))
+
+#                 # Insert transaksi
+#                 cur.execute("""
+#                     INSERT INTO voucher_transactions (code, used_amount, branch, items)
+#                     VALUES (%s, %s, %s, %s)
+#                 """, (code, used_amount, branch, items_str))
+
+#                 # ✅ UPDATE JUMLAH TERJUAL PER CABANG
+#                 # items_str format: "Item A x2, Item B x1"
+#                 items = [x.strip() for x in items_str.split(",")]
+
+#                 for i in items:
+#                     if " x" not in i:
+#                         continue
+#                     nama_item, qty = i.split(" x")
+#                     qty = int(qty)
+
+#                     if branch == "Tawangsari":
+#                         cur.execute("""
+#                             UPDATE menu_items
+#                             SET terjual_twsari = COALESCE(terjual_twsari,0) + %s
+#                             WHERE nama_item = %s
+#                         """, (qty, nama_item))
+                    
+#                     elif branch == "Sedati":
+#                         cur.execute("""
+#                             UPDATE menu_items
+#                             SET terjual_sedati = COALESCE(terjual_sedati,0) + %s
+#                             WHERE nama_item = %s
+#                         """, (qty, nama_item))
+
+#                 conn.commit()
+#                 return True, "Transaksi berhasil", new_balance
+
+#     except Exception as e:
+#         traceback.print_exc()
+#         return False, str(e), None
 
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
@@ -982,6 +1041,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
