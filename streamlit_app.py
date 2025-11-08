@@ -9,7 +9,7 @@ import math
 import traceback
 
 DB_URL = st.secrets["DB_URL"]
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
+ADMIN_PASSWORD = st.secrets[ADMIN_PASSWORD]
 engine = create_engine(DB_URL, future=True)
 
 # Database
@@ -444,12 +444,10 @@ def page_redeem():
         st.write(f"- Voucher: {code}")
         st.write(f"- Cabang: {st.session_state.selected_branch}")
         st.write(f"- Sisa Voucher: Rp {int(balance):,}")
-    
-        # Ambil menu dari DB
+   
         menu_items = get_menu_from_db(st.session_state.selected_branch)
         price_map = {item['nama']: item['harga'] for item in menu_items}
     
-        # Filter menu yang dipesan
         ordered_items = {k:v for k,v in st.session_state.order_items.items() if v > 0}
     
         if not ordered_items:
@@ -462,7 +460,6 @@ def page_redeem():
     
         st.write(f"### Total: Rp {st.session_state.checkout_total:,}")
     
-        # Tombol konfirmasi / kembali
         cA, cB = st.columns([1,1])
         with cA:
             if st.button("Ya, Bayar"):
@@ -472,7 +469,6 @@ def page_redeem():
                     st.session_state.selected_branch, items_str
                 )
                 if ok:
-                    # Simpan saldo baru dan flag untuk pop-up
                     st.session_state.newbal = newbal
                     st.session_state.show_success = True
                 else:
@@ -489,75 +485,9 @@ def page_redeem():
         st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(st.session_state.newbal):,}")
         st.write("Tutup pop-up ini untuk kembali ke awal.")
         if st.button("Tutup"):
-            reset_redeem_state()  # fungsi ini harus mereset redeem_step, order_items, voucher_row, dll
+            reset_redeem_state() 
             st.session_state.show_success = False
             st.rerun()
-
-    # # STEP 3: Konfirmasi pembayaran
-    # elif st.session_state.redeem_step == 3:
-    #         row = st.session_state.voucher_row
-    #         code, initial, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
-        
-    #         st.header("Konfirmasi Pembayaran")
-    #         st.write(f"- Voucher: {code}")
-    #         st.write(f"- Cabang: {st.session_state.selected_branch}")
-    #         st.write(f"- Sisa Voucher: Rp {int(balance):,}")
-        
-    #         menu_items = get_menu_from_db(st.session_state.selected_branch)
-    #         price_map = {item['nama']: item['harga'] for item in menu_items}
-        
-    #         ordered_items = {k:v for k,v in st.session_state.order_items.items() if v > 0}
-        
-    #         if not ordered_items:
-    #             st.warning("Tidak ada menu yang dipilih.")
-    #             return
-        
-    #         st.write("Detail pesanan:")
-    #         for it, q in ordered_items.items():
-    #             st.write(f"- {it} x{q} — Rp {price_map.get(it,0)*q:,}")
-        
-    #         st.write(f"### Total: Rp {st.session_state.checkout_total:,}")
-        
-    #         # Tombol konfirmasi / kembali
-    #         cA, cB = st.columns([1,1])
-    #         with cA:
-    #             if st.button("Ya, Bayar"):
-    #                 items_str = ", ".join([f"{k} x{v}" for k,v in ordered_items.items()])
-    #                 ok, msg, newbal = atomic_redeem(
-    #                     code, st.session_state.checkout_total,
-    #                     st.session_state.selected_branch, items_str
-    #                 )
-    #                 if ok:
-    #                     # simpan newbal di session_state agar bisa diakses di luar
-    #                     st.session_state.newbal = newbal
-    #                     st.session_state.show_success = True
-    #                 else:
-    #                     st.error(msg)
-    #                     st.session_state.redeem_step = 2
-    #                     st.rerun()
-                
-    #             # Tampilkan "pop-up" manual hanya jika transaksi berhasil
-    #             if st.session_state.get("show_success"):
-    #                 st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(st.session_state.newbal):,}")
-    #                 if st.button("Tutup"):
-    #                     reset_redeem_state()
-    #                     st.session_state.show_success = False
-    #                     st.rerun()
-
-                
-    #             # Tampilkan "pop-up" manual
-    #             if st.session_state.get("show_success"):
-    #                 st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
-    #                 if st.button("Tutup"):
-    #                     reset_redeem_state()
-    #                     st.session_state.show_success = False
-    #                     st.rerun()
-
-
-    #         with cB:
-    #             if st.button("Tidak, Kembali"):
-    #                 st.session_state.redeem_step = 2
-    #                 st.rerun()
 
 
 # Page: Aktivasi Voucher (admin) — inline edit
@@ -1186,6 +1116,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
