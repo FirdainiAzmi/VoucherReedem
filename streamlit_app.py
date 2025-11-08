@@ -89,61 +89,6 @@ def atomic_redeem(code, amount, branch, items):
         return False, f"DB error saat redeem: {e}", None
 
 
-# def atomic_redeem(code, used_amount, branch, items_str):
-#     try:
-#         with get_db_connection() as conn:
-#             with conn.cursor() as cur:
-#                 cur.execute("SELECT balance FROM vouchers WHERE code=%s FOR UPDATE", (code,))
-#                 row = cur.fetchone()
-#                 if not row:
-#                     return False, "Voucher tidak ditemukan", None
-
-#                 balance = row[0]
-#                 if balance < used_amount:
-#                     return False, "Saldo tidak cukup", balance
-
-#                 # Update saldo voucher
-#                 new_balance = balance - used_amount
-#                 cur.execute("UPDATE vouchers SET balance=%s, status='used' WHERE code=%s", (new_balance, code))
-
-#                 # Insert transaksi
-#                 cur.execute("""
-#                     INSERT INTO voucher_transactions (code, used_amount, branch, items)
-#                     VALUES (%s, %s, %s, %s)
-#                 """, (code, used_amount, branch, items_str))
-
-#                 # ✅ UPDATE JUMLAH TERJUAL PER CABANG
-#                 # items_str format: "Item A x2, Item B x1"
-#                 items = [x.strip() for x in items_str.split(",")]
-
-#                 for i in items:
-#                     if " x" not in i:
-#                         continue
-#                     nama_item, qty = i.split(" x")
-#                     qty = int(qty)
-
-#                     if branch == "Tawangsari":
-#                         cur.execute("""
-#                             UPDATE menu_items
-#                             SET terjual_twsari = COALESCE(terjual_twsari,0) + %s
-#                             WHERE nama_item = %s
-#                         """, (qty, nama_item))
-                    
-#                     elif branch == "Sedati":
-#                         cur.execute("""
-#                             UPDATE menu_items
-#                             SET terjual_sedati = COALESCE(terjual_sedati,0) + %s
-#                             WHERE nama_item = %s
-#                         """, (qty, nama_item))
-
-#                 conn.commit()
-#                 return True, "Transaksi berhasil", new_balance
-
-#     except Exception as e:
-#         traceback.print_exc()
-#         return False, str(e), None
-
-
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
     q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan FROM vouchers"
     clauses = []
@@ -998,6 +943,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
