@@ -277,8 +277,7 @@ def page_redeem():
                 return
     
             # --- Validasi tanggal penjualan ---
-            today = datetime.date.today()
-    
+            today = pd.to_datetime("today")
             if tgl_penjualan is None:
                 st.error("⚠ Voucher belum dapat digunakan karena belum memiliki tanggal penjualan.")
                 return
@@ -913,6 +912,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
