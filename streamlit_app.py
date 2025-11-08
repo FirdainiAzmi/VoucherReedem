@@ -298,7 +298,7 @@ def page_redeem():
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
-        code, initial_value, balance, created_at, nama, no_hp, status = row
+        code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
     
         st.subheader(f"Voucher: {code}")
         st.write(f"- Nilai awal: Rp {int(initial_value):,}")
@@ -398,7 +398,7 @@ def page_redeem():
     # STEP 3: Konfirmasi pembayaran
     elif st.session_state.redeem_step == 3:
         row = st.session_state.voucher_row
-        code, initial, balance, created_at, nama, no_hp, status = row
+        code, initial, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
     
         st.header("Konfirmasi Pembayaran")
         st.write(f"- Voucher: {code}")
@@ -513,7 +513,7 @@ def page_daftar_voucher():
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
 
     st.dataframe(
-        df_display[["code", "nama", "no_hp", "status", "initial_value", "balance", "created_at", "seller"]],
+        df_display[["code", "nama", "no_hp", "status", "initial_value", "balance", "created_at", "seller", "tanggal_penjualan"]],
         use_container_width=True
     )
 
@@ -905,6 +905,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
