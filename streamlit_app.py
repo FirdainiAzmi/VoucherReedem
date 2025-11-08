@@ -853,34 +853,90 @@ def page_laporan_global():
 
 
     # ===== TAB Seller =====
-    with tab_seller:   
-        st.subheader("📊 Ringkasan Seller - Voucher Aktif")
-
-        if "seller" not in df_vouchers.columns:
-            st.warning("Kolom 'seller' tidak tersedia di table vouchers.")
-            st.stop()
+    with tab_seller:
+        st.subheader("📊 Ringkasan Seller - Voucher Berdasarkan Filter")
+    
+        # ==================================
+        # ✅ Filter Tanggal Transaksi
+        # ==================================
+        if "tanggal_transaksi" in df_tx.columns:
+            df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
+            min_date = df_tx["tanggal_transaksi"].min()
+            max_date = df_tx["tanggal_transaksi"].max()
+            
+            date_filter = st.date_input("Filter Tanggal Transaksi", [min_date, max_date])
+            df_tx = df_tx[
+                (df_tx["tanggal_transaksi"] >= pd.to_datetime(date_filter[0])) &
+                (df_tx["tanggal_transaksi"] <= pd.to_datetime(date_filter[1]))
+            ]
+    
+        # ==================================
+        # ✅ Filter Cabang
+        # ==================================
+        if "branch" in df_tx.columns:
+            branch_list = ["Semua"] + sorted(df_tx["branch"].dropna().unique().tolist())
+            selected_branch = st.selectbox("Filter Cabang", branch_list)
+    
+            if selected_branch != "Semua":
+                df_tx = df_tx[df_tx["branch"] == selected_branch]
+    
+        # ==================================
+        # ✅ Voucher + Seller Reference
+        # ==================================
         df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
-        df_active = df_vouchers[df_vouchers["status"] == "active"]
     
-        if not df_active.empty:
-            seller_active_count = (
-                df_active.groupby("seller")
-                .size()
-                .reset_index(name="Voucher Aktif")
-                .sort_values(by="Voucher Aktif", ascending=False)
-            )
+        # Merge transaksi dengan voucher untuk semua analitik seller
+        df_merge = df_tx.merge(df_vouchers[["code", "seller", "status"]], on="code", how="left")
     
-            st.table(seller_active_count.rename(columns={"seller": "Seller"}))
     
-            chart_seller = alt.Chart(seller_active_count).mark_bar().encode(
-                x=alt.X("seller:N", title="Seller"),
-                y=alt.Y("Voucher Aktif:Q", title="Jumlah Voucher Aktif"),
-                tooltip=["seller", "Voucher Aktif"]
-            )
-            st.altair_chart(chart_seller, use_container_width=True)
+        # =============================
+        # 📌 A. Voucher Aktif per Seller
+        # =============================
+        st.write("### ✅ Voucher Aktif per Seller")
+        df_active = df_merge[df_merge["status"] == "active"]
     
-        else:
-            st.info("Belum ada voucher yang berstatus aktif.")
+        seller_active = (
+            df_active.groupby("seller")
+            .size()
+            .reset_index(name="Voucher Aktif")
+            .sort_values(by="Voucher Aktif", ascending=False)
+        )
+    
+        st.table(seller_active.rename(columns={"seller": "Seller"}))
+        st.bar_chart(seller_active, x="seller", y="Voucher Aktif")
+    
+    
+        # =========================================
+        # 📌 B. Total Voucher Dibawa Seller
+        # =========================================
+        st.write("### 📦 Total Voucher Dibawa Seller")
+    
+        seller_total = (
+            df_vouchers.groupby("seller")
+            .size()
+            .reset_index(name="Total Voucher Dibawa")
+            .sort_values(by="Total Voucher Dibawa", ascending=False)
+        )
+    
+        st.table(seller_total.rename(columns={"seller": "Seller"}))
+        st.bar_chart(seller_total, x="seller", y="Total Voucher Dibawa")
+    
+    
+        # ======================================================
+        # 📌 C. Total Penukaran Voucher Dari Setiap Seller
+        # ======================================================
+        st.write("### 🔁 Total Penukaran Voucher per Seller")
+    
+        seller_redeem = (
+            df_merge.groupby("seller")
+            .size()
+            .reset_index(name="Total Penukaran")
+            .sort_values(by="Total Penukaran", ascending=False)
+        )
+    
+        st.table(seller_redeem.rename(columns={"seller": "Seller"}))
+        st.bar_chart(seller_redeem, x="seller", y="Total Penukaran")
+
 
     # Download CSV
     st.markdown("---")
@@ -1032,62 +1088,5 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
