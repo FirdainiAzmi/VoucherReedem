@@ -82,43 +82,48 @@ def update_voucher_detail(code, nama, no_hp, status):
         st.error(f"Gagal update voucher: {e}")
         return False
 
-def atomic_redeem(code, used_amount, branch, items_str):
+from datetime import datetime
+from database import engine
+import traceback
+from sqlalchemy import text
+
+def atomic_redeem(code, amount, branch, items_str):
     try:
         with engine.begin() as conn:
+
             # Lock voucher row
-            res = conn.execute(text(
-                "SELECT balance FROM vouchers WHERE code=:code FOR UPDATE"
-            ), {"code": code}).fetchone()
+            r = conn.execute(
+                text("SELECT balance FROM vouchers WHERE code = :c FOR UPDATE"),
+                {"c": code}
+            ).fetchone()
 
-            if not res:
-                return False, "Voucher tidak ditemukan", None
+            if not r:
+                return False, "Voucher tidak ditemukan.", None
 
-            balance = res.balance
-            if balance < used_amount:
-                return False, "Saldo tidak cukup", balance
+            balance = r[0]
+            if balance < amount:
+                return False, f"Saldo tidak cukup (sisa: {balance}).", balance
 
-            new_balance = balance - used_amount
+            # Update saldo
+            conn.execute(
+                text("UPDATE vouchers SET balance = balance - :amt WHERE code = :c"),
+                {"amt": amount, "c": code}
+            )
 
+            # Insert transaksi
             conn.execute(text("""
-                UPDATE vouchers
-                SET balance=:new_balance,
-                    status = CASE WHEN balance = 0 THEN 'used' ELSE status END
-                WHERE code=:code
-            """), {"new_balance": new_balance, "code": code})
-
-            conn.execute(text("""
-                INSERT INTO transactions (code, used_amount, branch, items)
-                VALUES (:code, :used_amount, :branch, :items)
+                INSERT INTO transactions (code, used_amount, tanggal_transaksi, branch, items)
+                VALUES (:c, :amt, :now, :branch, :items)
             """), {
-                "code": code,
-                "used_amount": used_amount,
+                "c": code,
+                "amt": amount,
+                "now": datetime.utcnow(),
                 "branch": branch,
                 "items": items_str
             })
 
+            # ✅ Update jumlah penjualan menu ▒▒▒▒▒▒▒▒▒▒▒▒
             items = [x.strip() for x in items_str.split(",")]
-
-            column = "terjual_twsari" if branch == "Tawangsari" else "terjual_sedati"
 
             for i in items:
                 if " x" not in i:
@@ -126,17 +131,20 @@ def atomic_redeem(code, used_amount, branch, items_str):
                 nama_item, qty = i.split(" x")
                 qty = int(qty)
 
+                column = "terjual_twsari" if branch == "Tawangsari" else "terjual_sedati"
+
                 conn.execute(text(f"""
                     UPDATE menu_items
-                    SET {column} = COALESCE({column},0) + :qty
-                    WHERE nama_item = :nama_item
-                """), {"qty": qty, "nama_item": nama_item})
+                    SET {column} = COALESCE({column}, 0) + :qty
+                    WHERE nama_item = :item
+                """), {"qty": qty, "item": nama_item})
 
-            return True, "Transaksi berhasil", new_balance
+            return True, "Redeem berhasil ✅", balance - amount
 
     except Exception as e:
         traceback.print_exc()
-        return False, f"DB Error: {e}", None
+        return False, f"DB error saat redeem: {e}", None
+
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
     q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan FROM vouchers"
@@ -992,6 +1000,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
