@@ -9,7 +9,7 @@ import math
 import traceback
 
 DB_URL = st.secrets["DB_URL"]
-ADMIN_PASSWORD = st.secrets[ADMIN_PASSWORD]
+ADMIN_PASSWORD = st.secrets.get["ADMIN_PASSWORD"]
 engine = create_engine(DB_URL, future=True)
 
 # Database
@@ -1116,6 +1116,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
