@@ -402,10 +402,28 @@ def page_redeem():
                     code, st.session_state.checkout_total,
                     st.session_state.selected_branch, items_str
                 )
-                if ok:
-                    st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
-                    reset_redeem_state()
-                    st.rerun()
+            if ok:
+                try:
+                    conn = get_connection()
+                    cur = conn.cursor()
+            
+                    for item_name, qty in ordered_items.items():
+                        cur.execute("""
+                            UPDATE menu 
+                            SET jumlah_terjual = COALESCE(jumlah_terjual, 0) + %s
+                            WHERE nama = %s AND cabang = %s
+                        """, (qty, item_name, st.session_state.selected_branch))
+            
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+            
+                except Exception as e:
+                    st.error(f"⚠ Error update jumlah terjual: {e}")
+            
+                st.success(f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(newbal):,}")
+                reset_redeem_state()
+                st.rerun()
                 else:
                     st.error(msg)
                     st.session_state.redeem_step = 2
@@ -942,6 +960,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
