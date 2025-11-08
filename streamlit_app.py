@@ -795,16 +795,34 @@ def page_laporan_global():
         # =============================== #
         # 🍽️ Top 5 Menu Terlaris
         # =============================== #
+        st.subheader("🍽️ Top 5 Menu Terlaris")
         
-        # Query tergantung cabang yang dipilih
+        # Lihat kolom yang tersedia di menu_items
+        df_check = pd.read_sql("SELECT * FROM menu_items LIMIT 1", conn)
+        st.write("Kolom tersedia:", df_check.columns.tolist())
+        
+        # Tentukan kolom terjual berdasarkan cabang
         if selected_cabang == "Semua":
-            query_menu = """
-                SELECT nama_item,
-                COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0) AS Terjual
-                FROM menu_items
-            """
+            if all(col in df_check.columns for col in ["terjual_twsari", "terjual_sedati"]):
+                query_menu = """
+                    SELECT nama_item,
+                    COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0) AS Terjual
+                    FROM menu_items
+                """
+            else:
+                st.error("❌ Kolom penjualan tidak ditemukan! Pastikan kolom terjual ada di database.")
+                st.stop()
+        
         else:
-            column = "terjual_twsari" if selected_cabang == "Tawangsari" else "terjual_sedati"
+            if selected_cabang == "Tawangsari":
+                column = "terjual_twsari"
+            else:
+                column = "terjual_sedati"
+        
+            if column not in df_check.columns:
+                st.error(f"❌ Kolom {column} tidak ditemukan di menu_items.")
+                st.stop()
+        
             query_menu = f"""
                 SELECT nama_item,
                 COALESCE({column},0) AS Terjual
@@ -812,23 +830,22 @@ def page_laporan_global():
             """
         
         df_menu = pd.read_sql(query_menu, engine)
-        df_menu = df_menu.rename(columns={"nama_item": "Menu"})  # ✅ Rename langsung
-        
-        # Ambil Top 5
-        df_menu = df_menu.sort_values("Terjual", ascending=False).head(5)
-        
-        st.subheader("🍽️ Top 5 Menu Terlaris")
         
         if df_menu.empty:
-            st.info("Belum ada data penjualan menu.")
-        else:
-            # ✅ Bar Chart aja
-            chart_menu = alt.Chart(df_menu).mark_bar().encode(
-                x=alt.X("Menu:N", title="Menu"),
-                y=alt.Y("Terjual:Q", title="Jumlah Terjual"),
-                tooltip=["Menu", "Terjual"]
-            )
-            st.altair_chart(chart_menu, use_container_width=True)
+            st.info("ℹ️ Belum ada data penjualan menu.")
+            st.stop()
+        
+        df_menu = df_menu.rename(columns={"nama_item": "Menu"})
+        df_menu = df_menu.sort_values("Terjual", ascending=False).head(5)
+        
+        chart_menu = alt.Chart(df_menu).mark_bar().encode(
+            x="Menu:N",
+            y="Terjual:Q",
+            tooltip=["Menu", "Terjual"]
+        )
+        
+        st.altair_chart(chart_menu, use_container_width=True)
+
 
 
 
@@ -1025,6 +1042,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
