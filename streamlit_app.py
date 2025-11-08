@@ -53,7 +53,7 @@ def find_voucher(code):
     try:
         with engine.connect() as conn:
             row = conn.execute(text("""
-                SELECT code, initial_value, balance, created_at, nama, no_hp, status
+                SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan
                 FROM vouchers WHERE code = :c
             """), {"c": code}).fetchone()
         return row
@@ -905,6 +905,7 @@ elif page == "Laporan Global":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
