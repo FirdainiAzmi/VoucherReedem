@@ -9,8 +9,8 @@ import math
 import traceback 
 from database import get_db_connection
 
-# Config & DB connect
-@st.cache_resource
+engine = get_db_connection()
+
 def get_db_connection():
     DB_URL = st.secrets["DB_URL"]
     ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "admin123")
@@ -984,6 +984,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
