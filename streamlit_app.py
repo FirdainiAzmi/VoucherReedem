@@ -482,25 +482,25 @@ def page_daftar_voucher():
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
         
         # Cek aman untuk tanggal_penjualan
-        if "tanggal_penjualan" in df_display.columns:
-            df_display["tanggal_penjualan"] = (
-                pd.to_datetime(df_display["tanggal_penjualan"], errors="coerce")
-                .dt.strftime("%Y-%m-%d")
-                .fillna("-")
-            )
-        else:
-            df_display["tanggal_penjualan"] = "-"
-        
-        st.dataframe(
-            df_display[
-                [
-                    "code", "nama", "no_hp", "status",
-                    "initial_value", "balance", "created_at",
-                    "seller", "tanggal_penjualan"
-                ]
-            ],
-            use_container_width=True
+    if "tanggal_penjualan" in df_display.columns:
+        df_display["tanggal_penjualan"] = (
+            pd.to_datetime(df_display["tanggal_penjualan"], errors="coerce")
+            .dt.strftime("%Y-%m-%d")
+            .fillna("-")
         )
+    else:
+        df_display["tanggal_penjualan"] = "-"
+        
+    st.dataframe(
+        df_display[
+            [
+                "code", "nama", "no_hp", "status",
+                "initial_value", "balance", "created_at",
+                "seller", "tanggal_penjualan"
+            ]
+        ],
+        use_container_width=True
+    )
     
 
     # ===== Form edit voucher jika kode dicari ditemukan =====
@@ -862,6 +862,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
