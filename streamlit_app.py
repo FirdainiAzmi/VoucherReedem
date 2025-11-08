@@ -82,66 +82,61 @@ def update_voucher_detail(code, nama, no_hp, status):
         st.error(f"Gagal update voucher: {e}")
         return False
 
-def atomic_redeem(code, amount, branch, items):
-    import sqlite3
-    from datetime import datetime
-
-    conn = sqlite3.connect("database.db")
-    c = conn.cursor()
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+def atomic_redeem(code, used_amount, branch, items_str):
     try:
-        # === 1️⃣ Lock voucher row ===
-        c.execute("SELECT balance FROM vouchers WHERE code=? FOR UPDATE", (code,))
-        row = c.fetchone()
-        if not row:
-            return False, "Voucher tidak ditemukan", 0
+        with engine.begin() as conn:
+            # Lock voucher row
+            res = conn.execute(text(
+                "SELECT balance FROM vouchers WHERE code=:code FOR UPDATE"
+            ), {"code": code}).fetchone()
 
-        balance = row[0]
-        if amount > balance:
-            return False, "Saldo tidak cukup", balance
+            if not res:
+                return False, "Voucher tidak ditemukan", None
 
-        # === 2️⃣ Update balance voucher ===
-        new_balance = balance - amount
-        c.execute("UPDATE vouchers SET balance=? WHERE code=?", (new_balance, code))
+            balance = res.balance
+            if balance < used_amount:
+                return False, "Saldo tidak cukup", balance
 
-        # === 3️⃣ Simpan transaksi ===
-        c.execute("""
-            INSERT INTO transactions (code, amount, branch, items, redeemed_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (code, amount, branch, items, now))
+            new_balance = balance - used_amount
 
-        # === 4️⃣ Update jumlah_terjual di tabel menu ===
-        # items = string seperti "Nasi Goreng x2, Mie Goreng x1"
-        item_pairs = [i.strip() for i in items.split(",") if "x" in i]
-        for pair in item_pairs:
-            nama, qty = pair.rsplit("x", 1)
-            nama = nama.strip()
-            qty = int(qty.strip())
+            conn.execute(text("""
+                UPDATE vouchers
+                SET balance=:new_balance,
+                    status = CASE WHEN balance = 0 THEN 'used' ELSE status END
+                WHERE code=:code
+            """), {"new_balance": new_balance, "code": code})
 
-            # Tentukan nama kolom terjual berdasarkan cabang
-            if branch.lower() == "sedati":
-                col = "terjual_sedati"
-            elif branch.lower() == "tawangsari":
-                col = "terjual_tawangsari"
-            else:
-                col = "terjual_lain"
+            conn.execute(text("""
+                INSERT INTO transactions (code, used_amount, branch, items)
+                VALUES (:code, :used_amount, :branch, :items)
+            """), {
+                "code": code,
+                "used_amount": used_amount,
+                "branch": branch,
+                "items": items_str
+            })
 
-            # Update jumlah terjual di kolom cabang sesuai
-            c.execute(f"""
-                UPDATE menu 
-                SET {col} = {col} + ? 
-                WHERE nama = ?
-            """, (qty, nama))
+            items = [x.strip() for x in items_str.split(",")]
 
-        conn.commit()
-        return True, "Transaksi berhasil", new_balance
+            column = "terjual_twsari" if branch == "Tawangsari" else "terjual_sedati"
+
+            for i in items:
+                if " x" not in i:
+                    continue
+                nama_item, qty = i.split(" x")
+                qty = int(qty)
+
+                conn.execute(text(f"""
+                    UPDATE menu_items
+                    SET {column} = COALESCE({column},0) + :qty
+                    WHERE nama_item = :nama_item
+                """), {"qty": qty, "nama_item": nama_item})
+
+            return True, "Transaksi berhasil", new_balance
 
     except Exception as e:
-        conn.rollback()
-        return False, f"Error: {str(e)}", 0
-    finally:
-        conn.close()
+        traceback.print_exc()
+        return False, f"DB Error: {e}", None
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
     q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan FROM vouchers"
@@ -997,6 +992,7 @@ elif page == "Laporan Warung":
         page_laporan_global()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
