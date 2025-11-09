@@ -1118,17 +1118,17 @@ def page_seller_activation():
         else:
             st.error(msg)
 
-    # if reset:
-    #     for key in [
-    #         "kode_input",
-    #         "seller_input",
-    #         "buyer_name_input",
-    #         "buyer_phone_input",
-    #         "assign_tanggal_aktivasi"
-    #     ]:
-    #         if key in st.session_state:
-    #             del st.session_state[key]
-    #     st.rerun()
+    if reset:
+        for key in [
+            "kode_input",
+            "seller_input",
+            "buyer_name_input",
+            "buyer_phone_input",
+            "assign_tanggal_aktivasi"
+        ]:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.rerun()
     
     st.markdown("---")
     st.info("Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). Jika perlu koreksi, minta admin untuk ubah data.")
@@ -1293,6 +1293,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
