@@ -1098,7 +1098,9 @@ def page_seller_activation():
         seller_name_input = st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)")
         buyer_name_input = st.text_input("Nama Pembeli")
         buyer_phone_input = st.text_input("No HP Pembeli")
-        submit = st.form_submit_button("bwa bwa bwa")
+        tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
+        submit = st.form_submit_button("Simpan dan Aktifkan")
+        reset = st.form_reset_button("Kembali")
 
     if submit:
         if not kode:
@@ -1174,33 +1176,6 @@ def page_seller_admin_assign():
                 st.session_state["found_voucher"] = None
                 st.error("Terjadi kesalahan saat mencari voucher ⚠️")
                 st.code(str(e))
-
-    # df = list_vouchers(limit=5000)  
-    # df_display = df.copy()
-    # df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
-    # df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
-    # df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
-        
-    # # Cek aman untuk tanggal_penjualan
-    # if "tanggal_penjualan" in df_display.columns:
-    #     df_display["tanggal_penjualan"] = (
-    #         pd.to_datetime(df_display["tanggal_penjualan"], errors="coerce")
-    #         .dt.strftime("%Y-%m-%d")
-    #         .fillna("-")
-    #     )
-    # else:
-    #     df_display["tanggal_penjualan"] = "-"
-        
-    # st.dataframe(
-    #     df_display[
-    #         [
-    #             "code",
-    #             "initial_value",
-    #             "seller", "tanggal_penjualan"
-    #         ]
-    #     ],
-    #     use_container_width=True
-    # )
     
     if st.session_state.get("found_voucher"):
         code, initial_value, balance, seller, nama, no_hp, status, tanggal_penjualan = st.session_state["found_voucher"]
@@ -1306,6 +1281,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
