@@ -290,36 +290,8 @@ def seller_page(engine):
     col1, col2 = st.columns([1,1])
 
     # ✅ Tombol Reset Selalu Muncul
-    col2.write("👉 Klik untuk reset form")
-    if col2.button("🔄 Reset"):
-        st.session_state.code_input = ""
-        st.session_state.seller_input = ""
-        st.session_state.buyer_input = ""
-        st.session_state.phone_input = ""
-        st.rerun()
-
-    # ✅ Tombol Aktivasi
-    if col1.button("✅ Aktivasi & Simpan"):
-        ok, msg, data = seller_activate_voucher(
-            code.strip().upper(),
-            seller_name.strip(),
-            buyer_name.strip(),
-            buyer_phone.strip(),
-            engine
-        )
-
-        if ok:
-            st.success(msg)
-            st.subheader("📌 Detail Voucher")
-            st.write(f"**Kode:** {data['Kode']}")
-            st.write(f"**Seller:** {data['Seller']}")
-            st.write(f"**Nama Pembeli:** {data['Nama Pembeli']}")
-            st.write(f"**No HP Pembeli:** {data['No HP']}")
-            st.write(f"**Status:** ✅ {data['Status']} (Terkunci)")
-        else:
-            st.error(f"❌ {msg}")
-
-        # ✅ Reset input otomatis setelah aktivasi
+    col1.write("👉 Klik untuk reset form")
+    if col1.button("🔄 Reset"):
         st.session_state.code_input = ""
         st.session_state.seller_input = ""
         st.session_state.buyer_input = ""
@@ -1299,6 +1271,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
