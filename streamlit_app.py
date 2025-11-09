@@ -1134,11 +1134,20 @@ def page_seller_activation():
             return
 
         # attempt activation
-        ok, msg = seller_activate_voucher(kode, seller_name_input, buyer_name_input, buyer_phone_input, engine)
+        ok, msg, data = seller_activate_voucher(kode, seller_name_input, buyer_name_input, buyer_phone_input, engine)
         if ok:
             st.success(msg)
+        
+            if data:
+                st.subheader("📌 Detail Voucher")
+                st.write(f"**Kode:** {data['Kode']}")
+                st.write(f"**Seller:** {data['Seller']}")
+                st.write(f"**Nama Pembeli:** {data['Nama Pembeli']}")
+                st.write(f"**No HP Pembeli:** {data['No HP']}")
+                st.write(f"**Status:** ✅ {data['Status']} (Terkunci)")
         else:
             st.error(msg)
+
 
     st.markdown("---")
     st.info("Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). Jika perlu koreksi, minta admin untuk ubah data.")
@@ -1277,6 +1286,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
