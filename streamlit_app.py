@@ -450,13 +450,18 @@ def page_redeem():
     
                 # ✅ Tidak boleh dipakai HARI YANG SAMA
                 if tgl_aktivasi == date.today():
-                    st.error("⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher dibeli.")
+                    st.session_state['redeem_error'] = "⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher diaktifkan."
+                    reset_redeem_state()
                     st.rerun()
     
                 # ✅ Jika semua valid → lanjut
                 st.session_state.voucher_row = row
                 st.session_state.redeem_step = 2
                 st.rerun()
+
+        if 'redeem_error' in st.session_state:
+            st.error(st.session_state['redeem_error'])
+            del st.session_state['redeem_error']
 
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
@@ -1301,6 +1306,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
