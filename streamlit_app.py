@@ -74,7 +74,7 @@ def find_voucher(code):
     try:
         with engine.connect() as conn:
             row = conn.execute(text("""
-                SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan, tanggal_aktivasi
+                SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_aktivasi
                 FROM vouchers WHERE code = :c
             """), {"c": code}).fetchone()
         return row
@@ -153,7 +153,7 @@ def atomic_redeem(code, amount, branch, items_str):
 
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
-    q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan, tanggal_aktivasi FROM vouchers"
+    q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_aktivasi FROM vouchers"
     clauses = []
     params = {}
     if filter_status == "aktif":
@@ -425,7 +425,7 @@ def page_redeem():
                     st.rerun()
     
                 # Ambil data row
-                code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan, tanggal_aktivasi = row
+                code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_aktivasi = row
     
                 # ✅ Validasi status
                 if status is None or str(status).lower() != "active":
@@ -1248,5 +1248,6 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
