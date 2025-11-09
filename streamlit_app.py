@@ -1190,8 +1190,8 @@ def page_seller_admin_assign():
     st.dataframe(
         df_display[
             [
-                "code", "nama", "no_hp", "status",
-                "initial_value", "balance", "created_at",
+                "code",
+                "initial_value",
                 "seller", "tanggal_penjualan"
             ]
         ],
@@ -1276,6 +1276,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
