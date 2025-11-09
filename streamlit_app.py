@@ -1171,6 +1171,22 @@ def page_seller_admin_assign():
                 st.error("Terjadi kesalahan saat mencari voucher ⚠️")
                 st.code(str(e))
 
+    df = list_vouchers(limit=5000)  
+    df_display = df.copy()
+    df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
+    df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
+    df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
+        
+    # Cek aman untuk tanggal_penjualan
+    if "tanggal_penjualan" in df_display.columns:
+        df_display["tanggal_penjualan"] = (
+            pd.to_datetime(df_display["tanggal_penjualan"], errors="coerce")
+            .dt.strftime("%Y-%m-%d")
+            .fillna("-")
+        )
+    else:
+        df_display["tanggal_penjualan"] = "-"
+        
     st.dataframe(
         df_display[
             [
@@ -1260,6 +1276,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
