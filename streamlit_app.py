@@ -287,7 +287,16 @@ def seller_page(engine):
     buyer_name = st.text_input("Nama Pembeli", key="buyer_input")
     buyer_phone = st.text_input("Nomor HP Pembeli", key="phone_input")
 
-    col1, col2 = st.columns([2,1])
+    col1, col2 = st.columns([1,1])
+
+    # ✅ Tombol Reset Selalu Muncul
+    col2.write("👉 Klik untuk reset form")
+    if col2.button("🔄 Reset"):
+        st.session_state.code_input = ""
+        st.session_state.seller_input = ""
+        st.session_state.buyer_input = ""
+        st.session_state.phone_input = ""
+        st.rerun()
 
     # ✅ Tombol Aktivasi
     if col1.button("✅ Aktivasi & Simpan"):
@@ -310,17 +319,7 @@ def seller_page(engine):
         else:
             st.error(f"❌ {msg}")
 
-        # ✅ Reset input otomatis setelah aktivasi berhasil/gagal
-        st.session_state.code_input = ""
-        st.session_state.seller_input = ""
-        st.session_state.buyer_input = ""
-        st.session_state.phone_input = ""
-
-        st.rerun()
-
-    # ✅ Tombol Reset Selalu Muncul
-    col2.write("👉 Klik untuk reset form")
-    if col2.button("🔄 Reset Form"):
+        # ✅ Reset input otomatis setelah aktivasi
         st.session_state.code_input = ""
         st.session_state.seller_input = ""
         st.session_state.buyer_input = ""
@@ -1300,6 +1299,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
