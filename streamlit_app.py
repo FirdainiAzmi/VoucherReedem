@@ -90,7 +90,7 @@ def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
                 UPDATE vouchers
                 SET nama = :nama,
                     no_hp = :no_hp,
-                    status = :status
+                    status = :status,
                     tanggal_aktivasi = tanggal_aktivasi
                 WHERE code = :code
             """), {"nama": nama, "no_hp": no_hp, "status": status, "tanggal_aktivasi": tanggal_aktivasi, "code": code})
@@ -1248,6 +1248,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
