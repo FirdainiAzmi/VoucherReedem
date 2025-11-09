@@ -1178,7 +1178,13 @@ def page_seller_admin_assign():
                 st.code(str(e))
 
     if st.session_state.get("found_voucher"):
-        code, initial_value, balance, seller = st.session_state["found_voucher"]
+        row = st.session_state["found_voucher"]
+
+        code = row["code"]
+        initial_value = row["initial_value"]
+        balance = row["balance"]
+        seller = row["seller"]
+
 
         st.success("Voucher ditemukan ✅")
         st.write("### Detail Voucher")
@@ -1284,6 +1290,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
