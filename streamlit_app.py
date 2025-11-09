@@ -1171,6 +1171,17 @@ def page_seller_admin_assign():
                 st.error("Terjadi kesalahan saat mencari voucher ⚠️")
                 st.code(str(e))
 
+    st.dataframe(
+        df_display[
+            [
+                "code", "nama", "no_hp", "status",
+                "initial_value", "balance", "created_at",
+                "seller", "tanggal_penjualan"
+            ]
+        ],
+        use_container_width=True
+    )
+    
     if st.session_state.get("found_voucher"):
         code, initial_value, balance, seller, nama, no_hp, status, tanggal_penjualan = st.session_state["found_voucher"]
 
@@ -1249,6 +1260,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
