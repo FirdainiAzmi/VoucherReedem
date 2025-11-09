@@ -227,16 +227,7 @@ def df_to_csv_bytes(df: pd.DataFrame):
 # ---------------------------
 # Seller activation helper
 # ---------------------------
-def seller_activate_voucher(code, seller_input, buyer_name, buyer_phone):
-    """
-    Attempts to activate voucher by seller.
-    Returns (ok: bool, message: str)
-    Rules:
-      - voucher must exist
-      - voucher.seller must be present (assigned by admin) and equal to seller_input
-      - voucher.status must not be 'active'
-      - on success: set nama, no_hp, status='active', tanggal_penjualan = CURRENT_DATE
-    """
+def seller_activate_voucher(code, seller_input, buyer_name, buyer_phone, engine):
     try:
         with engine.begin() as conn:
             row = conn.execute(text("""
@@ -247,23 +238,19 @@ def seller_activate_voucher(code, seller_input, buyer_name, buyer_phone):
             """), {"c": code}).fetchone()
 
             if not row:
-                return False, "Voucher tidak ditemukan."
+                return False, "Voucher tidak ditemukan.", None
 
             _, status_db, seller_db = row
 
-            # not assigned to seller yet
-            if seller_db is None or str(seller_db).strip() == "":
-                return False, "Voucher belum diassign ke seller. Hubungi admin."
+            if not seller_db:
+                return False, "Voucher belum diassign ke seller. Hubungi admin.", None
 
-            # seller mismatch
-            if str(seller_db).strip() != str(seller_input).strip():
-                return False, "Nama seller tidak sesuai dengan data voucher. Aktivasi ditolak."
+            if seller_db.strip() != seller_input.strip():
+                return False, "Nama seller tidak sesuai.", None
 
-            # already active
-            if status_db is not None and str(status_db).lower() == "active":
-                return False, "Voucher sudah aktif dan terkunci."
+            if status_db and status_db.lower() == "active":
+                return False, "Voucher sudah aktif dan terkunci.", None
 
-            # all good -> update
             conn.execute(text("""
                 UPDATE vouchers
                 SET nama = :buyer_name,
@@ -271,21 +258,60 @@ def seller_activate_voucher(code, seller_input, buyer_name, buyer_phone):
                     status = 'active',
                     tanggal_penjualan = CURRENT_DATE
                 WHERE code = :c
-            """), {"buyer_name": buyer_name or None, "buyer_phone": buyer_phone or None, "c": code})
-                if ok:
-                    st.success(msg)
-                
-                    if st.button("🔙 Kembali"):
-                        # Reset semua input → tetapi jangan logout seller
-                        for key in list(st.session_state.keys()):
-                            if key != "seller_logged_in":
-                                del st.session_state[key]
-                        st.experimental_rerun()
-                
-                    except Exception as e:
-                        traceback.print_exc()
-                        return False, f"DB error saat aktivasi: {e}"
+            """), {
+                "buyer_name": buyer_name,
+                "buyer_phone": buyer_phone,
+                "c": code
+            })
 
+        return True, "Aktivasi berhasil ✅ Voucher terkunci!", {
+            "Kode": code,
+            "Seller": seller_input,
+            "Nama Pembeli": buyer_name,
+            "No HP": buyer_phone,
+            "Status": "Active"
+        }
+
+    except Exception as e:
+        traceback.print_exc()
+        return False, f"DB Error: {e}", None
+
+
+def seller_page(engine):
+    if "seller_logged_in" not in st.session_state:
+        return seller_login_page()
+
+    st.title("🏷️ Aktivasi Voucher")
+
+    code = st.text_input("Kode Voucher")
+    seller_name = st.text_input("Nama Seller (harus sesuai database)")
+    buyer_name = st.text_input("Nama Pembeli")
+    buyer_phone = st.text_input("Nomor HP Pembeli")
+
+    if st.button("✅ Aktivasi"):
+        ok, msg, data = seller_activate_voucher(code, seller_name, buyer_name, buyer_phone, engine)
+
+        if ok:
+            st.success(msg)
+
+            # ✅ Tampilkan detail voucher setelah berhasil aktivasi
+            with st.container():
+                st.subheader("📌 Detail Voucher")
+                st.write(f"**Kode:** {data['Kode']}")
+                st.write(f"**Seller:** {data['Seller']}")
+                st.write(f"**Nama Pembeli:** {data['Nama Pembeli']}")
+                st.write(f"**No HP Pembeli:** {data['No HP']}")
+                st.write(f"**Status:** ✅ {data['Status']} (Terkunci)")
+
+            # ✅ Tombol kembali ke form awal
+            if st.button("🔙 Kembali ke Aktivasi Voucher"):
+                for key in list(st.session_state.keys()):
+                    if key != "seller_logged_in":
+                        del st.session_state[key]
+                st.rerun()
+
+        else:
+            st.error(msg)
 
 # ---------------------------
 # Session helpers
@@ -1251,6 +1277,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
