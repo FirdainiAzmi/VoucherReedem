@@ -452,7 +452,6 @@ def page_redeem():
                 if tgl_aktivasi == date.today():
                     st.error("⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher dibeli.")
                     reset_redeem_state()
-                    st.rerun()
     
                 # ✅ Jika semua valid → lanjut
                 st.session_state.voucher_row = row
@@ -1302,6 +1301,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
