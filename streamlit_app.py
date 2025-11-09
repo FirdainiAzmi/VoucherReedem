@@ -414,8 +414,8 @@ with st.sidebar:
 # ---------------------------
 page = st.session_state.get("page", "Penukaran Voucher")
 if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
+    st.session_state.page = "Penukaran Voucher"
     page = "Penukaran Voucher"
-
 
 # ---------------------------
 # Page: Penukaran Voucher (public)
@@ -1271,6 +1271,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
