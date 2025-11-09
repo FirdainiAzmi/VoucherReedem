@@ -1137,28 +1137,12 @@ def page_seller_activation():
     st.markdown("---")
     st.info("Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). Jika perlu koreksi, minta admin untuk ubah data.")
 
-    # Seller should not see full voucher table — but show a quick lookup area
-    st.subheader("Cek Status Voucher (Lookup cepat)")
-    kode_lookup = st.text_input("Masukkan kode voucher untuk cek status (opsional)").strip().upper()
-    if kode_lookup:
-        v = find_voucher(kode_lookup)
-        if not v:
-            st.error("Voucher tidak ditemukan.")
-        else:
-            code, initial_value, balance, created_at, nama, no_hp, status, seller_db, tanggal_penjualan = v
-            st.write(f"- Kode: {code}")
-            st.write(f"- Seller (di DB): {seller_db or '-'}")
-            st.write(f"- Status: {status or 'inactive'}")
-            st.write(f"- Nama pembeli: {nama or '-'}")
-            st.write(f"- No HP pembeli: {no_hp or '-'}")
-            st.write(f"- Tgl penjualan: {tanggal_penjualan or '-'}")
-
 
 # ---------------------------
 # Page: Seller (admin-only assign seller) — keep an admin-only page to assign seller to voucher
 # ---------------------------
 def page_seller_admin_assign():
-    st.subheader("Seller (Admin) — assign seller ke voucher")
+    st.subheader("Seller")
     if "found_voucher" not in st.session_state:
         st.session_state["found_voucher"] = None
     if "search_input" not in st.session_state:
@@ -1170,17 +1154,17 @@ def page_seller_admin_assign():
         st.session_state["search_input"] = ""
         st.session_state["clear_search"] = False
 
-    search_code = st.text_input("Masukkan Kode Voucher", key="admin_assign_search")
+    search_code = st.text_input("Masukkan Kode Voucher", key="search_input")
 
-    if st.button("Cari", key="admin_assign_search_btn"):
+    if st.button("Cari"):
         if search_code:
             try:
                 with engine.connect() as conn:
                     result = conn.execute(text("""
-                        SELECT code, initial_value, balance, seller, nama, no_hp, status, tanggal_penjualan
+                        SELECT code, initial_value, balance, seller
                         FROM vouchers
                         WHERE code = :code
-                    """), {"code": search_code.strip().upper()}).fetchone()
+                    """), {"code": search_code}).fetchone()
 
                 if result:
                     st.session_state["found_voucher"] = result
@@ -1194,7 +1178,7 @@ def page_seller_admin_assign():
                 st.code(str(e))
 
     if st.session_state.get("found_voucher"):
-        code, initial_value, balance, seller, nama, no_hp, status, tanggal_penjualan = st.session_state["found_voucher"]
+        code, initial_value, balance, seller = st.session_state["found_voucher"]
 
         st.success("Voucher ditemukan ✅")
         st.write("### Detail Voucher")
@@ -1202,15 +1186,24 @@ def page_seller_admin_assign():
             "Kode Voucher": [code],
             "Initial Value": [initial_value],
             "Balance": [balance],
-            "Seller (DB)": [seller if seller else "-"],
-            "Status": [status if status else "-"]
+            "Seller": [seller if seller else "-"]
         })
 
-        seller_input_admin = st.text_input("Tetapkan Nama Seller untuk voucher ini:", value=seller if seller else "", key="assign_seller_input")
-        tanggal_input = st.date_input("Tanggal Penjualan (opsional)", value=pd.to_datetime("today"), key="assign_tanggal_input")
+
+        seller_input = st.text_input(
+            "Nama Seller", 
+            value=seller if seller else "", 
+            key="seller_input"
+        )
+
+        tanggal_input = st.date_input(
+            "Tanggal Penjualan", 
+            value=pd.to_datetime("today"), 
+            key="tanggal_input"
+        )
         
-        if st.button("Simpan Assignment", key="assign_seller_btn"):
-            if seller_input_admin:
+        if st.button("Simpan Seller"):
+            if seller_input:
                 try:
                     with engine.begin() as conn2:
                         conn2.execute(text("""
@@ -1219,7 +1212,7 @@ def page_seller_admin_assign():
                                 tanggal_penjualan = :tanggal_penjualan
                             WHERE code = :code
                         """), {
-                            "seller": seller_input_admin.strip(), 
+                            "seller": seller_input, 
                             "tanggal_penjualan": tanggal_input,  
                             "code": code
                         })
@@ -1236,6 +1229,26 @@ def page_seller_admin_assign():
                     st.code(str(e))
             else:
                 st.warning("Nama Seller tidak boleh kosong!")
+
+
+    st.markdown("---")
+    st.subheader("📋 Aktivasi Voucher (Seller Terisi)")
+    
+    try:
+        with engine.connect() as conn:
+            df_seller = pd.read_sql(text("""
+                SELECT code, initial_value, balance, seller, tanggal_penjualan
+                FROM vouchers
+                WHERE seller IS NOT NULL AND seller != ''
+                ORDER BY code DESC
+            """), conn)
+        
+        st.dataframe(df_seller, use_container_width=True)
+    
+    except Exception as e:
+        st.error("Gagal memuat data voucher ❌")
+        st.code(str(e))
+
 
 
 # ---------------------------
@@ -1271,6 +1284,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
