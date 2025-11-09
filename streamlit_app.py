@@ -1098,7 +1098,7 @@ def page_seller_activation():
         seller_name_input = st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)")
         buyer_name_input = st.text_input("Nama Pembeli")
         buyer_phone_input = st.text_input("No HP Pembeli")
-        submit = st.form_submit_button("Aktivasi & Simpan")
+        submit = st.form_submit_button("bwa bwa bwa")
 
     if submit:
         if not kode:
@@ -1306,6 +1306,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
