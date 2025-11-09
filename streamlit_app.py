@@ -65,7 +65,7 @@ def init_db():
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
         st.stop()
-
+#Aktivasi & Simpan
 
 # ---------------------------
 # DB helpers
@@ -1271,6 +1271,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
