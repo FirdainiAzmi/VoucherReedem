@@ -74,7 +74,7 @@ def find_voucher(code):
     try:
         with engine.connect() as conn:
             row = conn.execute(text("""
-                SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan
+                SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan, tanggal_aktivasi
                 FROM vouchers WHERE code = :c
             """), {"c": code}).fetchone()
         return row
@@ -83,7 +83,7 @@ def find_voucher(code):
         return None
 
 
-def update_voucher_detail(code, nama, no_hp, status):
+def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
@@ -91,8 +91,9 @@ def update_voucher_detail(code, nama, no_hp, status):
                 SET nama = :nama,
                     no_hp = :no_hp,
                     status = :status
+                    tanggal_aktivasi = tanggal_aktivasi
                 WHERE code = :code
-            """), {"nama": nama, "no_hp": no_hp, "status": status, "code": code})
+            """), {"nama": nama, "no_hp": no_hp, "status": status, "tanggal_aktivasi": tanggal_aktivasi, "code": code})
         return True
     except Exception as e:
         st.error(f"Gagal update voucher: {e}")
@@ -152,7 +153,7 @@ def atomic_redeem(code, amount, branch, items_str):
 
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
-    q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan FROM vouchers"
+    q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan, tanggal_aktivasi FROM vouchers"
     clauses = []
     params = {}
     if filter_status == "aktif":
@@ -424,7 +425,7 @@ def page_redeem():
                     st.rerun()
     
                 # Ambil data row
-                code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
+                code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan, tanggal_aktivasi = row
     
                 # ✅ Validasi status
                 if status is None or str(status).lower() != "active":
@@ -432,22 +433,22 @@ def page_redeem():
                     reset_redeem_state()
                     st.rerun()
     
-                # ✅ Validasi tanggal_penjualan
-                if tanggal_penjualan is None:
-                    st.error("⛔ Voucher belum bisa digunakan. Tanggal penjualan belum tercatat.")
+                # ✅ Validasi tanggal_aktivasi
+                if tanggal_aktivasi is None:
+                    st.error("⛔ Voucher belum bisa digunakan. Tanggal aktivasi belum tercatat.")
                     reset_redeem_state()
                     st.rerun()
 
-                if hasattr(tanggal_penjualan, "date"):
-                    tgl_penjualan = tanggal_penjualan.date()
+                if hasattr(tanggal_aktivasi, "date"):
+                    tgl_aktivasi = tanggal_aktivasi.date()
                 else:
                     try:
-                        tgl_penjualan = datetime.strptime(str(tanggal_penjualan), "%Y-%m-%d").date()
+                        tgl_aktivasi = datetime.strptime(str(tanggal_aktivasi), "%Y-%m-%d").date()
                     except Exception:
-                        tgl_penjualan = None
+                        tgl_aktivasi = None
     
                 # ✅ Tidak boleh dipakai HARI YANG SAMA
-                if tgl_penjualan == date.today():
+                if tgl_aktivasi == date.today():
                     st.error("⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher dibeli.")
                     reset_redeem_state()
                     st.rerun()
@@ -717,11 +718,14 @@ def page_daftar_voucher():
                     if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
                         st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
                     else:
+                        tanggal_aktivasi = datetime.now().strftime("%Y-%m-%d")
+                        
                         ok = update_voucher_detail(
                             v["code"],
                             nama_in.strip() or None,
                             nohp_in.strip() or None,
-                            status_in
+                            status_in,
+                            tanggal_aktivasi
                         )
                         if ok:
                             st.session_state["voucher_update_success"] = f"Voucher {v['code']} berhasil diperbarui ✅"
@@ -1244,4 +1248,5 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
