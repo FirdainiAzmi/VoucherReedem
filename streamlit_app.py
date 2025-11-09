@@ -292,23 +292,21 @@ def seller_page(engine):
         ok, msg, data = seller_activate_voucher(code, seller_name, buyer_name, buyer_phone, engine)
 
         if ok:
-            st.success(msg)
-
-            # ✅ Tampilkan detail voucher setelah berhasil aktivasi
-            with st.container():
+                st.success(msg)
+        
                 st.subheader("📌 Detail Voucher")
                 st.write(f"**Kode:** {data['Kode']}")
                 st.write(f"**Seller:** {data['Seller']}")
                 st.write(f"**Nama Pembeli:** {data['Nama Pembeli']}")
                 st.write(f"**No HP Pembeli:** {data['No HP']}")
                 st.write(f"**Status:** ✅ {data['Status']} (Terkunci)")
-
-            # ✅ Tombol kembali ke form awal
-            if st.button("🔙 Kembali ke Aktivasi Voucher"):
-                for key in list(st.session_state.keys()):
-                    if key != "seller_logged_in":
-                        del st.session_state[key]
-                st.rerun()
+        
+                # ✅ Tombol kembali hanya muncul pada kondisi ok=True
+                if st.button("🔙 Kembali ke Aktivasi Voucher"):
+                    for key in list(st.session_state.keys()):
+                        if key != "seller_logged_in":
+                            del st.session_state[key]
+                    st.rerun()
 
         else:
             st.error(msg)
@@ -1286,6 +1284,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
