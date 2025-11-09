@@ -272,19 +272,19 @@ def seller_activate_voucher(code, seller_input, buyer_name, buyer_phone):
                     tanggal_penjualan = CURRENT_DATE
                 WHERE code = :c
             """), {"buyer_name": buyer_name or None, "buyer_phone": buyer_phone or None, "c": code})
-            if ok:
-                st.success(msg)
-            
-                if st.button("🔙 Kembali"):
-                    # Reset semua input → tetapi jangan logout seller
-                    for key in list(st.session_state.keys()):
-                        if key != "seller_logged_in":
-                            del st.session_state[key]
-                    st.experimental_rerun()
-            
-                except Exception as e:
-                    traceback.print_exc()
-                    return False, f"DB error saat aktivasi: {e}"
+                if ok:
+                    st.success(msg)
+                
+                    if st.button("🔙 Kembali"):
+                        # Reset semua input → tetapi jangan logout seller
+                        for key in list(st.session_state.keys()):
+                            if key != "seller_logged_in":
+                                del st.session_state[key]
+                        st.experimental_rerun()
+                
+                    except Exception as e:
+                        traceback.print_exc()
+                        return False, f"DB error saat aktivasi: {e}"
 
 
 # ---------------------------
@@ -1251,5 +1251,6 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
