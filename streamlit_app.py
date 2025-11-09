@@ -1100,49 +1100,23 @@ def page_seller_activation():
         buyer_phone_input = st.text_input("No HP Pembeli")
         tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
         submit = st.form_submit_button("Simpan dan Aktifkan")
-    if st.button("Kembali / Reset Form"):
-        # hapus session_state
-        for key in [
-            "kode_input",
-            "seller_input",
-            "buyer_name_input",
-            "buyer_phone_input",
-            "assign_tanggal_aktivasi"
-        ]:
-            st.session_state.pop(key, None)
-        st.rerun()
+        reset = st.form_reset_button("Kembali")
 
     if submit:
-        kode = st.session_state.get("kode_input", "").strip().upper()
-        seller_name_input = st.session_state.get("seller_input", "").strip()
-        buyer_name_input = st.session_state.get("buyer_name_input", "").strip()
-        buyer_phone_input = st.session_state.get("buyer_phone_input", "").strip()
-    
         if not kode:
             st.error("Masukkan kode voucher.")
             return
+
         if not seller_name_input:
             st.error("Masukkan nama seller (sesuai yang terdaftar pada voucher).")
             return
-    
+
+        # attempt activation
         ok, msg = seller_activate_voucher(kode, seller_name_input, buyer_name_input, buyer_phone_input)
         if ok:
             st.success(msg)
         else:
             st.error(msg)
-
-
-    if reset:
-        for key in [
-            "kode_input",
-            "seller_input",
-            "buyer_name_input",
-            "buyer_phone_input",
-            "assign_tanggal_aktivasi"
-        ]:
-            if key in st.session_state:
-                del st.session_state[key]
-        st.rerun()
     
     st.markdown("---")
     st.info("Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). Jika perlu koreksi, minta admin untuk ubah data.")
