@@ -281,21 +281,26 @@ def seller_page(engine):
 
     st.title("🏷️ Aktivasi Voucher")
 
-    # Input fields
-    code = st.text_input("Kode Voucher", key="code_input").strip().upper()
+    # ✅ Input dengan KEY agar bisa di-reset
+    code = st.text_input("Kode Voucher", key="code_input")
     seller_name = st.text_input("Nama Seller (harus sesuai database)", key="seller_input")
     buyer_name = st.text_input("Nama Pembeli", key="buyer_input")
     buyer_phone = st.text_input("Nomor HP Pembeli", key="phone_input")
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([2,1])
 
-    if col1.button("✅ Aktivasi"):
+    # ✅ Tombol Aktivasi
+    if col1.button("✅ Aktivasi & Simpan"):
         ok, msg, data = seller_activate_voucher(
-            code, seller_name, buyer_name, buyer_phone, engine
+            code.strip().upper(),
+            seller_name.strip(),
+            buyer_name.strip(),
+            buyer_phone.strip(),
+            engine
         )
 
         if ok:
-            st.success("✅ Aktivasi berhasil! Voucher terkunci!")
+            st.success(msg)
             st.subheader("📌 Detail Voucher")
             st.write(f"**Kode:** {data['Kode']}")
             st.write(f"**Seller:** {data['Seller']}")
@@ -305,17 +310,22 @@ def seller_page(engine):
         else:
             st.error(f"❌ {msg}")
 
-        # Reset input setelah berhasil/gagal
-        for k in ["code_input", "seller_input", "buyer_input", "phone_input"]:
-            st.session_state[k] = ""
+        # ✅ Reset input otomatis setelah aktivasi berhasil/gagal
+        st.session_state.code_input = ""
+        st.session_state.seller_input = ""
+        st.session_state.buyer_input = ""
+        st.session_state.phone_input = ""
 
         st.rerun()
 
-    # ✅ Tombol Reset manual
-    if col2.button("kembali"):
-        for k in ["code_input", "seller_input", "buyer_input", "phone_input"]:
-            st.session_state[k] = ""
+    # ✅ Tombol Reset Selalu Muncul
+    if col2.button("🔄 Reset Form"):
+        st.session_state.code_input = ""
+        st.session_state.seller_input = ""
+        st.session_state.buyer_input = ""
+        st.session_state.phone_input = ""
         st.rerun()
+
 
 
 
@@ -1293,6 +1303,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
