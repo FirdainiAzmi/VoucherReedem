@@ -1100,7 +1100,7 @@ def page_seller_activation():
         buyer_phone_input = st.text_input("No HP Pembeli")
         tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
         submit = st.form_submit_button("Simpan dan Aktifkan")
-        reset = st.form_reset_button("Kembali")
+        reset = st.form_submit_button("Kembali")
 
     if submit:
         if not kode:
@@ -1281,6 +1281,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
