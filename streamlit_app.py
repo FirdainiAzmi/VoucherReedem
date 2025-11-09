@@ -1101,10 +1101,17 @@ def page_seller_activation():
         tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
         submit = st.form_submit_button("Simpan dan Aktifkan")
     if st.button("Kembali / Reset Form"):
-        for key in ["kode_input","seller_input","buyer_name_input","buyer_phone_input","assign_tanggal_aktivasi"]:
+        # hapus session_state
+        for key in [
+            "kode_input",
+            "seller_input",
+            "buyer_name_input",
+            "buyer_phone_input",
+            "assign_tanggal_aktivasi"
+        ]:
             st.session_state.pop(key, None)
         st.rerun()
-    
+
     if submit:
         kode = st.session_state.get("kode_input", "").strip().upper()
         seller_name_input = st.session_state.get("seller_input", "").strip()
@@ -1300,6 +1307,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
