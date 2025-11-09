@@ -319,6 +319,7 @@ def seller_page(engine):
         st.rerun()
 
     # ✅ Tombol Reset Selalu Muncul
+    col2.write("👉 Klik untuk reset form")
     if col2.button("🔄 Reset Form"):
         st.session_state.code_input = ""
         st.session_state.seller_input = ""
@@ -1299,6 +1300,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
