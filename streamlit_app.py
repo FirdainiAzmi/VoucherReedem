@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date
@@ -9,20 +8,11 @@ import matplotlib.pyplot as plt
 import math
 import traceback
 
-# ---------------------------
-# Config / Secrets
-# ---------------------------
 DB_URL = st.secrets["DB_URL"]
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")  # admin password in st.secrets
-# Seller password: fallback to the one you gave if not in secrets
-SELLER_PASSWORD = st.secrets.get("SELLER_PASSWORD", "sellerpwspt")
-
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")
 engine = create_engine(DB_URL, future=True)
 
-
-# ---------------------------
-# Database initialization
-# ---------------------------
+# Database
 def init_db():
     try:
         with engine.begin() as conn:
@@ -55,7 +45,6 @@ def init_db():
                 )
             """))
 
-            # optional columns used by app
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS nama TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS no_hp TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS status TEXT"))
@@ -65,11 +54,7 @@ def init_db():
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
         st.stop()
-#Aktivasi & Simpan
 
-# ---------------------------
-# DB helpers
-# ---------------------------
 def find_voucher(code):
     try:
         with engine.connect() as conn:
@@ -81,7 +66,6 @@ def find_voucher(code):
     except Exception as e:
         st.error(f"DB error saat cari voucher: {e}")
         return None
-
 
 def update_voucher_detail(code, nama, no_hp, status):
     try:
@@ -98,10 +82,16 @@ def update_voucher_detail(code, nama, no_hp, status):
         st.error(f"Gagal update voucher: {e}")
         return False
 
+from datetime import datetime
+from database import engine
+import traceback
+from sqlalchemy import text
 
 def atomic_redeem(code, amount, branch, items_str):
     try:
         with engine.begin() as conn:
+
+            # Lock voucher row
             r = conn.execute(
                 text("SELECT balance FROM vouchers WHERE code = :c FOR UPDATE"),
                 {"c": code}
@@ -114,11 +104,13 @@ def atomic_redeem(code, amount, branch, items_str):
             if balance < amount:
                 return False, f"Saldo tidak cukup (sisa: {balance}).", balance
 
+            # Update saldo
             conn.execute(
                 text("UPDATE vouchers SET balance = balance - :amt WHERE code = :c"),
                 {"amt": amount, "c": code}
             )
 
+            # Insert transaksi
             conn.execute(text("""
                 INSERT INTO transactions (code, used_amount, tanggal_transaksi, branch, items)
                 VALUES (:c, :amt, :now, :branch, :items)
@@ -130,14 +122,17 @@ def atomic_redeem(code, amount, branch, items_str):
                 "items": items_str
             })
 
-            # update menu sold count
+            # ✅ Update jumlah penjualan menu ▒▒▒▒▒▒▒▒▒▒▒▒
             items = [x.strip() for x in items_str.split(",")]
+
             for i in items:
                 if " x" not in i:
                     continue
                 nama_item, qty = i.split(" x")
                 qty = int(qty)
+
                 column = "terjual_twsari" if branch == "Tawangsari" else "terjual_sedati"
+
                 conn.execute(text(f"""
                     UPDATE menu_items
                     SET {column} = COALESCE({column}, 0) + :qty
@@ -175,7 +170,6 @@ def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
         df["status"] = "inactive"
     return df
 
-
 def get_menu_from_db(branch):
     try:
         with engine.connect() as conn:
@@ -193,7 +187,6 @@ def get_menu_from_db(branch):
         st.error(f"Gagal ambil menu dari DB: {e}")
         return []
 
-
 def count_vouchers(filter_status=None, search=None):
     q = "SELECT count(*) FROM vouchers"
     clauses = []
@@ -210,12 +203,10 @@ def count_vouchers(filter_status=None, search=None):
     with engine.connect() as conn:
         return int(conn.execute(text(q), params).scalar())
 
-
 def list_transactions(limit=5000):
     q = "SELECT * FROM transactions ORDER BY tanggal_transaksi DESC LIMIT :limit"
     with engine.connect() as conn:
         return pd.read_sql(text(q), conn, params={"limit": limit})
-
 
 def df_to_csv_bytes(df: pd.DataFrame):
     buf = BytesIO()
@@ -223,88 +214,10 @@ def df_to_csv_bytes(df: pd.DataFrame):
     buf.seek(0)
     return buf.read()
 
-# ---------------------------
-# Seller activation helper
-# ---------------------------
-def seller_activate_voucher(code, seller_input, buyer_name, buyer_phone, engine):
-    try:
-        with engine.begin() as conn:
-            row = conn.execute(text("""
-                SELECT code, status, seller
-                FROM vouchers
-                WHERE code = :c
-                FOR UPDATE
-            """), {"c": code}).fetchone()
-
-            if not row:
-                return False, "Voucher tidak ditemukan.", None
-
-            _, status_db, seller_db = row
-
-            if not seller_db:
-                return False, "Voucher belum diassign ke seller. Hubungi admin.", None
-
-            if seller_db.strip() != seller_input.strip():
-                return False, "Nama seller tidak sesuai.", None
-
-            if status_db and status_db.lower() == "active":
-                return False, "Voucher sudah aktif dan terkunci.", None
-
-            conn.execute(text("""
-                UPDATE vouchers
-                SET nama = :buyer_name,
-                    no_hp = :buyer_phone,
-                    status = 'active',
-                    tanggal_penjualan = CURRENT_DATE
-                WHERE code = :c
-            """), {
-                "buyer_name": buyer_name,
-                "buyer_phone": buyer_phone,
-                "c": code
-            })
-
-        return True, "Aktivasi berhasil ✅ Voucher terkunci!", {
-            "Kode": code,
-            "Seller": seller_input,
-            "Nama Pembeli": buyer_name,
-            "No HP": buyer_phone,
-            "Status": "Active"
-        }
-
-    except Exception as e:
-        traceback.print_exc()
-        return False, f"DB Error: {e}", None
-
-def seller_page(engine):
-    if "seller_logged_in" not in st.session_state:
-        return seller_login_page()
-
-    st.title("🏷️ Aktivasi Voucher")
-
-    # ✅ Input dengan KEY agar bisa di-reset
-    code = st.text_input("Kode Voucher", key="code_input")
-    seller_name = st.text_input("Nama Seller (harus sesuai database)", key="seller_input")
-    buyer_name = st.text_input("Nama Pembeli", key="buyer_input")
-    buyer_phone = st.text_input("Nomor HP Pembeli", key="phone_input")
-
-    col1, col2 = st.columns([1,1])
-
-    # ✅ Tombol Reset Selalu Muncul
-    col1.write("👉 Klik untuk reset form")
-    if col1.button("🔄 Reset"):
-        st.session_state.code_input = ""
-        st.session_state.seller_input = ""
-        st.session_state.buyer_input = ""
-        st.session_state.phone_input = ""
-        st.rerun()
-
-# ---------------------------
 # Session helpers
-# ---------------------------
 def ensure_session_state():
     st.session_state.setdefault("admin_logged_in", False)
-    st.session_state.setdefault("seller_logged_in", False)
-    st.session_state.setdefault("page", "Penukaran Voucher")
+    st.session_state.setdefault("page", "Aktivasi Voucher" if st.session_state.get("admin_logged_in") else "Penukaran Voucher")
     st.session_state.setdefault("redeem_step", 1)
     st.session_state.setdefault("entered_code", "")
     st.session_state.setdefault("voucher_row", None)
@@ -314,9 +227,6 @@ def ensure_session_state():
     st.session_state.setdefault("edit_code", None)
     st.session_state.setdefault("vouchers_page_idx", 0)
     st.session_state.setdefault("vouchers_per_page", 10)
-    # track seller login ephemeral info
-    st.session_state.setdefault("seller_mode", None)  # not storing identity, seller enters name during activation
-
 
 def reset_redeem_state():
     for k in ["redeem_step","entered_code","voucher_row","selected_branch","order_items","checkout_total","new_balance"]:
@@ -324,102 +234,53 @@ def reset_redeem_state():
             del st.session_state[k]
     ensure_session_state()
 
-
 def admin_login(password):
     return password == ADMIN_PASSWORD
-
 
 def admin_logout():
     st.session_state.admin_logged_in = False
     st.session_state.page = "Penukaran Voucher"
     st.session_state.edit_code = None
 
-
-def seller_logout():
-    st.session_state.seller_logged_in = False
-    st.session_state.page = "Penukaran Voucher"
-
-
-# ---------------------------
-# Init app
-# ---------------------------
+# Init
 init_db()
 ensure_session_state()
 st.set_page_config(page_title="Voucher Pawon Sappitoe", layout="wide")
 st.title("🎫 Voucher Pawon Sappitoe")
 
-
-# ---------------------------
-# Sidebar / Login UI
-# ---------------------------
+# Sidebar
 with st.sidebar:
     st.markdown("## Menu")
-
-    # If admin logged in -> full admin menu
     if st.session_state.admin_logged_in:
-        st.success("Logged in as **Admin**")
+        st.success("Logged in as **admin**")
         if st.button("Logout"):
             admin_logout()
             st.rerun()
-
         st.markdown("---")
-        page_choice = st.radio("Pilih halaman Admin",
-                               ("Aktivasi Voucher", "Laporan Warung", "Histori Transaksi", "Seller"),
-                               index=("Aktivasi Voucher","Laporan Warung","Histori Transaksi","Seller").index(
-                                   st.session_state.get("page") if st.session_state.get("page") in ("Aktivasi Voucher","Laporan Warung","Histori Transaksi","Seller") else "Aktivasi Voucher"
-                               ))
+        page_choice = st.radio("Pilih halaman", ("Aktivasi Voucher", "Laporan Warung", "Histori Transaksi", "Seller"),
+                               index=("Aktivasi Voucher","Laporan Warung","Histori Transaksi", "Seller").index(st.session_state.get("page") if st.session_state.get("page") in ("Aktivasi Voucher","Laporan Warung","Histori Transaksi", "Seller") else "Aktivasi Voucher"))
         st.session_state.page = page_choice
-
-    # If seller logged in -> limited menu (only a seller activation page)
-    elif st.session_state.seller_logged_in:
-        st.success("Logged in as **Seller**")
-        if st.button("Logout Seller"):
-            seller_logout()
-            st.rerun()
-
-        st.markdown("---")
-        page_choice = st.radio("Pilih halaman Seller", ("Aktivasi Voucher Seller",), index=0)
-        st.session_state.page = page_choice
-
-    # Not logged in -> show login options
     else:
-        st.markdown("### Login")
-        pwd_admin = st.text_input("Password Admin", type="password", key="pwd_admin")
-        if st.button("Login sebagai Admin"):
-            if admin_login(pwd_admin):
+        st.markdown("### Admin Login")
+        pwd = st.text_input("Password", type="password")
+        if st.button("Login sebagai admin"):
+            if admin_login(pwd):
                 st.session_state.admin_logged_in = True
                 st.session_state.page = "Aktivasi Voucher"
                 st.success("Login admin berhasil")
                 st.rerun()
             else:
-                st.error("Password admin salah")
-
+                st.error("Password salah")
         st.markdown("---")
-        pwd_seller = st.text_input("Password Seller", type="password", key="pwd_seller")
-        if st.button("Login sebagai Seller"):
-            if pwd_seller == SELLER_PASSWORD:
-                st.session_state.seller_logged_in = True
-                st.session_state.page = "Aktivasi Voucher Seller"
-                st.success("Login seller berhasil")
-                st.rerun()
-            else:
-                st.error("Password seller salah")
+        st.info("Login hanya untuk admin.")
 
-        st.markdown("---")
-        st.info("Admin: akses penuh. Seller: akses terbatas (Aktivasi Voucher).")
-
-
-# ---------------------------
-# Force page for non-admin/non-seller
-# ---------------------------
+# Force page if not admin
 page = st.session_state.get("page", "Penukaran Voucher")
-if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
-    st.session_state.page = "Penukaran Voucher"
+if not st.session_state.admin_logged_in:
     page = "Penukaran Voucher"
 
-# ---------------------------
+
 # Page: Penukaran Voucher (public)
-# ---------------------------
 def page_redeem():
     st.header("Penukaran Voucher (User)")
 
@@ -445,7 +306,7 @@ def page_redeem():
                 code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
     
                 # ✅ Validasi status
-                if status is None or str(status).lower() != "active":
+                if status.lower() != "active":
                     st.error("⛔ Voucher belum dapat digunakan. Status masih INACTIVE.")
                     reset_redeem_state()
                     st.rerun()
@@ -459,10 +320,7 @@ def page_redeem():
                 if hasattr(tanggal_penjualan, "date"):
                     tgl_penjualan = tanggal_penjualan.date()
                 else:
-                    try:
-                        tgl_penjualan = datetime.strptime(str(tanggal_penjualan), "%Y-%m-%d").date()
-                    except Exception:
-                        tgl_penjualan = None
+                    tgl_penjualan = datetime.strptime(str(tanggal_penjualan), "%Y-%m-%d").date()
     
                 # ✅ Tidak boleh dipakai HARI YANG SAMA
                 if tgl_penjualan == date.today():
@@ -632,9 +490,7 @@ def page_redeem():
             st.rerun()
 
 
-# ---------------------------
-# Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
-# ---------------------------
+# Page: Aktivasi Voucher (admin) — inline edit
 def page_daftar_voucher():
     st.header("Aktivasi Voucher (Admin)")
 
@@ -688,7 +544,7 @@ def page_daftar_voucher():
     df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
         
-    # Cek aman untuk tanggal_penjualan
+        # Cek aman untuk tanggal_penjualan
     if "tanggal_penjualan" in df_display.columns:
         df_display["tanggal_penjualan"] = (
             pd.to_datetime(df_display["tanggal_penjualan"], errors="coerce")
@@ -709,6 +565,7 @@ def page_daftar_voucher():
         use_container_width=True
     )
     
+
     # ===== Form edit voucher jika kode dicari ditemukan =====
     matched_row = df[df["code"] == search.strip().upper()]
     if not matched_row.empty:
@@ -747,7 +604,23 @@ def page_daftar_voucher():
                             st.session_state.vouchers_page_idx = 0
                             st.rerun()
         
-                    # Duplicate button removed — keep only one submit to avoid confusion
+                    submit = st.form_submit_button("Simpan / Aktifkan")
+                    if submit:
+                        if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
+                            st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
+                        else:
+                            ok = update_voucher_detail(
+                                v["code"],
+                                nama_in.strip() or None,
+                                nohp_in.strip() or None,
+                                status_in
+                            )
+                            if ok:
+                                st.session_state["voucher_update_success"] = f"Voucher {v['code']} berhasil diaktifkan ✅"
+                            
+                                st.session_state.reset_search = True
+                                st.session_state.vouchers_page_idx = 0
+                                st.rerun()
 
     st.markdown("---")
     st.download_button(
@@ -758,9 +631,7 @@ def page_daftar_voucher():
     )
 
 
-# ---------------------------
 # Page: Histori Transaksi (admin)
-# ---------------------------
 def page_histori():
     st.header("Histori Transaksi (Admin)")
     df_tx = list_transactions(limit=5000)
@@ -790,10 +661,7 @@ def page_histori():
         st.dataframe(df_tx, use_container_width=True)
         st.download_button("Download CSV Transaksi", data=df_to_csv_bytes(df_tx), file_name="transactions.csv", mime="text/csv")
 
-
-# ---------------------------
 # Page: Laporan Warung (admin)
-# ---------------------------
 def page_laporan_global():
     st.header("Laporan Warung (Admin)")
 
@@ -986,6 +854,21 @@ def page_laporan_global():
             st.error(f"Gagal memuat data menu terlaris: {e}")
 
 
+
+
+    
+        # =============================== #
+        # ⬇️ Export Data
+        # =============================== #
+        csv_export = df_filtered.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "📥 Download Data Transaksi (CSV)",
+            data=csv_export,
+            file_name="laporan_transaksi.csv",
+            mime="text/csv"
+    )
+
+
     # ===== TAB Seller =====
     with tab_seller:
         st.subheader("📊 Analisis Seller")
@@ -1019,7 +902,6 @@ def page_laporan_global():
         # ========================= #
         # Filter Cabang
         # ========================= #
-        # (This assumes vouchers table might have 'branch' column; if not, skip)
         if "branch" in df_filtered_seller.columns:
             cabang_list = ["Semua"] + sorted(df_filtered_seller["branch"].dropna().unique().tolist())
             selected_branch_seller = st.selectbox(
@@ -1051,6 +933,7 @@ def page_laporan_global():
         
         # Filter voucher aktif oleh seller
         df_active = df_seller_only[df_seller_only["status"] == "active"]
+
     
         # ========================= #
         # Voucher Aktif Per Seller
@@ -1094,54 +977,10 @@ def page_laporan_global():
             st.info("Belum ada seller yang membawa voucher.")
 
 
-# ---------------------------
-# Page: Seller Activation (seller-only)
-# ---------------------------
-def page_seller_activation():
-    st.header("Aktivasi Voucher (Seller)")
-
-    st.info("Masukkan Nama Seller (sesuai dengan data seller pada voucher), Nama Pembeli, No HP, dan Kode Voucher.\nJika voucher belum diassign seller oleh admin → aktivasi ditolak.")
-
-    with st.form(key="seller_activation_form"):
-        kode = st.text_input("Kode Voucher").strip().upper()
-        seller_name_input = st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)")
-        buyer_name_input = st.text_input("Nama Pembeli")
-        buyer_phone_input = st.text_input("No HP Pembeli")
-        submit = st.form_submit_button("Aktivasi & Simpan")
-
-    if submit:
-        if not kode:
-            st.error("Masukkan kode voucher.")
-            return
-
-        if not seller_name_input:
-            st.error("Masukkan nama seller (sesuai yang terdaftar pada voucher).")
-            return
-
-        # attempt activation
-        ok, msg, data = seller_activate_voucher(kode, seller_name_input, buyer_name_input, buyer_phone_input, engine)
-        if ok:
-            st.success(msg)
-        
-            if data:
-                st.subheader("📌 Detail Voucher")
-                st.write(f"**Kode:** {data['Kode']}")
-                st.write(f"**Seller:** {data['Seller']}")
-                st.write(f"**Nama Pembeli:** {data['Nama Pembeli']}")
-                st.write(f"**No HP Pembeli:** {data['No HP']}")
-                st.write(f"**Status:** ✅ {data['Status']} (Terkunci)")
-        else:
-            st.error(msg)
-
-
-    st.markdown("---")
-    st.info("Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). Jika perlu koreksi, minta admin untuk ubah data.")
-
-
-# ---------------------------
-# Page: Seller (admin-only assign seller) — keep an admin-only page to assign seller to voucher
-# ---------------------------
-def page_seller_admin_assign():
+# --------------------
+# Page: Seller (admin-only)
+# --------------------
+def page_seller():
     st.subheader("Seller")
     if "found_voucher" not in st.session_state:
         st.session_state["found_voucher"] = None
@@ -1178,13 +1017,7 @@ def page_seller_admin_assign():
                 st.code(str(e))
 
     if st.session_state.get("found_voucher"):
-        row = st.session_state["found_voucher"]
-
-        code = row["code"]
-        initial_value = row["initial_value"]
-        balance = row["balance"]
-        seller = row["seller"]
-
+        code, initial_value, balance, seller = st.session_state["found_voucher"]
 
         st.success("Voucher ditemukan ✅")
         st.write("### Detail Voucher")
@@ -1257,9 +1090,7 @@ def page_seller_admin_assign():
 
 
 
-# ---------------------------
 # Router
-# ---------------------------
 if page == "Penukaran Voucher":
     page_redeem()
 elif page == "Aktivasi Voucher":
@@ -1276,21 +1107,15 @@ elif page == "Seller":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses halaman Seller.")
     else:
-        # admin view to assign sellers
-        page_seller_admin_assign()
+        page_seller()
+
 elif page == "Laporan Warung":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses laporan.")
     else:
         page_laporan_global()
-elif page == "Aktivasi Voucher Seller":
-    if not st.session_state.seller_logged_in:
-        st.error("Hanya seller yang dapat mengakses halaman Seller Activation.")
-    else:
-        page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
-
 
 
 
