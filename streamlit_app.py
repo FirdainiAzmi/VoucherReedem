@@ -288,28 +288,48 @@ def seller_page(engine):
     buyer_name = st.text_input("Nama Pembeli")
     buyer_phone = st.text_input("Nomor HP Pembeli")
 
-    if st.button("✅ Aktivasi"):
-        ok, msg, data = seller_activate_voucher(code, seller_name, buyer_name, buyer_phone, engine)
-
-        if ok:
+    if "activated" not in st.session_state:
+        st.session_state["activated"] = False
+    
+    # ======================
+    # FORM AKTIVASI
+    # ======================
+    if not st.session_state["activated"]:
+        code = st.text_input("Kode Voucher").strip().upper()
+        seller_name = st.text_input("Nama Seller")
+        buyer_name = st.text_input("Nama Pembeli")
+        buyer_phone = st.text_input("No HP Pembeli")
+    
+        if st.button("✅ Aktivasi"):
+            ok, msg, data = seller_activate_voucher(code, seller_name, buyer_name, buyer_phone, engine)
+    
+            if ok:
                 st.success(msg)
+                st.session_state["activated"] = True
+                st.session_state["data"] = data
+                st.rerun()
+            else:
+                st.error(msg)
+    
+    # ======================
+    # HALAMAN SUKSES
+    # ======================
+    else:
+        data = st.session_state["data"]
         
-                st.subheader("📌 Detail Voucher")
-                st.write(f"**Kode:** {data['Kode']}")
-                st.write(f"**Seller:** {data['Seller']}")
-                st.write(f"**Nama Pembeli:** {data['Nama Pembeli']}")
-                st.write(f"**No HP Pembeli:** {data['No HP']}")
-                st.write(f"**Status:** ✅ {data['Status']} (Terkunci)")
-        
-                # ✅ Tombol kembali hanya muncul pada kondisi ok=True
-                if st.button("🔙 Kembali ke Aktivasi Voucher"):
-                    for key in list(st.session_state.keys()):
-                        if key != "seller_logged_in":
-                            del st.session_state[key]
-                    st.rerun()
-
-        else:
-            st.error(msg)
+        st.success("Aktivasi berhasil ✅ Voucher terkunci!")
+        st.subheader("📌 Detail Voucher")
+        st.write(f"**Kode:** {data['Kode']}")
+        st.write(f"**Seller:** {data['Seller']}")
+        st.write(f"**Nama Pembeli:** {data['Nama Pembeli']}")
+        st.write(f"**No HP Pembeli:** {data['No HP']}")
+        st.write(f"**Status:** ✅ {data['Status']} (Terkunci)")
+    
+        if st.button("🔙 Kembali ke Aktivasi Voucher"):
+            for key in list(st.session_state.keys()):
+                if key not in ["seller_logged_in"]:
+                    del st.session_state[key]
+            st.rerun()
 
 # ---------------------------
 # Session helpers
@@ -1284,6 +1304,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
