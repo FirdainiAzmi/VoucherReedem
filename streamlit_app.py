@@ -61,6 +61,7 @@ def init_db():
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS status TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS seller TEXT"))
             conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS tanggal_penjualan DATE"))
+            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS tanggal_aktivasi DATE"))
             conn.execute(text("UPDATE vouchers SET status = 'inactive' WHERE status IS NULL"))
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
@@ -1248,6 +1249,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
