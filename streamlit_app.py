@@ -1094,23 +1094,13 @@ def page_seller_activation():
     st.info("Masukkan Nama Seller (sesuai dengan data seller pada voucher), Nama Pembeli, No HP, dan Kode Voucher.\nJika voucher belum diassign seller oleh admin → aktivasi ditolak.")
 
     with st.form(key="seller_activation_form"):
-        st.text_input("Kode Voucher", key="kode_input").strip().upper()
-        st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)", key="seller_input")
-        st.text_input("Nama Pembeli", key="buyer_name_input")
-        st.text_input("No HP Pembeli", key="buyer_phone_input")
-        st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
+        kode = st.text_input("Kode Voucher").strip().upper()
+        seller_name_input = st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)")
+        buyer_name_input = st.text_input("Nama Pembeli")
+        buyer_phone_input = st.text_input("No HP Pembeli")
+        tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
         submit = st.form_submit_button("Simpan dan Aktifkan")
-
-    if st.button("Kembali (Reset Form)"):
-        for key in [
-            "kode_input",
-            "seller_input",
-            "buyer_name_input",
-            "buyer_phone_input",
-            "assign_tanggal_aktivasi"
-        ]:
-            st.session_state.pop(key, None)
-        st.rerun()
+        reset = st.form_submit_button("Kembali")
     
     if submit:
         if not kode:
@@ -1303,6 +1293,7 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
