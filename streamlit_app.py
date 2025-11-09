@@ -1134,7 +1134,7 @@ def page_seller_activation():
             return
 
         # attempt activation
-        ok, msg = seller_activate_voucher(kode, seller_name_input, buyer_name_input, buyer_phone_input)
+        ok, msg = seller_activate_voucher(kode, seller_name_input, buyer_name_input, buyer_phone_input, engine)
         if ok:
             st.success(msg)
         else:
