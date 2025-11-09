@@ -342,7 +342,7 @@ with st.sidebar:
         st.success("Logged in as **Admin**")
         if st.button("Logout"):
             admin_logout()
-            st.experimental_rerun()
+            st.rerun()
 
         st.markdown("---")
         page_choice = st.radio("Pilih halaman Admin",
@@ -357,7 +357,7 @@ with st.sidebar:
         st.success("Logged in as **Seller**")
         if st.button("Logout Seller"):
             seller_logout()
-            st.experimental_rerun()
+            st.rerun()
 
         st.markdown("---")
         page_choice = st.radio("Pilih halaman Seller", ("Aktivasi Voucher Seller",), index=0)
@@ -372,7 +372,7 @@ with st.sidebar:
                 st.session_state.admin_logged_in = True
                 st.session_state.page = "Aktivasi Voucher"
                 st.success("Login admin berhasil")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Password admin salah")
 
@@ -383,7 +383,7 @@ with st.sidebar:
                 st.session_state.seller_logged_in = True
                 st.session_state.page = "Aktivasi Voucher Seller"
                 st.success("Login seller berhasil")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Password seller salah")
 
@@ -421,7 +421,7 @@ def page_redeem():
                 if not row:
                     st.error("❌ Voucher tidak ditemukan.")
                     reset_redeem_state()
-                    st.experimental_rerun()
+                    st.rerun()
     
                 # Ambil data row
                 code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
@@ -430,13 +430,13 @@ def page_redeem():
                 if status is None or str(status).lower() != "active":
                     st.error("⛔ Voucher belum dapat digunakan. Status masih INACTIVE.")
                     reset_redeem_state()
-                    st.experimental_rerun()
+                    st.rerun()
     
                 # ✅ Validasi tanggal_penjualan
                 if tanggal_penjualan is None:
                     st.error("⛔ Voucher belum bisa digunakan. Tanggal penjualan belum tercatat.")
                     reset_redeem_state()
-                    st.experimental_rerun()
+                    st.rerun()
 
                 if hasattr(tanggal_penjualan, "date"):
                     tgl_penjualan = tanggal_penjualan.date()
@@ -450,12 +450,12 @@ def page_redeem():
                 if tgl_penjualan == date.today():
                     st.error("⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher dibeli.")
                     reset_redeem_state()
-                    st.experimental_rerun()
+                    st.rerun()
     
                 # ✅ Jika semua valid → lanjut
                 st.session_state.voucher_row = row
                 st.session_state.redeem_step = 2
-                st.experimental_rerun()
+                st.rerun()
 
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
@@ -473,7 +473,7 @@ def page_redeem():
             st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
             if st.button("Kembali"):
                 reset_redeem_state()
-                st.experimental_rerun()
+                st.rerun()
             return
     
         # Pilih cabang
@@ -543,11 +543,11 @@ def page_redeem():
                     st.error(f"Saldo tidak cukup. Total: Rp {checkout_total:,} — Saldo: Rp {int(balance):,}")
                 else:
                     st.session_state.redeem_step = 3
-                    st.experimental_rerun()
+                    st.rerun()
         with cB:
             if st.button("Batal / Kembali"):
                 reset_redeem_state()
-                st.experimental_rerun()
+                st.rerun()
                 
     # ===== Inisialisasi session_state =====
     if "redeem_step" not in st.session_state:
@@ -598,11 +598,11 @@ def page_redeem():
                 else:
                     st.error(msg)
                     st.session_state.redeem_step = 2
-                    st.experimental_rerun()
+                    st.rerun()
         with cB:
             if st.button("Tidak, Kembali"):
                 st.session_state.redeem_step = 2
-                st.experimental_rerun()
+                st.rerun()
     
     # ===== Pop-up transaksi berhasil =====
     if st.session_state.show_success:
@@ -611,7 +611,7 @@ def page_redeem():
         if st.button("Tutup"):
             reset_redeem_state() 
             st.session_state.show_success = False
-            st.experimental_rerun()
+            st.rerun()
 
 
 # ---------------------------
@@ -727,7 +727,7 @@ def page_daftar_voucher():
                             st.session_state["voucher_update_success"] = f"Voucher {v['code']} berhasil diperbarui ✅"
                             st.session_state.reset_search = True
                             st.session_state.vouchers_page_idx = 0
-                            st.experimental_rerun()
+                            st.rerun()
         
                     # Duplicate button removed — keep only one submit to avoid confusion
 
@@ -1202,7 +1202,7 @@ def page_seller_admin_assign():
                     st.session_state["found_voucher"] = None
                     st.session_state["clear_search"] = True
         
-                    st.experimental_rerun()
+                    st.rerun()
         
                 except Exception as e:
                     st.error("Gagal menyimpan seller dan tanggal ❌")
@@ -1244,3 +1244,4 @@ elif page == "Aktivasi Voucher Seller":
         page_seller_activation()
 else:
     st.info("Halaman tidak ditemukan.")
+
