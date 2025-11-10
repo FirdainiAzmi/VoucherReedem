@@ -1205,7 +1205,7 @@ def page_seller_admin_assign():
     
             if df_seller.empty:
                 st.info("Belum ada seller yang berstatus 'Accepted'.")
-                st.stop()
+                return
     
             # Pilih seller
             selected_seller = st.selectbox(
@@ -1215,7 +1215,7 @@ def page_seller_admin_assign():
     
             if not selected_seller:
                 st.warning("Pilih seller terlebih dahulu.")
-                st.stop()
+                return
     
             # Ambil detail seller terpilih
             selected_row = df_seller[df_seller["nama_seller"] == selected_seller].iloc[0]
@@ -1263,7 +1263,7 @@ def page_seller_admin_assign():
     
             if df_voucher.empty:
                 st.info("Semua voucher sudah diassign ke seller.")
-                st.stop()
+                return
     
             # Multi-select voucher baru
             selected_vouchers = st.multiselect(
@@ -1273,7 +1273,7 @@ def page_seller_admin_assign():
     
             if not selected_vouchers:
                 st.info("Pilih minimal satu voucher untuk diberikan.")
-                st.stop()
+                return
     
             st.markdown("---")
             if st.button("💾 Simpan Assign Voucher"):
@@ -1413,6 +1413,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
