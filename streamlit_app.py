@@ -653,10 +653,10 @@ def page_daftar_seller():
                 with engine.begin() as conn:
                     conn.execute(
                         text("""
-                            INSERT INTO seller (nama_seller, no_hp)
-                            VALUES (:nama, :no_hp)
+                            INSERT INTO seller (nama_seller, no_hp, status)
+                            VALUES (:nama, :no_hp, :status)
                         """),
-                        {"nama": nama.strip(), "no_hp": nohp.strip()}
+                        {"nama": nama.strip(), "no_hp": nohp.strip(), "status": "not accepted"}
                     )
 
                 st.success("✅ Pendaftaran berhasil! Data Anda telah disimpan ke database.")
@@ -1381,6 +1381,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
