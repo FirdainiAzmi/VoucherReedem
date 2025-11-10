@@ -1145,13 +1145,16 @@ def page_laporan_global():
 def page_seller_activation():
     st.header("Aktivasi Voucher (Seller)")
 
-    st.info("Masukkan Nama Seller (sesuai dengan data seller pada voucher), Nama Pembeli, No HP, dan Kode Voucher.\nJika voucher belum diassign seller oleh admin → aktivasi ditolak.")
+    st.info(
+        "Masukkan Nama Seller (sesuai dengan data seller pada voucher), Nama Pembeli, No HP, dan Kode Voucher.\n"
+        "Jika voucher belum diassign seller oleh admin → aktivasi ditolak."
+    )
 
     with st.form(key="seller_activation_form"):
         kode = st.text_input("Kode Voucher").strip().upper()
-        seller_name_input = st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)")
-        buyer_name_input = st.text_input("Nama Pembeli")
-        buyer_phone_input = st.text_input("No HP Pembeli")
+        seller_name_input = st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)").strip()
+        buyer_name_input = st.text_input("Nama Pembeli").strip()
+        buyer_phone_input = st.text_input("No HP Pembeli").strip()
         tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
         submit = st.form_submit_button("Simpan dan Aktifkan")
         reset = st.form_submit_button("Kembali")
@@ -1165,31 +1168,109 @@ def page_seller_activation():
             st.error("Masukkan nama seller (sesuai yang terdaftar pada voucher).")
             return
 
-        # attempt activation
-        ok, msg = seller_activate_voucher(kode, seller_name_input, buyer_name_input, buyer_phone_input)
-        if ok:
-            st.success(msg)
-        else:
-            st.error(msg)
-    
-    st.markdown("---")
-    st.info("Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). Jika perlu koreksi, minta admin untuk ubah data.")
+        try:
+            with engine.begin() as conn:
+                # Cek apakah voucher ada dan seller cocok
+                result = conn.execute(
+                    text("""
+                        SELECT seller, status FROM vouchers WHERE code = :code
+                    """),
+                    {"code": kode}
+                ).fetchone()
 
-    # Seller should not see full voucher table — but show a quick lookup area
+                if not result:
+                    st.error("Kode voucher tidak ditemukan.")
+                    return
+
+                db_seller, db_status = result
+
+                # Jika voucher belum diassign seller oleh admin
+                if not db_seller or db_seller.strip() == "":
+                    st.error("Voucher belum diassign ke seller mana pun. Aktivasi ditolak.")
+                    return
+
+                # Jika seller input tidak cocok dengan seller di database
+                if db_seller.strip().lower() != seller_name_input.lower():
+                    st.error(f"Nama seller tidak sesuai. Voucher ini terdaftar untuk seller: **{db_seller}**.")
+                    return
+
+                # Jika sudah aktif sebelumnya
+                if db_status and db_status.lower() == "active":
+                    st.warning("Voucher ini sudah diaktivasi sebelumnya.")
+                    return
+
+                # Update data voucher
+                conn.execute(
+                    text("""
+                        UPDATE vouchers
+                        SET nama = :nama,
+                            no_hp = :no_hp,
+                            tanggal_aktivasi = :tgl,
+                            status = 'Active'
+                        WHERE code = :code
+                    """),
+                    {
+                        "nama": buyer_name_input,
+                        "no_hp": buyer_phone_input,
+                        "tgl": tanggal_aktivasi,
+                        "code": kode,
+                    }
+                )
+
+            st.success(f"✅ Voucher {kode} berhasil diaktivasi untuk pembeli {buyer_name_input}.")
+
+        except Exception as e:
+            st.error("❌ Terjadi kesalahan saat mengupdate data voucher.")
+            st.code(str(e))
+
+    st.markdown("---")
+    st.info(
+        "Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). "
+        "Jika perlu koreksi, minta admin untuk ubah data."
+    )
+
+    # Bagian lookup cepat
     st.subheader("Cek Status Voucher (Lookup cepat)")
     kode_lookup = st.text_input("Masukkan kode voucher untuk cek status (opsional)").strip().upper()
     if kode_lookup:
-        v = find_voucher(kode_lookup)
-        if not v:
-            st.error("Voucher tidak ditemukan.")
-        else:
-            code, initial_value, balance, created_at, nama, no_hp, status, seller_db, tanggal_penjualan = v
-            st.write(f"- Kode: {code}")
-            st.write(f"- Seller (di DB): {seller_db or '-'}")
-            st.write(f"- Status: {status or 'inactive'}")
-            st.write(f"- Nama pembeli: {nama or '-'}")
-            st.write(f"- No HP pembeli: {no_hp or '-'}")
-            st.write(f"- Tgl penjualan: {tanggal_penjualan or '-'}")
+        try:
+            with engine.connect() as conn:
+                v = conn.execute(
+                    text("""
+                        SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan, tanggal_aktivasi
+                        FROM vouchers
+                        WHERE code = :code
+                    """),
+                    {"code": kode_lookup}
+                ).fetchone()
+
+            if not v:
+                st.error("Voucher tidak ditemukan.")
+            else:
+                (
+                    code,
+                    initial_value,
+                    balance,
+                    created_at,
+                    nama,
+                    no_hp,
+                    status,
+                    seller_db,
+                    tanggal_penjualan,
+                    tanggal_aktivasi_db,
+                ) = v
+
+                st.write(f"- **Kode:** {code}")
+                st.write(f"- **Seller (di DB):** {seller_db or '-'}")
+                st.write(f"- **Status:** {status or 'inactive'}")
+                st.write(f"- **Nama pembeli:** {nama or '-'}")
+                st.write(f"- **No HP pembeli:** {no_hp or '-'}")
+                st.write(f"- **Tgl penjualan:** {tanggal_penjualan or '-'}")
+                st.write(f"- **Tgl aktivasi:** {tanggal_aktivasi_db or '-'}")
+
+        except Exception as e:
+            st.error("❌ Gagal melakukan lookup voucher.")
+            st.code(str(e))
 
 
 # ---------------------------
@@ -1413,6 +1494,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
