@@ -407,10 +407,12 @@ with st.sidebar:
 # ---------------------------
 # Force page for non-admin/non-seller
 # ---------------------------
-page = st.session_state.get("page", "Penukaran Voucher")
-if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
-    page = "Penukaran Voucher"
+page = st.session_state.get("page", "Redeem Voucher")
 
+# Jika belum login admin/seller, tetap izinkan 2 halaman umum
+if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
+    if page not in ("Redeem Voucher", "Daftar Sebagai Seller"):
+        page = "Redeem Voucher"
 
 # ---------------------------
 # Page: Penukaran Voucher (public)
@@ -1303,4 +1305,5 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
