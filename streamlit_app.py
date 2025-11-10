@@ -1304,7 +1304,7 @@ def page_seller_admin_assign():
         try:
             # Ambil data seller dari database
             with engine.connect() as conn:
-                df_seller = pd.read_sql("SELECT * FROM seller ORDER BY nama ASC", conn)
+                df_seller = pd.read_sql("SELECT * FROM seller ORDER BY nama_seller ASC", conn)
     
             if df_seller.empty:
                 st.info("Belum ada data seller yang mendaftar.")
@@ -1381,6 +1381,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
