@@ -418,7 +418,7 @@ if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
 # Page: Penukaran Voucher (public)
 # ---------------------------
 def page_redeem():
-    st.header("Penukaran Voucher (User)")
+    st.header("Penukaran Voucher")
 
     # STEP 1: Input kode voucher
     if st.session_state.redeem_step == 1:
@@ -634,7 +634,21 @@ def page_redeem():
 
 def page_daftar_seller():
     st.header("📋 Daftar Sebagai Seller")
-    st.write("Hello world")  # sementara sebagai placeholder
+    st.write("Silakan isi data berikut untuk mendaftar sebagai seller.")
+
+    with st.form("form_daftar_seller"):
+        nama = st.text_input("Nama lengkap")
+        nohp = st.text_input("No HP")
+
+        submit = st.form_submit_button("Daftar")
+
+    if submit:
+        if not nama.strip():
+            st.error("Nama tidak boleh kosong.")
+        elif not nohp.strip():
+            st.error("No HP tidak boleh kosong.")
+        else:
+            st.success("✅ Pendaftaran berhasil!\n(Admin akan menghubungi Anda jika disetujui.)")
 
 # ---------------------------
 # Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
@@ -1305,5 +1319,6 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
