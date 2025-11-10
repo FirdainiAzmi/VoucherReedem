@@ -1235,7 +1235,7 @@ def page_seller_admin_assign():
                 if not df_current_voucher.empty:
                     st.markdown("**Voucher yang Saat Ini Dimiliki:**")
                     st.dataframe(
-                        df_current_voucher[["code", "status", "tanggal_penjualan"]],
+                        df_current_voucher[["code", "tanggal_penjualan", "status"]],
                         use_container_width=True
                     )
                 else:
@@ -1406,6 +1406,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
