@@ -1460,7 +1460,7 @@ if page == "Penukaran Voucher" or page == "Redeem Voucher":
 elif page == "Daftar Sebagai Seller":
     page_daftar_seller()
 
-elif page == "Aktivasi Voucher":
+elif page == "Edit Voucher":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses halaman ini.")
     else:
@@ -1492,6 +1492,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
