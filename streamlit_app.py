@@ -339,16 +339,17 @@ st.title("🎫 Voucher Pawon Sappitoe")
 with st.sidebar:
     st.markdown("## Menu")
 
-    pageumum_choice = st.radio(
-        "Pilih Halaman",
-        ("Redeem Voucher", "Daftar Sebagai Seller"),
-        index=("Redeem Voucher", "Daftar Sebagai Seller").index(
-            st.session_state.get("page")
-            if st.session_state.get("page") in ("Redeem Voucher", "Daftar Sebagai Seller")
-            else "Redeem Voucher"
+    if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
+        pageumum_choice = st.radio(
+            "Pilih Halaman",
+            ("Redeem Voucher", "Daftar Sebagai Seller"),
+            index=("Redeem Voucher", "Daftar Sebagai Seller").index(
+                st.session_state.get("page")
+                if st.session_state.get("page") in ("Redeem Voucher", "Daftar Sebagai Seller")
+                else "Redeem Voucher"
+            )
         )
-    )
-    st.session_state.page = pageumum_choice
+        st.session_state.page = pageumum_choice
     
     # If admin logged in -> full admin menu
     if st.session_state.admin_logged_in:
@@ -1191,111 +1192,82 @@ def page_seller_admin_assign():
     tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Voucher", "Penerimaan Seller"])
 
     with tab_kepemilikan:
-        st.subheader("Seller (Admin) — assign seller ke voucher")
-        if "found_voucher" not in st.session_state:
-            st.session_state["found_voucher"] = None
-        if "search_input" not in st.session_state:
-            st.session_state["search_input"] = ""
-        if "clear_search" not in st.session_state:
-            st.session_state["clear_search"] = False
+        st.header("🎯 Assign Voucher ke Seller")
+
+        try:
+            # Ambil semua seller yang sudah diterima
+            with engine.connect() as conn:
+                df_seller = pd.read_sql("""
+                    SELECT * FROM seller
+                    WHERE status = 'Accepted'
+                    ORDER BY nama_seller ASC
+                """, conn)
     
-        if st.session_state.get("clear_search"):
-            st.session_state["search_input"] = ""
-            st.session_state["clear_search"] = False
+            if df_seller.empty:
+                st.info("Belum ada seller yang berstatus 'Accepted'.")
+                return
     
-        search_code = st.text_input("Masukkan Kode Voucher", key="admin_assign_search")
+            # Pilih seller yang ingin diberikan voucher
+            selected_seller = st.selectbox(
+                "Pilih Seller untuk diberikan voucher",
+                df_seller["nama_seller"].tolist()
+            )
     
-        if st.button("Cari", key="admin_assign_search_btn"):
-            if search_code:
+            if not selected_seller:
+                st.warning("Pilih seller terlebih dahulu.")
+                return
+    
+            st.markdown("---")
+            st.subheader(f"🧾 Pilih Voucher untuk {selected_seller}")
+    
+            # Ambil voucher yang belum diassign ke seller (seller IS NULL atau kosong)
+            with engine.connect() as conn:
+                df_voucher = pd.read_sql("""
+                    SELECT code, initial_value, balance, status
+                    FROM vouchers
+                    WHERE seller IS NULL OR TRIM(seller) = ''
+                    ORDER BY created_at ASC
+                """, conn)
+    
+            if df_voucher.empty:
+                st.info("Semua voucher sudah diassign ke seller.")
+                return
+    
+            # Multi-select untuk pilih voucher
+            selected_vouchers = st.multiselect(
+                "Pilih kode voucher yang akan diberikan",
+                df_voucher["code"].tolist()
+            )
+    
+            if not selected_vouchers:
+                st.info("Pilih minimal satu voucher untuk diberikan.")
+                return
+    
+            st.markdown("---")
+            if st.button("💾 Simpan Assign Voucher"):
                 try:
-                    with engine.connect() as conn:
-                        result = conn.execute(text("""
-                            SELECT code, initial_value, balance, seller, nama, no_hp, status, tanggal_penjualan
-                            FROM vouchers
-                            WHERE code = :code
-                        """), {"code": search_code.strip().upper()}).fetchone()
+                    with engine.begin() as conn2:
+                        conn2.execute(
+                            text("""
+                                UPDATE vouchers
+                                SET seller = :seller
+                                WHERE code = ANY(:codes)
+                            """),
+                            {"seller": selected_seller, "codes": selected_vouchers}
+                        )
     
-                    if result:
-                        st.session_state["found_voucher"] = result
-                    else:
-                        st.session_state["found_voucher"] = None
-                        st.error("Voucher tidak ditemukan ❌")
+                    st.success(
+                        f"✅ {len(selected_vouchers)} voucher berhasil diassign ke seller {selected_seller}."
+                    )
+                    st.rerun()
     
                 except Exception as e:
-                    st.session_state["found_voucher"] = None
-                    st.error("Terjadi kesalahan saat mencari voucher ⚠️")
+                    st.error("❌ Gagal menyimpan assign voucher ke database.")
                     st.code(str(e))
-        
-        if st.session_state.get("found_voucher"):
-            code, initial_value, balance, seller, nama, no_hp, status, tanggal_penjualan = st.session_state["found_voucher"]
     
-            st.success("Voucher ditemukan ✅")
-            st.write("### Detail Voucher")
-            st.table({
-                "Kode Voucher": [code],
-                "Initial Value": [initial_value],
-                "Balance": [balance],
-                "Seller (DB)": [seller if seller else "-"],
-                "Status": [status if status else "-"]
-            })
-    
-            seller_input_admin = st.text_input("Tetapkan Nama Seller untuk voucher ini:", value=seller if seller else "", key="assign_seller_input")
-            tanggal_input = st.date_input("Tanggal Penjualan (opsional)", value=pd.to_datetime("today"), key="assign_tanggal_input")
-            
-            if st.button("Simpan Assignment", key="assign_seller_btn"):
-                if seller_input_admin:
-                    try:
-                        with engine.begin() as conn2:
-                            conn2.execute(text("""
-                                UPDATE vouchers 
-                                SET seller = :seller,
-                                    tanggal_penjualan = :tanggal_penjualan
-                                WHERE code = :code
-                            """), {
-                                "seller": seller_input_admin.strip(), 
-                                "tanggal_penjualan": tanggal_input,  
-                                "code": code
-                            })
-            
-                        st.success("Seller dan Tanggal Penjualan berhasil disimpan ✅")
-            
-                        st.session_state["found_voucher"] = None
-                        st.session_state["clear_search"] = True
-            
-                        st.rerun()
-            
-                    except Exception as e:
-                        st.error("Gagal menyimpan seller dan tanggal ❌")
-                        st.code(str(e))
-                else:
-                    st.warning("Nama Seller tidak boleh kosong!")
-    
-        df = list_vouchers(limit=5000)  
-        df_display = df.copy()
-        df_display["initial_value"] = df_display["initial_value"].apply(lambda x: f"Rp {int(x):,}")
-        df_display["balance"] = df_display["balance"].apply(lambda x: f"Rp {int(x):,}")
-        df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
-            
-        # Cek aman untuk tanggal_penjualan
-        if "tanggal_penjualan" in df_display.columns:
-            df_display["tanggal_penjualan"] = (
-                pd.to_datetime(df_display["tanggal_penjualan"], errors="coerce")
-                .dt.strftime("%Y-%m-%d")
-                .fillna("-")
-            )
-        else:
-            df_display["tanggal_penjualan"] = "-"
-            
-        st.dataframe(
-            df_display[
-                [
-                    "code",
-                    "initial_value",
-                    "seller", "tanggal_penjualan"
-                ]
-            ],
-            use_container_width=True
-        )
+        except Exception as e:
+            st.error("❌ Gagal memuat data seller atau voucher.")
+            st.code(str(e))
 
     with tab_acc:
         st.header("🧾 Daftar Calon Seller")
@@ -1388,6 +1360,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
