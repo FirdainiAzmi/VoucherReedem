@@ -1213,39 +1213,35 @@ def page_seller_admin_assign():
                 selected_row = df_seller[df_seller["nama_seller"] == selected_seller].iloc[0]
                 seller_hp = selected_row["no_hp"]
 
-                # --- BAGIAN INFORMASI SELLER ---
+                # Ambil voucher yang dimiliki seller
+                with engine.connect() as conn:
+                    df_current_voucher = pd.read_sql(
+                        text("""
+                            SELECT code, initial_value, balance, status, tanggal_penjualan
+                            FROM vouchers
+                            WHERE seller = :seller
+                            ORDER BY tanggal_penjualan DESC NULLS LAST
+                        """),
+                        conn,
+                        params={"seller": selected_seller}
+                    )
+
                 st.markdown("---")
                 st.subheader("📋 Informasi Seller")
                 st.write(f"**Nama:** {selected_seller}")
                 st.write(f"**No HP:** {seller_hp}")
-
-                # Fungsi bantu untuk ambil voucher seller
-                def get_voucher_seller():
-                    with engine.connect() as conn_inner:
-                        return pd.read_sql(
-                            text("""
-                                SELECT code, status, tanggal_penjualan
-                                FROM vouchers
-                                WHERE seller = :seller
-                                ORDER BY tanggal_penjualan DESC NULLS LAST
-                            """),
-                            conn_inner,
-                            params={"seller": selected_seller}
-                        )
-
-                # Ambil voucher awal
-                df_current_voucher = get_voucher_seller()
                 st.write(f"**Jumlah Voucher yang Dimiliki:** {len(df_current_voucher)}")
 
                 if not df_current_voucher.empty:
-                    st.dataframe(df_current_voucher, use_container_width=True)
+                    st.markdown("**Voucher yang Saat Ini Dimiliki:**")
+                    st.dataframe(
+                        df_current_voucher[["code", "status", "tanggal_penjualan"]],
+                        use_container_width=True
+                    )
                 else:
                     st.info("Seller ini belum memiliki voucher apa pun.")
 
-                # --- BAGIAN ASSIGN VOUCHER ---
-                st.markdown("---")
-                st.subheader(f"🧾 Pilih Voucher Baru untuk {selected_seller}")
-
+                # Ambil voucher yang belum diassign
                 with engine.connect() as conn:
                     df_voucher = pd.read_sql("""
                         SELECT code, initial_value, balance, status
@@ -1253,6 +1249,9 @@ def page_seller_admin_assign():
                         WHERE seller IS NULL OR TRIM(seller) = ''
                         ORDER BY created_at ASC
                     """, conn)
+
+                st.markdown("---")
+                st.subheader(f"🧾 Pilih Voucher Baru untuk {selected_seller}")
 
                 if df_voucher.empty:
                     st.info("Semua voucher sudah diassign ke seller.")
@@ -1265,6 +1264,7 @@ def page_seller_admin_assign():
                     if st.button("💾 Simpan Assign Voucher") and selected_vouchers:
                         try:
                             today = date.today()
+
                             with engine.begin() as conn2:
                                 for code in selected_vouchers:
                                     conn2.execute(
@@ -1274,19 +1274,27 @@ def page_seller_admin_assign():
                                                 tanggal_penjualan = :tgl
                                             WHERE code = :code
                                         """),
-                                        {"seller": selected_seller, "tgl": today, "code": code}
+                                        {
+                                            "seller": selected_seller,
+                                            "tgl": today,
+                                            "code": code
+                                        }
                                     )
 
-                            st.success(
-                                f"✅ {len(selected_vouchers)} voucher berhasil diassign ke seller {selected_seller}."
-                            )
-                            st.balloons()
+                            with engine.connect() as conn3:
+                                df_changed = pd.read_sql(
+                                    text("""
+                                        SELECT code, seller, tanggal_penjualan
+                                        FROM vouchers
+                                        WHERE code IN :codes
+                                    """),
+                                    conn3,
+                                    params={"codes": tuple(selected_vouchers)}
+                                )
 
-                            # 🟢 Query ulang voucher milik seller (langsung update tampilan)
-                            df_current_voucher = get_voucher_seller()
-
-                            st.markdown("### 🔁 Voucher yang dimiliki seller saat ini:")
-                            st.dataframe(df_current_voucher, use_container_width=True)
+                            st.success(f"✅ {len(selected_vouchers)} voucher berhasil diassign ke seller {selected_seller}.")
+                            st.markdown("### 🔍 Voucher yang baru saja diubah:")
+                            st.dataframe(df_changed, use_container_width=True)
 
                         except Exception as e:
                             st.error("❌ Gagal menyimpan assign voucher ke database.")
@@ -1307,12 +1315,12 @@ def page_seller_admin_assign():
                     WHERE status = 'not accepted'
                     ORDER BY nama_seller ASC
                 """, conn)
-
+    
             if df_seller_pending.empty:
                 st.info("Belum ada data seller yang mendaftar.")
             else:
                 for idx, row in df_seller_pending.iterrows():
-                    col1, col2, col3 = st.columns([3, 3, 2])
+                    col1, col2, col3, col4 = st.columns([3, 3, 2, 2])
                     with col1:
                         st.write(f"**Nama:** {row['nama_seller']}")
                         st.write(f"No HP: {row['no_hp']}")
@@ -1335,7 +1343,24 @@ def page_seller_admin_assign():
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Gagal update status seller: {e}")
-
+    
+                    with col4:
+                        if st.button("🗑️ Hapus", key=f"hapus_{row['nama_seller']}_{idx}"):
+                            try:
+                                with engine.begin() as conn3:
+                                    conn3.execute(
+                                        text("""
+                                            DELETE FROM seller
+                                            WHERE nama_seller = :nama_seller
+                                              AND no_hp = :no_hp
+                                        """),
+                                        {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
+                                    )
+                                st.warning(f"Data seller {row['nama_seller']} telah dihapus ❌")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Gagal menghapus data seller: {e}")
+    
         except Exception as e:
             st.error("❌ Gagal mengambil data seller dari database.")
             st.code(str(e))
@@ -1381,6 +1406,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
