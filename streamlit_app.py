@@ -360,7 +360,7 @@ with st.sidebar:
 
         st.markdown("---")
         page_choice = st.radio("Pilih halaman Admin",
-                               ("Aktivasi Voucher", "Laporan Warung", "Histori Transaksi", "Seller"),
+                               ("Edit Voucher", "Laporan Warung", "Histori Transaksi", "Kelola Seller"),
                                index=("Aktivasi Voucher","Laporan Warung","Histori Transaksi","Seller").index(
                                    st.session_state.get("page") if st.session_state.get("page") in ("Aktivasi Voucher","Laporan Warung","Histori Transaksi","Seller") else "Aktivasi Voucher"
                                ))
@@ -671,7 +671,7 @@ def page_daftar_seller():
 # Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
 # ---------------------------
 def page_daftar_voucher():
-    st.header("Aktivasi Voucher (Admin)")
+    st.header("Edit Voucher")
 
     st.session_state.setdefault("vouchers_page_idx", 0)
     st.session_state.setdefault("vouchers_per_page", 10)
@@ -724,14 +724,7 @@ def page_daftar_voucher():
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
         
     # Cek aman untuk tanggal_penjualan
-    if "tanggal_penjualan" in df_display.columns:
-        df_display["tanggal_penjualan"] = (
-            pd.to_datetime(df_display["tanggal_penjualan"], errors="coerce")
-            .dt.strftime("%Y-%m-%d")
-            .fillna("-")
-        )
-    else:
-        df_display["tanggal_penjualan"] = "-"
+    df_display["tanggal_penjualan"] = df_display["tanggal_penjualan"].astype(str)
         
     st.dataframe(
         df_display[
@@ -868,11 +861,11 @@ def page_laporan_global():
         vouchers["used_value"] = vouchers["initial_value"] - vouchers["balance"]
         summary = {
             "total_voucher_dijual": len(vouchers),
+            "total_voucher_aktif": len(vouchers[vouchers["status"] == "active"]),
+            "total_voucher_inaktif": len(vouchers[vouchers["status"] != "active"]),
             "total_voucher_terpakai": len(transactions["code"].unique()),
             "total_saldo_belum_terpakai": vouchers["balance"].sum(),
             "total_saldo_sudah_terpakai": vouchers["used_value"].sum(),
-            "total_voucher_aktif": len(vouchers[vouchers["status"] == "active"]),
-            "total_voucher_inaktif": len(vouchers[vouchers["status"] != "active"]),
         }
     
         # ✅ Summary Cards
@@ -1499,6 +1492,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
