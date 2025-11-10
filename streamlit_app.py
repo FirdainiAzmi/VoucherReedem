@@ -1479,7 +1479,7 @@ elif page == "Histori Transaksi":
     else:
         page_histori()
 
-elif page == "Seller":
+elif page == "Kelola Seller":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses halaman Seller.")
     else:
@@ -1499,6 +1499,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
