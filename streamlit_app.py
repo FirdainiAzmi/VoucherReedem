@@ -724,14 +724,11 @@ def page_daftar_voucher():
     df_display["created_at"] = pd.to_datetime(df_display["created_at"]).dt.strftime("%Y-%m-%d")
         
     # Cek aman untuk tanggal_penjualan
-    if "tanggal_penjualan" in df_display.columns:
-        df_display["tanggal_penjualan"] = (
-            pd.to_datetime(df_display["tanggal_penjualan"], errors="coerce")
-            .dt.strftime("%Y-%m-%d")
-            .fillna("-")
-        )
-    else:
-        df_display["tanggal_penjualan"] = "-"
+    if "tanggal_penjualan" not in df_display.columns:
+        df_display["tanggal_penjualan"] = None
+    
+    df_display["tanggal_penjualan"] = df_display["tanggal_penjualan"].fillna("-")
+
         
     st.dataframe(
         df_display[
@@ -1499,6 +1496,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
