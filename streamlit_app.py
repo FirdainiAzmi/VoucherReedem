@@ -340,9 +340,11 @@ with st.sidebar:
     st.markdown("## Menu")
 
     pageumum_choice = st.radio("pilih halaman",
-                               ("Reedem Voucher", "Daftar Sebagai Seller"),
-                               index=("Reedem Voucher", "Daftar Sebagai Seller").index(
-                                   st.session_state.get("page") if st.session_state.get("page") in ("Reedem Voucher", "Daftar Sebagai Seller") else "Reedem Voucher"
+                               ("Redeem Voucher", "Daftar Sebagai Seller"),
+                               index=("Redeem Voucher", "Daftar Sebagai Seller").index(
+                                   st.session_state.get("page") 
+                                   if st.session_state.get("page") in ("Redeem Voucher", "Daftar Sebagai Seller") 
+                                   else "Redeem Voucher"
                                ))
     st.session_state.page = pageumum_choice
     
@@ -626,6 +628,9 @@ def page_redeem():
             st.session_state.show_success = False
             st.rerun()
 
+def page_daftar_seller():
+    st.header("📋 Daftar Sebagai Seller")
+    st.write("Hello world")  # sementara sebagai placeholder
 
 # ---------------------------
 # Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
@@ -1258,59 +1263,41 @@ def page_seller_admin_assign():
 # ---------------------------
 # Router
 # ---------------------------
-if page == "Penukaran Voucher":
+if page == "Penukaran Voucher" or page == "Redeem Voucher":
     page_redeem()
+
+elif page == "Daftar Sebagai Seller":
+    page_daftar_seller()
+
 elif page == "Aktivasi Voucher":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses halaman ini.")
     else:
         page_daftar_voucher()
+
 elif page == "Histori Transaksi":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses histori transaksi.")
     else:
         page_histori()
+
 elif page == "Seller":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses halaman Seller.")
     else:
-        # admin view to assign sellers
         page_seller_admin_assign()
+
 elif page == "Laporan Warung":
     if not st.session_state.admin_logged_in:
         st.error("Hanya admin yang dapat mengakses laporan.")
     else:
         page_laporan_global()
+
 elif page == "Aktivasi Voucher Seller":
     if not st.session_state.seller_logged_in:
         st.error("Hanya seller yang dapat mengakses halaman Seller Activation.")
     else:
         page_seller_activation()
+
 else:
     st.info("Halaman tidak ditemukan.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
