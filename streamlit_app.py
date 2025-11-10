@@ -1328,8 +1328,8 @@ def page_seller_admin_assign():
                         try:
                             with engine.begin() as conn2:
                                 conn2.execute(
-                                    text("UPDATE seller SET status = 'Accepted' WHERE nama_seller = :nama AND no_hp = :no_hp"),
-                                    {"nama": row["nama_seller"], "no_hp": row["no_hp"]}
+                                    text("UPDATE seller SET status = 'Accepted' WHERE nama_seller = :nama_seller AND no_hp = :no_hp"),
+                                    {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
                                 )
                             st.success(f"Seller {row['nama_seller']} diterima ✅")
                             st.rerun()
@@ -1381,6 +1381,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
