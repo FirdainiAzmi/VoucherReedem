@@ -339,13 +339,15 @@ st.title("🎫 Voucher Pawon Sappitoe")
 with st.sidebar:
     st.markdown("## Menu")
 
-    pageumum_choice = st.radio("pilih halaman",
-                               ("Redeem Voucher", "Daftar Sebagai Seller"),
-                               index=("Redeem Voucher", "Daftar Sebagai Seller").index(
-                                   st.session_state.get("page") 
-                                   if st.session_state.get("page") in ("Redeem Voucher", "Daftar Sebagai Seller") 
-                                   else "Redeem Voucher"
-                               ))
+    pageumum_choice = st.radio(
+        "Pilih Halaman",
+        ("Redeem Voucher", "Daftar Sebagai Seller"),
+        index=("Redeem Voucher", "Daftar Sebagai Seller").index(
+            st.session_state.get("page")
+            if st.session_state.get("page") in ("Redeem Voucher", "Daftar Sebagai Seller")
+            else "Redeem Voucher"
+        )
+    )
     st.session_state.page = pageumum_choice
     
     # If admin logged in -> full admin menu
@@ -1301,3 +1303,4 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
