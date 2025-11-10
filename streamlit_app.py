@@ -1298,7 +1298,47 @@ def page_seller_admin_assign():
         )
 
     with tab_acc:
-        st.write("halllo")
+        st.header("🧾 Daftar Calon Seller")
+        st.write("Berikut adalah daftar seller yang mendaftar. Klik 'Accept' untuk menyetujui pendaftaran.")
+    
+        try:
+            # Ambil data seller dari database
+            with engine.connect() as conn:
+                df_seller = pd.read_sql("SELECT * FROM seller ORDER BY nama ASC", conn)
+    
+            if df_seller.empty:
+                st.info("Belum ada data seller yang mendaftar.")
+                return
+    
+            # Pastikan kolom ada
+            if "status" not in df_seller.columns:
+                st.warning("Kolom 'status' tidak ditemukan pada tabel seller.")
+                return
+    
+            # Tampilkan tabel seller
+            for idx, row in df_seller.iterrows():
+                col1, col2, col3 = st.columns([3, 3, 2])
+                with col1:
+                    st.write(f"**Nama:** {row['nama']}")
+                    st.write(f"No HP: {row['no_hp']}")
+                with col2:
+                    st.write(f"Status: {row['status'] or '-'}")
+                with col3:
+                    if st.button("✅ Accept", key=f"accept_{row['nama']}_{idx}"):
+                        try:
+                            with engine.begin() as conn2:
+                                conn2.execute(
+                                    text("UPDATE seller SET status = 'Accepted' WHERE nama = :nama AND no_hp = :no_hp"),
+                                    {"nama": row["nama"], "no_hp": row["no_hp"]}
+                                )
+                            st.success(f"Seller {row['nama']} diterima ✅")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Gagal update status seller: {e}")
+    
+        except Exception as e:
+            st.error("❌ Gagal mengambil data seller dari database.")
+            st.code(str(e))
         
 # ---------------------------
 # Router
@@ -1341,6 +1381,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
