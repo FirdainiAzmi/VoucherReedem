@@ -361,8 +361,8 @@ with st.sidebar:
         st.markdown("---")
         page_choice = st.radio("Pilih halaman Admin",
                                ("Edit Voucher", "Laporan Warung", "Histori Transaksi", "Kelola Seller"),
-                               index=("Aktivasi Voucher","Laporan Warung","Histori Transaksi","Seller").index(
-                                   st.session_state.get("page") if st.session_state.get("page") in ("Aktivasi Voucher","Laporan Warung","Histori Transaksi","Seller") else "Aktivasi Voucher"
+                               index=("Edit Voucher","Laporan Warung","Histori Transaksi","Seller").index(
+                                   st.session_state.get("page") if st.session_state.get("page") in ("Edit Voucher","Laporan Warung","Histori Transaksi","Seller") else "Edit Voucher"
                                ))
         st.session_state.page = page_choice
 
@@ -1492,6 +1492,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
