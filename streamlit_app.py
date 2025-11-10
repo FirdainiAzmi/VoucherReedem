@@ -1297,7 +1297,7 @@ def page_seller_admin_assign():
             use_container_width=True
         )
 
-    with tab_kepemilikan:
+    with tab_acc:
         st.write("halllo")
         
 # ---------------------------
@@ -1341,6 +1341,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
