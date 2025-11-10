@@ -1319,19 +1319,19 @@ def page_seller_admin_assign():
             for idx, row in df_seller.iterrows():
                 col1, col2, col3 = st.columns([3, 3, 2])
                 with col1:
-                    st.write(f"**Nama:** {row['nama']}")
+                    st.write(f"**Nama:** {row['nama_seller']}")
                     st.write(f"No HP: {row['no_hp']}")
                 with col2:
                     st.write(f"Status: {row['status'] or '-'}")
                 with col3:
-                    if st.button("✅ Accept", key=f"accept_{row['nama']}_{idx}"):
+                    if st.button("✅ Accept", key=f"accept_{row['nama_seller']}_{idx}"):
                         try:
                             with engine.begin() as conn2:
                                 conn2.execute(
-                                    text("UPDATE seller SET status = 'Accepted' WHERE nama = :nama AND no_hp = :no_hp"),
-                                    {"nama": row["nama"], "no_hp": row["no_hp"]}
+                                    text("UPDATE seller SET status = 'Accepted' WHERE nama_seller = :nama AND no_hp = :no_hp"),
+                                    {"nama": row["nama_seller"], "no_hp": row["no_hp"]}
                                 )
-                            st.success(f"Seller {row['nama']} diterima ✅")
+                            st.success(f"Seller {row['nama_seller']} diterima ✅")
                             st.rerun()
                         except Exception as e:
                             st.error(f"Gagal update status seller: {e}")
@@ -1381,6 +1381,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
