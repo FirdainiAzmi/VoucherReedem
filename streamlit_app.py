@@ -648,7 +648,23 @@ def page_daftar_seller():
         elif not nohp.strip():
             st.error("No HP tidak boleh kosong.")
         else:
-            st.success("✅ Pendaftaran berhasil!\n(Admin akan menghubungi Anda jika disetujui.)")
+            try:
+                # Simpan ke database
+                with engine.begin() as conn:
+                    conn.execute(
+                        text("""
+                            INSERT INTO seller (nama, no_hp)
+                            VALUES (:nama, :no_hp)
+                        """),
+                        {"nama": nama.strip(), "no_hp": nohp.strip()}
+                    )
+
+                st.success("✅ Pendaftaran berhasil! Data Anda telah disimpan ke database.")
+                st.info("Admin akan menghubungi Anda untuk proses verifikasi.")
+
+            except Exception as e:
+                st.error("❌ Gagal menyimpan data ke database.")
+                st.code(str(e))
 
 # ---------------------------
 # Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
@@ -1319,6 +1335,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
