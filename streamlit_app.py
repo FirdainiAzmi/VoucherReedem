@@ -750,7 +750,7 @@ def page_daftar_voucher():
         v = matched_row.iloc[0]
         st.markdown("---")
         st.subheader(f"Edit Voucher: {v['code']}")
-
+    
         seller_data = v.get("seller")
         
         if not seller_data or str(seller_data).strip() == "":
@@ -764,14 +764,21 @@ def page_daftar_voucher():
                     "Status", ["inactive", "active"],
                     index=0 if (v["status"] or "inactive") != "active" else 1
                 )
-        
+    
+                # 🗓️ Tambahkan input tanggal aktivasi manual
+                tanggal_aktivasi_in = st.date_input(
+                    "Tanggal Aktivasi",
+                    value=date.today() if v.get("tanggal_aktivasi") in [None, "", "NaT"] else datetime.strptime(v["tanggal_aktivasi"], "%Y-%m-%d").date()
+                )
+    
                 submit = st.form_submit_button("Simpan")
                 if submit:
                     if status_in == "active" and (not nama_in.strip() or not nohp_in.strip()):
                         st.error("Untuk mengaktifkan voucher, isi Nama dan No HP terlebih dahulu.")
                     else:
-                        tanggal_aktivasi = datetime.now().strftime("%Y-%m-%d")
-                        
+                        # Simpan tanggal hasil input user
+                        tanggal_aktivasi = tanggal_aktivasi_in.strftime("%Y-%m-%d")
+    
                         ok = update_voucher_detail(
                             v["code"],
                             nama_in.strip() or None,
@@ -1406,6 +1413,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
