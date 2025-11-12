@@ -431,49 +431,41 @@ def page_redeem():
         if st.button("Submit Kode"):
             code = st.session_state.entered_code
             if not code:
-                st.error("Kode tidak boleh kosong")
+                st.session_state['redeem_error'] = "⚠️ Kode tidak boleh kosong"
             else:
                 row = find_voucher(code)
                 if not row:
                     st.session_state['redeem_error'] = "❌ Voucher tidak ditemukan."
-                    reset_redeem_state()
-                    return
-        
-                # Ambil data row
-                code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_aktivasi = row
-        
-                if status is None or str(status).lower() != "active":
-                    st.session_state['redeem_error'] = "⛔ Voucher belum dapat digunakan. Status masih INACTIVE."
-                    reset_redeem_state()
-                    return
-        
-                if tanggal_aktivasi is None:
-                    st.session_state['redeem_error'] = "⛔ Voucher belum bisa digunakan. Tanggal aktivasi belum tercatat."
-                    reset_redeem_state()
-                    return
-        
-                if hasattr(tanggal_aktivasi, "date"):
-                    tgl_aktivasi = tanggal_aktivasi.date()
                 else:
-                    try:
-                        tgl_aktivasi = datetime.strptime(str(tanggal_aktivasi), "%Y-%m-%d").date()
-                    except Exception:
-                        tgl_aktivasi = None
-        
-                if tgl_aktivasi == date.today():
-                    st.session_state['redeem_error'] = "⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher diaktifkan."
-                    reset_redeem_state()
-                    return
-        
-                # ✅ Jika semua valid → lanjut
-                st.session_state.voucher_row = row
-                st.session_state.redeem_step = 2
-                st.rerun()
-        
+                    # Ambil data row
+                    code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_aktivasi = row
+            
+                    if status is None or str(status).lower() != "active":
+                        st.session_state['redeem_error'] = "⛔ Voucher belum dapat digunakan. Status masih INACTIVE."
+                    elif tanggal_aktivasi is None:
+                        st.session_state['redeem_error'] = "⛔ Voucher belum bisa digunakan. Tanggal aktivasi belum tercatat."
+                    else:
+                        # Cek tanggal aktivasi
+                        if hasattr(tanggal_aktivasi, "date"):
+                            tgl_aktivasi = tanggal_aktivasi.date()
+                        else:
+                            try:
+                                tgl_aktivasi = datetime.strptime(str(tanggal_aktivasi), "%Y-%m-%d").date()
+                            except Exception:
+                                tgl_aktivasi = None
+            
+                        if tgl_aktivasi == date.today():
+                            st.session_state['redeem_error'] = "⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher diaktifkan."
+                        else:
+                            # ✅ Semua valid → lanjut ke step berikutnya
+                            st.session_state.voucher_row = row
+                            st.session_state.redeem_step = 2
+                            st.session_state.pop('redeem_error', None)
+                            st.rerun()
+
         # Tampilkan error jika ada
         if 'redeem_error' in st.session_state:
             st.error(st.session_state['redeem_error'])
-            del st.session_state['redeem_error']
 
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
@@ -1485,6 +1477,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
