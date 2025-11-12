@@ -467,6 +467,14 @@ def page_redeem():
         if 'redeem_error' in st.session_state:
             st.error(st.session_state['redeem_error'])
 
+            # Tombol ulangi hanya muncul saat ada error
+            if st.button("🔄 Ulangi"):
+                reset_redeem_state()
+                st.session_state.entered_code = ""
+                st.session_state.pop('redeem_error', None)
+                st.rerun()
+
+
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
         row = st.session_state.voucher_row
@@ -1477,6 +1485,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
