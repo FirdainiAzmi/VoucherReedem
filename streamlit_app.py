@@ -421,6 +421,12 @@ if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
 def page_redeem():
     st.header("Penukaran Voucher")
 
+    # Pastikan state awal ada
+    if "redeem_step" not in st.session_state:
+        st.session_state.redeem_step = 1
+    if "entered_code" not in st.session_state:
+        st.session_state.entered_code = ""
+
     # STEP 1: Input kode voucher
     if st.session_state.redeem_step == 1:
         st.session_state.entered_code = st.text_input(
@@ -470,10 +476,10 @@ def page_redeem():
             # Tombol ulangi hanya muncul saat ada error
             if st.button("🔄 Ulangi"):
                 reset_redeem_state()
-                st.session_state.entered_code = ""
+                st.session_state.entered_code = ""  # kosongkan input
                 st.session_state.pop('redeem_error', None)
+                st.session_state.redeem_step = 1
                 st.rerun()
-
 
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
@@ -1485,6 +1491,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
