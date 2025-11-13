@@ -15,7 +15,7 @@ import traceback
 DB_URL = st.secrets["DB_URL"]
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")  # admin password in st.secrets
 # Seller password: fallback to the one you gave if not in secrets
-SELLER_PASSWORD = st.secrets.get("SELLER_PASSWORD", "sellerpwspt")
+SELLER_PASSWORD = st.secrets.get("SELLER_PASSWORD")
 
 engine = create_engine(DB_URL, future=True)
 
@@ -1491,6 +1491,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
