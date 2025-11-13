@@ -18,8 +18,6 @@ Admin memiliki kontrol penuh terhadap sistem dan berperan dalam pengelolaan selu
 - 👥 **Kelola Seller:** Menambahkan atau menghapus seller yang berwenang menjual dan mengaktifkan voucher.  
 - 🧮 **Monitoring Saldo & Status Voucher:** Memastikan voucher aktif memiliki saldo dan validitas yang sesuai.  
 
----
-
 ### 💼 2. Fitur untuk Seller
 Seller berfungsi sebagai pihak yang **mengaktivasi dan menjual voucher** ke pelanggan.  
 Semua aktivitas seller tercatat di sistem agar admin dapat melakukan pelacakan dan verifikasi.
@@ -28,8 +26,6 @@ Semua aktivitas seller tercatat di sistem agar admin dapat melakukan pelacakan d
 - 🔑 **Aktivasi Voucher:** Mengaktifkan voucher baru sebelum dijual ke pelanggan.  
 - 💳 **Pencatatan Penjualan:** Menyimpan data voucher yang telah diaktivasi beserta pembeli.  
 - 📅 **Histori Aktivasi:** Melihat daftar voucher yang telah dijual dan status penggunaannya.  
-
----
 
 ### 💰 3. Fitur untuk User (Kasir)
 User atau kasir menggunakan aplikasi untuk melakukan transaksi harian dengan pelanggan menggunakan voucher.
@@ -41,8 +37,6 @@ User atau kasir menggunakan aplikasi untuk melakukan transaksi harian dengan pel
 - 🧾 **Riwayat Pesanan:** Menampilkan daftar transaksi sebelumnya berdasarkan kode voucher pelanggan.  
 - 🔐 **Keamanan Input:** Fitur seperti tombol *show/hide password* untuk menjaga privasi pengguna.  
 
----
-
 ### ⚙️ 4. Fitur Tambahan (Global)
 Selain fitur utama per-role, aplikasi juga memiliki beberapa fitur pendukung:
 
@@ -53,6 +47,17 @@ Selain fitur utama per-role, aplikasi juga memiliki beberapa fitur pendukung:
 - 📈 **Kemudahan Monitoring:**  
   Admin dapat memantau saldo, transaksi, dan aktivitas penjualan voucher secara langsung dari dashboard.  
 
----
+## 🛠️ Tech Stack
 
-> ✨ Dengan pembagian fitur berdasarkan peran, aplikasi ini memastikan alur kerja yang terstruktur, transparan, dan efisien untuk seluruh pihak yang terlibat dalam pengelolaan voucher warung makan.
+**Frontend / Web App**
+- 🎨 **Streamlit** — framework utama untuk membangun antarmuka web yang interaktif dan cepat berbasis Python  
+- 🧩 **streamlit-aggrid** — menampilkan data dalam bentuk tabel interaktif dengan fitur filter, sort, dan edit langsung  
+- ⚡ **streamlit-javascript** — memungkinkan interaksi langsung antara komponen Streamlit dan JavaScript untuk fungsionalitas tambahan  
+
+**Backend / Database Layer**
+- 🐍 **SQLAlchemy** — ORM (Object Relational Mapper) untuk mengelola query dan koneksi database dengan lebih efisien  
+- 🗄️ **psycopg2-binary** — driver PostgreSQL untuk Python yang digunakan sebagai konektor utama database  
+- 📊 **pandas** — pengolahan data tabular, laporan, dan integrasi hasil query ke dalam tampilan Streamlit  
+
+**Visualisasi & Analisis**
+- 📈 **matplotlib** — menampilkan grafik laporan dan visualisasi transaksi secara dinamis di dashboard  
