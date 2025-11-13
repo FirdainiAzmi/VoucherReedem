@@ -1,5 +1,6 @@
 # Pawon Sappitoe's Voucher Management App
-**Warung Voucher Management App** adalah aplikasi web berbasis **Streamlit** yang dirancang untuk membantu pengelolaan sistem voucher pada warung makan.  
-Aplikasi ini menyediakan fitur **multi-role** (Kasir, Admin, dan Seller) dengan fungsi berbeda sesuai kebutuhan operasional.  
+**Pawon Sappitoe's Voucher Management App** adalah aplikasi berbasis Streamlit yang dirancang untuk membantu digitalisasi sistem pengelolaan voucher pada warung makan. Tujuan utama aplikasi ini adalah untuk memberikan solusi praktis bagi warung dalam mengatur transaksi menggunakan voucher digital, mulai dari proses aktivasi, penggunaan, hingga pelaporan — semuanya dapat dilakukan dalam satu platform terpusat. 
 
-Proyek ini bertujuan untuk mempermudah proses transaksi, pencatatan, serta manajemen voucher secara digital — mulai dari penukaran voucher hingga pelaporan transaksi warung.
+Aplikasi ini menggunakan PostgreSQL sebagai basis data utama untuk memastikan semua pengguna (admin, kasir, dan seller) memiliki akses terhadap data yang sinkron dan real-time, sehingga setiap perubahan pada saldo, transaksi, atau status voucher akan langsung tercermin di seluruh sistem. Dengan antarmuka berbasis Streamlit, aplikasi ini menawarkan pengalaman pengguna yang sederhana namun interaktif. Semua proses — mulai dari login, input voucher, pemilihan menu, hingga laporan transaksi — dapat dilakukan melalui antarmuka web tanpa perlu instalasi tambahan di sisi klien.
+
+> 🔹 Proyek ini dibuat sebagai implementasi praktis dari konsep multi-role system, database integration, dan state management di Streamlit, dengan fokus pada efisiensi transaksi berbasis voucher.
