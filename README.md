@@ -3,8 +3,6 @@
 
 Aplikasi ini menggunakan PostgreSQL sebagai basis data utama untuk memastikan semua pengguna (admin, kasir, dan seller) memiliki akses terhadap data yang sinkron dan real-time, sehingga setiap perubahan pada saldo, transaksi, atau status voucher akan langsung tercermin di seluruh sistem. Dengan antarmuka berbasis Streamlit, aplikasi ini menawarkan pengalaman pengguna yang sederhana namun interaktif. Semua proses mulai dari login, input voucher, pemilihan menu, hingga laporan transaksi dapat dilakukan melalui antarmuka web tanpa perlu instalasi tambahan di sisi klien.
 
-> 🔹 Proyek ini dibuat sebagai implementasi praktis dari konsep multi-role system, database integration, dan state management di Streamlit, dengan fokus pada efisiensi transaksi berbasis voucher.
-
 ## 🔧 Fitur Utama
 Aplikasi ini memiliki sistem multi-role dengan fungsi yang berbeda untuk setiap jenis pengguna: Kasir (User), Admin, dan Seller. Setiap fitur dirancang untuk saling terhubung melalui database PostgreSQL agar seluruh data tetap sinkron, konsisten, dan real-time.
 
