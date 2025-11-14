@@ -452,13 +452,13 @@ def page_admin():
 
         filter1, filter2, filter3, filter4 = st.columns([1, 1, 1, 1])
 
-        with filter1:
+        with filter3:
             filter_status = st.selectbox(
                 "Filter Status",
                 ["semua", "active", "habis", "inactive"]
             )
         
-        with filter2:
+        with filter4:
             filter_nominal = st.selectbox(
                 "Filter Nominal",
                 ["semua", "50000", "100000", "200000"],
@@ -1138,7 +1138,6 @@ def page_seller_activation():
         buyer_phone_input = st.text_input("No HP Pembeli").strip()
         tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
         submit = st.form_submit_button("Simpan dan Aktifkan")
-        reset = st.form_submit_button("Kembali")
 
     if submit:
         if not kode:
@@ -1209,49 +1208,6 @@ def page_seller_activation():
         "Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). "
         "Jika perlu koreksi, minta admin untuk ubah data."
     )
-
-    # Bagian lookup cepat
-    st.subheader("Cek Status Voucher (Lookup cepat)")
-    kode_lookup = st.text_input("Masukkan kode voucher untuk cek status (opsional)").strip().upper()
-    if kode_lookup:
-        try:
-            with engine.connect() as conn:
-                v = conn.execute(
-                    text("""
-                        SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan, tanggal_aktivasi
-                        FROM vouchers
-                        WHERE code = :code
-                    """),
-                    {"code": kode_lookup}
-                ).fetchone()
-
-            if not v:
-                st.error("Voucher tidak ditemukan.")
-            else:
-                (
-                    code,
-                    initial_value,
-                    balance,
-                    created_at,
-                    nama,
-                    no_hp,
-                    status,
-                    seller_db,
-                    tanggal_penjualan,
-                    tanggal_aktivasi_db,
-                ) = v
-
-                st.write(f"- **Kode:** {code}")
-                st.write(f"- **Seller (di DB):** {seller_db or '-'}")
-                st.write(f"- **Status:** {status or 'inactive'}")
-                st.write(f"- **Nama pembeli:** {nama or '-'}")
-                st.write(f"- **No HP pembeli:** {no_hp or '-'}")
-                st.write(f"- **Tgl penjualan:** {tanggal_penjualan or '-'}")
-                st.write(f"- **Tgl aktivasi:** {tanggal_aktivasi_db or '-'}")
-
-        except Exception as e:
-            st.error("❌ Gagal melakukan lookup voucher.")
-            st.code(str(e))
         
 # ---------------------------
 # Init app
@@ -1586,6 +1542,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
