@@ -9,16 +9,6 @@ import matplotlib.pyplot as plt
 import math
 import traceback
 
-# ========== Session State Default ==========
-# if "admin_logged_in" not in st.session_state:
-#     st.session_state.admin_logged_in = False
-
-# if "seller_logged_in" not in st.session_state:
-#     st.session_state.seller_logged_in = False
-
-# if "page" not in st.session_state:
-#     st.session_state.page = "Redeem Voucher"
-
 # ---------------------------
 # Config / Secrets
 # ---------------------------
@@ -373,6 +363,9 @@ def ensure_session_state():
         if key not in st.session_state:
             st.session_state[key] = val
 
+# ---------------------------
+# Start
+# ---------------------------
 init_db()
 ensure_session_state()
 st.set_page_config(page_title="Voucher Pawon Sappitoe", layout="wide")
@@ -1725,6 +1718,7 @@ with daftar_seller:
             except Exception as e:
                 st.error("❌ Gagal menyimpan data ke database.")
                 st.code(str(e))
+
 
 
 
