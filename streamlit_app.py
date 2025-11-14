@@ -899,6 +899,11 @@ def page_admin():
                 x="seller",
                 y=["active", "habis", "inactive"],
                 title="Distribusi Status Voucher per Seller",
+                color_discrete_map={
+                    "active": "#2ecc71",   # Hijau
+                    "habis": "#e74c3c",    # Merah
+                    "inactive": "#bdc3c7"  # Abu-abu
+                }
             )
             fig.update_layout(
                 xaxis_tickangle=-30,
@@ -1510,6 +1515,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
