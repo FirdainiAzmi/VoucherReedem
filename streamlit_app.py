@@ -381,6 +381,8 @@ with st.sidebar:
             )
         )
         st.session_state.page = pageumum_choice
+
+    login_admin, login_seller = st.tabs(["Admin", "Seller"])
     
     # If admin logged in -> full admin menu
     if st.session_state.admin_logged_in:
@@ -1597,6 +1599,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
