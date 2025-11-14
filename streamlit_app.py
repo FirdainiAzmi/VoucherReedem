@@ -898,6 +898,9 @@ def page_daftar_voucher():
                         except Exception as e:
                             st.error("❌ Gagal memperbarui data voucher.")
                             st.code(str(e))
+    except Exception as e:
+        st.error("❌ Gagal memuat data voucher dari database.")
+        st.code(str(e))
         
 # ---------------------------
 # Page: Histori Transaksi (admin)
@@ -1595,6 +1598,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
