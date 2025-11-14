@@ -100,12 +100,11 @@ def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
         st.error(f"Gagal update voucher: {e}")
         return False
 
-
 def atomic_redeem(code, amount, branch, items_str):
     try:
         with engine.begin() as conn:
 
-            # Ambil saldo voucher
+            # Ambil saldo voucher (lock row)
             r = conn.execute(
                 text("SELECT balance FROM vouchers WHERE code = :c FOR UPDATE"),
                 {"c": code}
@@ -116,17 +115,14 @@ def atomic_redeem(code, amount, branch, items_str):
 
             balance = int(r[0])
 
-            # Restriction: Kalau saldo sudah 0, tidak boleh dipakai
+            # Jika saldo 0 → tidak boleh dipakai
             if balance <= 0:
                 return False, "Saldo voucher sudah habis.", balance
 
-            # Hitung apakah saldo cukup
+            # Hitung saldo baru (tanpa saldo minus)
             if amount > balance:
-                # Kekurangan → dibayar cash
-                cash_shortage = amount - balance
                 new_balance = 0
             else:
-                cash_shortage = 0
                 new_balance = balance - amount
 
             # Update saldo voucher
@@ -135,15 +131,14 @@ def atomic_redeem(code, amount, branch, items_str):
                 {"newbal": new_balance, "c": code}
             )
 
-            # Simpan transaksi ke database
+            # Simpan transaksi ke database (tanpa cash shortage)
             conn.execute(text("""
                 INSERT INTO transactions 
-                (code, used_amount, cash_shortage, tanggal_transaksi, branch, items)
-                VALUES (:c, :amt, :shortage, :now, :branch, :items)
+                (code, used_amount, tanggal_transaksi, branch, items)
+                VALUES (:c, :amt, :now, :branch, :items)
             """), {
                 "c": code,
                 "amt": amount,
-                "shortage": cash_shortage,
                 "now": datetime.utcnow(),
                 "branch": branch,
                 "items": items_str
@@ -157,11 +152,11 @@ def atomic_redeem(code, amount, branch, items_str):
                 nama_item, qty = i.split(" x")
                 qty = int(qty)
 
-                column = "terjual_twsari" if branch == "Tawangsari" else "terjual_sedati"
+                col = "terjual_twsari" if branch == "Tawangsari" else "terjual_sedati"
 
                 conn.execute(text(f"""
                     UPDATE menu_items
-                    SET {column} = COALESCE({column}, 0) + :qty
+                    SET {col} = COALESCE({col}, 0) + :qty
                     WHERE nama_item = :item
                 """), {"qty": qty, "item": nama_item})
 
@@ -1578,6 +1573,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
