@@ -450,7 +450,7 @@ def page_admin():
                 ["Kode", "Nama Seller", "Nama Pembeli"]
             )
 
-        filter1, filter2 = st.columns([1, 1])
+        filter1, filter2, filter3, filter4 = st.columns([1, 1, 1, 1])
 
         with filter1:
             filter_status = st.selectbox(
@@ -1576,6 +1576,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
