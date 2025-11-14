@@ -853,110 +853,74 @@ def page_admin():
     
         # ===== TAB Seller =====
         with tab_seller:
-            st.subheader("📊 Analisis Seller")
+            st.subheader("📊 Analisis Voucher per Seller")
         
-            # Pastikan kolom seller tersedia
             if "seller" not in df_vouchers.columns:
-                st.warning("Kolom 'seller' tidak tersedia di tabel vouchers.")
+                st.warning("Kolom 'seller' tidak tersedia.")
                 st.stop()
         
             df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
         
-            # ========================= #
-            # Filter Tanggal
-            # ========================= #
-            min_date = pd.to_datetime(df_vouchers["created_at"]).min()
-            max_date = pd.to_datetime(df_vouchers["created_at"]).max()
+            # Filter hanya yg punya seller
+            df_seller_only = df_vouchers[df_vouchers["seller"] != "-"].copy()
         
-            date_filter = st.date_input(
-                "📅 Filter Tanggal Kupon Dibuat",
-                [min_date, max_date],
-                key="seller_date_filter"
+            if df_seller_only.empty:
+                st.info("Belum ada voucher yang dibawa seller.")
+                st.stop()
+        
+            # 🔹 Hitung jumlah per status
+            status_pivot = (
+                df_seller_only.pivot_table(
+                    index="seller",
+                    columns="status",
+                    values="code",
+                    aggfunc="count",
+                    fill_value=0
+                )
+                .reset_index()
             )
         
-            df_filtered_seller = df_vouchers.copy()
-            df_filtered_seller["created_at"] = pd.to_datetime(df_filtered_seller["created_at"])
-            df_filtered_seller = df_filtered_seller[
-                (df_filtered_seller["created_at"] >= pd.to_datetime(date_filter[0])) &
-                (df_filtered_seller["created_at"] <= pd.to_datetime(date_filter[1]))
-            ]
+            # Pastikan semua kolom status selalu ada
+            for col in ["active", "habis", "inactive"]:
+                if col not in status_pivot:
+                    status_pivot[col] = 0
         
-            # ========================= #
-            # Filter Cabang
-            # ========================= #
-            # (This assumes vouchers table might have 'branch' column; if not, skip)
-            if "branch" in df_filtered_seller.columns:
-                cabang_list = ["Semua"] + sorted(df_filtered_seller["branch"].dropna().unique().tolist())
-                selected_branch_seller = st.selectbox(
-                    "🏬 Filter Cabang Seller",
-                    cabang_list,
-                    key="seller_branch_filter"
-                )
+            # 🔹 Tambahkan total
+            status_pivot["Total"] = status_pivot[["active", "habis", "inactive"]].sum(axis=1)
+            status_pivot = status_pivot.sort_values(by="Total", ascending=False)
         
-                if selected_branch_seller != "Semua":
-                    df_filtered_seller = df_filtered_seller[
-                        df_filtered_seller["branch"] == selected_branch_seller
-                    ]
+            st.dataframe(
+                status_pivot.rename(columns={
+                    "seller": "Seller",
+                    "active": "Active",
+                    "habis": "Habis",
+                    "inactive": "Inactive",
+                }),
+                use_container_width=True,
+            )
         
-            # ========================= #
-            # Card Metrics
-            # ========================= #
-            
-            # Hanya voucher yang benar-benar dibawa seller
-            df_seller_only = df_filtered_seller[df_filtered_seller["seller"] != "-"]
-            
-            # ✅ Total Seller (count unique seller)
-            total_seller = df_seller_only["seller"].nunique()
-            
-            # ✅ Total Voucher Dibawa Seller (count voucher)
-            total_voucher = len(df_seller_only)
-            
-            st.success(f"👤 Total Seller: **{total_seller}**")
-            st.info(f"🎟️ Total Kupon Dibawa Seller: **{total_voucher:,}**")
-            
-            # Filter voucher aktif oleh seller
-            df_active = df_seller_only[df_seller_only["status"] == "active"]
+            st.markdown("---")
+            st.subheader("🎨 Distribusi Status Voucher per Seller")
         
-            # ========================= #
-            # Voucher Aktif Per Seller
-            # ========================= #
-            st.subheader("✅ Kupon Aktif per Seller")
+            # 🟦 Stacked Bar Chart dengan Plotly
+            import plotly.express as px
         
-            df_active = df_filtered_seller[df_filtered_seller["status"] == "active"]
+            fig = px.bar(
+                status_pivot,
+                x="seller",
+                y=["active", "habis", "inactive"],
+                title="Distribusi Status Voucher per Seller",
+                labels={"value": "Jumlah Kupon", "seller": "Seller"},
+            )
         
-            if not df_active.empty:
-                seller_active = (
-                    df_active.groupby("seller")
-                    .size()
-                    .reset_index(name="Voucher Aktif")
-                    .sort_values(by="Voucher Aktif", ascending=False)
-                )
+            fig.update_layout(
+                xaxis_tickangle=-30,
+                bargap=0.25,
+                legend_title_text="Status",
+            )
         
-                st.table(seller_active.rename(columns={"seller": "Seller"}))
-                st.bar_chart(seller_active, x="seller", y="Voucher Aktif")
-        
-            else:
-                st.info("Tidak ada voucher aktif.")
-    
-            # ========================= #
-            # 🎟️ Total Voucher Dibawa per Seller
-            # ========================= #
-            st.subheader("🎟️ Total Voucher Dibawa per Seller")
-            
-            if not df_seller_only.empty:
-                voucher_by_seller = (
-                    df_seller_only.groupby("seller")
-                    .size()
-                    .reset_index(name="Total Voucher Dibawa")
-                    .sort_values(by="Total Voucher Dibawa", ascending=False)
-                )
-            
-                st.table(voucher_by_seller.rename(columns={"seller": "Seller"}))
-            
-                st.bar_chart(voucher_by_seller, x="seller", y="Total Voucher Dibawa")
-            
-            else:
-                st.info("Belum ada seller yang membawa voucher.")
+            # Render chart
+            st.plotly_chart(fig, use_container_width=True)
 
     with tab_edit_seller:
         st.subheader("Kelola Seller")
@@ -1562,6 +1526,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
