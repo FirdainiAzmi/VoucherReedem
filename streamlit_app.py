@@ -1071,14 +1071,14 @@ def page_admin():
 # Page: Seller Activation (seller-only)
 # ---------------------------
 def page_seller_activation():
-    st.subheader("Aktivasi Voucher")
+    st.subheader("Aktivasi Kupon")
 
     st.info(
-        "Masukkan kode kupon dan nama anda, setelah itu masukkan nama dan nomer HP pembeli kupon untuk aktivasi."
+        "Masukkan kode kupon dan nama anda (seller), setelah itu masukkan nama dan nomer HP pembeli kupon untuk aktivasi."
     )
 
     with st.form(key="seller_activation_form"):
-        kode = st.text_input("Kode Voucher").strip().upper()
+        kode = st.text_input("Kode Kupon").strip().upper()
         seller_name_input = st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)").strip()
         buyer_name_input = st.text_input("Nama Pembeli").strip()
         buyer_phone_input = st.text_input("No HP Pembeli").strip()
@@ -1088,7 +1088,7 @@ def page_seller_activation():
 
     if submit:
         if not kode:
-            st.error("Masukkan kode voucher.")
+            st.error("Masukkan kode kupon.")
             return
 
         if not seller_name_input:
@@ -1106,24 +1106,24 @@ def page_seller_activation():
                 ).fetchone()
 
                 if not result:
-                    st.error("Kode voucher tidak ditemukan.")
+                    st.error("Kode kupon tidak ditemukan.")
                     return
 
                 db_seller, db_status = result
 
                 # Jika voucher belum diassign seller oleh admin
                 if not db_seller or db_seller.strip() == "":
-                    st.error("Voucher belum diassign ke seller mana pun. Aktivasi ditolak.")
+                    st.error("Kupon belum diassign ke seller mana pun. Aktivasi ditolak.")
                     return
 
                 # Jika seller input tidak cocok dengan seller di database
                 if db_seller.strip().lower() != seller_name_input.lower():
-                    st.error(f"Nama seller tidak sesuai. Voucher ini terdaftar untuk seller: **{db_seller}**.")
+                    st.error(f"Nama seller tidak sesuai. Kupon ini terdaftar untuk seller: **{db_seller}**.")
                     return
 
                 # Jika sudah aktif sebelumnya
                 if db_status and db_status.lower() == "active":
-                    st.warning("Voucher ini sudah diaktivasi sebelumnya.")
+                    st.warning("Kupon ini sudah diaktivasi sebelumnya.")
                     return
 
                 # Update data voucher
@@ -1144,10 +1144,10 @@ def page_seller_activation():
                     }
                 )
 
-            st.success(f"✅ Voucher {kode} berhasil diaktivasi untuk pembeli {buyer_name_input}.")
+            st.success(f"✅ Kupon {kode} berhasil diaktivasi untuk pembeli {buyer_name_input}.")
 
         except Exception as e:
-            st.error("❌ Terjadi kesalahan saat mengupdate data voucher.")
+            st.error("❌ Terjadi kesalahan saat mengupdate data kupon.")
             st.code(str(e))
 
     st.markdown("---")
@@ -1533,6 +1533,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
