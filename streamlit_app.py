@@ -547,8 +547,18 @@ def page_admin():
         
                 # Jika search cocok dengan 1 voucher → tampilkan form edit
                 if kode_cari:
-                    matched = df_voucher[df_voucher["code"].str.upper() == kode_cari]
-                    if not matched.empty:
+                    match_col = {
+                        "Kode": "code",
+                        "Nama Seller": "seller",
+                        "Nama Pembeli": "nama"
+                    }.get(cari_berdasarkan, "code")
+                
+                    matched = df_voucher[
+                        df_voucher[match_col].astype(str).str.upper() == kode_cari.upper()
+                    ]
+                    if matched.empty:
+                        st.warning("Tidak ditemukan voucher yang cocok dengan pencarian.")
+                    else:
                         v = matched.iloc[0]
                         st.markdown("---")
                         st.subheader(f"✏️ Edit Kupon: {v['code']}")
@@ -1576,6 +1586,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
