@@ -853,72 +853,58 @@ def page_admin():
     
         # ===== TAB Seller =====
         with tab_seller:
-         st.subheader("📊 Analisis Voucher per Seller")
-
-        if "seller" not in df_vouchers.columns:
-            st.warning("Kolom 'seller' tidak tersedia.")
-            st.stop()
-    
-        df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
-    
-        # Filter hanya yg punya seller
-        df_seller_only = df_vouchers[df_vouchers["seller"] != "-"].copy()
-    
-        if df_seller_only.empty:
-            st.info("Belum ada voucher yang dibawa seller.")
-            st.stop()
-    
-        # 🔹 Hitung jumlah per status
-        status_pivot = (
-            df_seller_only.pivot_table(
-                index="seller",
-                columns="status",
-                values="code",
-                aggfunc="count",
-                fill_value=0
+            st.subheader("📊 Analisis Voucher per Seller")
+        
+            if "seller" not in df_vouchers.columns:
+                st.warning("Kolom 'seller' tidak tersedia.")
+                st.stop()
+        
+            df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
+            df_seller_only = df_vouchers[df_vouchers["seller"] != "-"].copy()
+        
+            if df_seller_only.empty:
+                st.info("Belum ada voucher yang dibawa seller.")
+                st.stop()
+        
+            # --- Normalize status for clean analytics ---
+            df_seller_only["status_clean"] = (
+                df_seller_only["status"].astype(str).str.lower().replace({
+                    "sold out": "habis"
+                })
             )
-            .reset_index()
-        )
-    
-        # Pastikan semua kolom status selalu ada
-        for col in ["active", "habis", "inactive"]:
-            if col not in status_pivot:
-                status_pivot[col] = 0
-    
-        # 🔹 Tambahkan total
-        status_pivot["Total"] = status_pivot[["active", "habis", "inactive"]].sum(axis=1)
-        status_pivot = status_pivot.sort_values(by="Total", ascending=False)
-    
-        st.dataframe(
-            status_pivot.rename(columns={
-                "seller": "Seller",
-                "active": "Active",
-                "habis": "Habis",
-                "inactive": "Inactive",
-            }),
-            use_container_width=True,
-        )
-    
-        st.markdown("---")
-        st.subheader("🎨 Distribusi Status Voucher per Seller")
-    
-        # 🟦 Stacked Bar Chart dengan Plotly
-        fig = px.bar(
-            status_pivot,
-            x="seller",
-            y=["active", "habis", "inactive"],
-            title="Distribusi Status Voucher per Seller",
-            labels={"value": "Jumlah Kupon", "seller": "Seller"},
-        )
-    
-        fig.update_layout(
-            xaxis_tickangle=-30,
-            bargap=0.25,
-            legend_title_text="Status",
-        )
-    
-        # Render chart
-        st.plotly_chart(fig, use_container_width=True)
+        
+            status_pivot = (
+                df_seller_only.pivot_table(
+                    index="seller",
+                    columns="status_clean",
+                    values="code",
+                    aggfunc="count",
+                    fill_value=0
+                )
+                .reset_index()
+            )
+        
+            # Pastikan kolom lengkap
+            for col in ["active", "habis", "inactive"]:
+                if col not in status_pivot.columns:
+                    status_pivot[col] = 0
+        
+            status_pivot["Total"] = status_pivot[["active", "habis", "inactive"]].sum(axis=1)
+            status_pivot = status_pivot.sort_values(by="Total", ascending=False)
+        
+            st.dataframe(status_pivot, use_container_width=True)
+        
+            fig = px.bar(
+                status_pivot,
+                x="seller",
+                y=["active", "habis", "inactive"],
+                title="Distribusi Status Voucher per Seller",
+            )
+            fig.update_layout(
+                xaxis_tickangle=-30,
+                legend_title_text="Status"
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
     with tab_edit_seller:
         st.subheader("Kelola Seller")
@@ -1524,6 +1510,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
