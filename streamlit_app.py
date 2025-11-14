@@ -519,8 +519,8 @@ def page_admin():
                 # Display tabel dengan badge
                 st.dataframe(
                     df_voucher[
-                        ["code", "nama", "no_hp", "status", "seller",
-                         "initial_value", "balance", "tanggal_penjualan", "tanggal_aktivasi", "tunai"]
+                        ["code", "nama", "no_hp", "status", "tanggal_aktivasi",
+                         "initial_value", "balance", "tunai", "seller", "tanggal_penjualan"]
                     ],
                     use_container_width=True,
                 )
@@ -1557,6 +1557,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
