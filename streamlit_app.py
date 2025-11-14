@@ -369,7 +369,6 @@ def ensure_session_state():
 init_db()
 ensure_session_state()
 st.set_page_config(page_title="Voucher Pawon Sappitoe", layout="wide")
-st.title("🎫 Kupon Pawon Sappitoe")
 
 # ---------------------------
 # Sidebar / Login UI
@@ -1206,16 +1205,19 @@ def page_seller_activation():
 
 # Jika admin login → langsung ke halaman admin
 if st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
+    st.title("Halaman Admin")
     page_admin()
     st.stop()
 
 # Jika seller login → langsung ke halaman seller
 if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
+    st.title("Halaman Seller")
     page_seller_activation()
     st.stop()
 
 # Jika keduanya tidak login → tampil tab publik
 if not st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
+    st.title("🎫 Kupon Pawon Sappitoe")
     tukar_kupon, daftar_seller = st.tabs(["Tukar Kupon", "Daftar sebagai Seller"])
 
     with tukar_kupon:
@@ -1534,4 +1536,5 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
