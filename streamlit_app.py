@@ -441,7 +441,7 @@ def page_admin():
         with col1:
             kode_cari = st.text_input(
                 "Cari kode voucher (realtime)",
-                placeholder="Contoh: ABC",
+                placeholder="Masukkan kode",
             ).strip().upper()
         
         with col2:
@@ -1553,6 +1553,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
