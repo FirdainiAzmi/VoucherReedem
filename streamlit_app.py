@@ -125,10 +125,24 @@ def atomic_redeem(code, amount, branch, items_str):
             else:
                 new_balance = balance - amount
 
-            # Update saldo voucher
+            # Update saldo & status voucher
+            if new_balance == 0:
+                new_status = "sold out"
+            else:
+                new_status = "active"
+            
             conn.execute(
-                text("UPDATE vouchers SET balance = :newbal WHERE code = :c"),
-                {"newbal": new_balance, "c": code}
+                text("""
+                    UPDATE vouchers 
+                    SET balance = :newbal,
+                        status = :newstatus
+                    WHERE code = :c
+                """),
+                {
+                    "newbal": new_balance,
+                    "newstatus": new_status,
+                    "c": code
+                }
             )
 
             # Simpan transaksi ke database (tanpa cash shortage)
@@ -1573,6 +1587,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
