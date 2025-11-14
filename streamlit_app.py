@@ -454,7 +454,9 @@ def page_admin():
         with col3:
             filter_nominal = st.selectbox(
                 "Filter Nominal",
-                ["Semua", "50000", "100000", "200000"]
+                ["50000", "100000", "200000"],
+                default=[],
+                help="Pilih lebih dari satu nilai jika diperlukan"
             )
         
         # Query builder
@@ -474,14 +476,9 @@ def page_admin():
                 params["code"] = f"%{kode_cari}%"
         
             # Filter nominal
-            if filter_nominal != "Semua":
-                if ">=" in filter_nominal:
-                    val = int(filter_nominal.split(">= ")[1])
-                    conditions.append("initial_value >= :min_val")
-                    params["min_val"] = val
-                else:
-                    conditions.append("initial_value < :max_val")
-                    params["max_val"] = 10000
+            if filter_nominal:
+                where_conditions.append("CAST(initial_value AS TEXT) IN :nominals")
+                params["nominals"] = tuple(filter_nominal)
         
             if conditions:
                 query += " WHERE " + " AND ".join(conditions)
@@ -1553,6 +1550,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
