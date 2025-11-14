@@ -889,7 +889,7 @@ def page_admin():
         tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Voucher", "Penerimaan Seller"])
 
         with tab_kepemilikan:
-            st.markdown("#### 🎯 Assign Voucher ke Seller")
+            st.subheader("🎯 Assign Voucher ke Seller")
     
             try:
                 with engine.connect() as conn:
@@ -1007,7 +1007,7 @@ def page_admin():
                 st.code(str(e))
     
         with tab_acc:
-            st.markdown("#### 🧾 Daftar Calon Seller")
+            st.subheader("🧾 Daftar Calon Seller")
             st.write("Berikut adalah daftar seller yang mendaftar. Klik 'Accept' untuk menyetujui pendaftaran.")
     
             try:
@@ -1534,6 +1534,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
