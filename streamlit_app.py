@@ -506,32 +506,69 @@ def page_redeem():
         st.session_state.selected_branch = selected_branch
 
         menu_items = get_menu_from_db(selected_branch)
-    
-        if menu_items and isinstance(menu_items[0], tuple):
-            menu_items = [
-                {
-                    "kategori": m[0],
-                    "nama_item": m[1],
-                    "keterangan": m[2],
-                    "harga_sedati": m[3],
-                    "harga_twsari": m[4],
-                    "terjual_sedati": m[5],
-                    "terjual_twsari": m[6],
-                }
-                for m in menu_items
-            ]
 
-            # Filter item sesuai cabang → jika harga NULL, jangan tampilkan
-            if selected_branch == "Sedati":
-                menu_items = [m for m in menu_items if m["harga_sedati"] is not None]
-                # Normalisasi ke satu key: harga
+        # --- Normalisasi struktur menu_items ---
+        normalized = []
+        if menu_items:
+            # case: list of tuples (legacy)
+            if isinstance(menu_items[0], tuple):
                 for m in menu_items:
-                    m["harga"] = m["harga_sedati"]
-            
-            elif selected_branch == "Tawangsari":
-                menu_items = [m for m in menu_items if m["harga_twsari"] is not None]
-                for m in menu_items:
-                    m["harga"] = m["harga_twsari"]
+                    # pastikan panjang tuple sesuai, jika tidak lewatkan
+                    try:
+                        kategori = m[0]
+                        nama_item = m[1]
+                        keterangan = m[2]
+                        harga_sedati = m[3]
+                        harga_twsari = m[4]
+                    except Exception:
+                        continue
+
+                    # pilih harga sesuai cabang
+                    if selected_branch == "Sedati":
+                        harga = harga_sedati
+                    else:  # Tawangsari
+                        harga = harga_twsari
+
+                    # hanya masukkan menu yang punya harga bukan None
+                    if harga is None:
+                        continue
+
+                    normalized.append({
+                        "kategori": kategori,
+                        "nama": nama_item,
+                        "keterangan": keterangan,
+                        "harga": int(harga) if harga is not None else None
+                    })
+
+            # case: list of dicts (yang di-return get_menu_from_db normal)
+            elif isinstance(menu_items[0], dict):
+                for it in menu_items:
+                    # harga sudah diset di get_menu_from_db sebagai 'harga'
+                    harga = it.get("harga")
+                    # jika harga None skip
+                    if harga is None:
+                        continue
+                    normalized.append({
+                        "kategori": it.get("kategori"),
+                        "nama": it.get("nama"),
+                        "keterangan": it.get("keterangan", ""),
+                        "harga": int(harga) if harga is not None else None
+                    })
+
+        # jika tidak ada menu (kosong / semua harga None)
+        if not normalized:
+            st.info("Tidak ada menu yang tersedia untuk cabang ini.")
+            return
+
+        menu_items = normalized
+
+        # Ambil daftar kategori dari menu_items yang sudah difilter
+        categories = sorted({item["kategori"] for item in menu_items if item.get("kategori") is not None})
+
+        # Jika tidak ada kategori (safety)
+        if not categories:
+            st.info("Tidak ada kategori menu untuk ditampilkan.")
+            return
  
         categories = sorted(list(set([item["kategori"] for item in menu_items])))
     
@@ -1518,6 +1555,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
