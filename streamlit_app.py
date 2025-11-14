@@ -1079,7 +1079,7 @@ def page_seller_activation():
 
     with st.form(key="seller_activation_form"):
         kode = st.text_input("Kode Kupon").strip().upper()
-        seller_name_input = st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)").strip()
+        seller_name_input = st.text_input("Nama Seller (isi sesuai nama saat mendaftar)").strip()
         buyer_name_input = st.text_input("Nama Pembeli").strip()
         buyer_phone_input = st.text_input("No HP Pembeli").strip()
         tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
@@ -1533,6 +1533,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
