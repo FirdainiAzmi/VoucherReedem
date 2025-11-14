@@ -504,19 +504,34 @@ def page_redeem():
         branch_options = ["Sedati", "Tawangsari"]
         selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
         st.session_state.selected_branch = selected_branch
+
         menu_items = get_menu_from_db(selected_branch)
     
-        # Filter item sesuai cabang → jika harga NULL, jangan tampilkan
-        if selected_branch == "Sedati":
-            menu_items = [m for m in menu_items if m["harga_sedati"] is not None]
-            # Normalisasi ke satu key: harga
-            for m in menu_items:
-                m["harga"] = m["harga_sedati"]
-        
-        elif selected_branch == "Tawangsari":
-            menu_items = [m for m in menu_items if m["harga_twsari"] is not None]
-            for m in menu_items:
-                m["harga"] = m["harga_twsari"]
+        if menu_items and isinstance(menu_items[0], tuple):
+            menu_items = [
+                {
+                    "kategori": m[0],
+                    "nama_item": m[1],
+                    "keterangan": m[2],
+                    "harga_sedati": m[3],
+                    "harga_twsari": m[4],
+                    "terjual_sedati": m[5],
+                    "terjual_twsari": m[6],
+                }
+                for m in menu_items
+            ]
+
+            # Filter item sesuai cabang → jika harga NULL, jangan tampilkan
+            if selected_branch == "Sedati":
+                menu_items = [m for m in menu_items if m["harga_sedati"] is not None]
+                # Normalisasi ke satu key: harga
+                for m in menu_items:
+                    m["harga"] = m["harga_sedati"]
+            
+            elif selected_branch == "Tawangsari":
+                menu_items = [m for m in menu_items if m["harga_twsari"] is not None]
+                for m in menu_items:
+                    m["harga"] = m["harga_twsari"]
  
         categories = sorted(list(set([item["kategori"] for item in menu_items])))
     
@@ -1503,6 +1518,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
