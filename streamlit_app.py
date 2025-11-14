@@ -447,7 +447,7 @@ def page_admin():
         with col2:
             filter_status = st.selectbox(
                 "Filter Status",
-                ["semua", "inactive", "active", "soldout"]
+                ["semua", "active", "habis", "inactive"]
             )
         
         with col3:
@@ -510,8 +510,8 @@ def page_admin():
                 def status_badge(x):
                     if x == "active":
                         return "🟢 active"
-                    elif x == "sold out":
-                        return "🔴 sold out"
+                    elif x == "habis":
+                        return "🔴 habis"
                     return "⚪ inactive"
         
                 df_voucher["status"] = df_voucher["status"].apply(status_badge)
@@ -1557,6 +1557,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
