@@ -490,6 +490,12 @@ def page_admin():
                     WHEN status = 'inactive' THEN 3
                     ELSE 4
                 END,
+                CASE
+                    WHEN initial_value = 50000 THEN 1
+                    WHEN initial_value = 100000 THEN 2
+                    WHEN initial_value = 200000 THEN 3
+                    ELSE 4
+                END,
                 code ASC
             """
         
@@ -1557,6 +1563,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
