@@ -537,7 +537,7 @@ def page_redeem():
                         "kategori": kategori,
                         "nama": nama_item,
                         "keterangan": keterangan,
-                        "harga": int(harga) if harga is not None else None
+                        "harga": int(harga) if (harga is not None and not pd.isna(harga)) else None
                     })
 
             # case: list of dicts (yang di-return get_menu_from_db normal)
@@ -546,13 +546,13 @@ def page_redeem():
                     # harga sudah diset di get_menu_from_db sebagai 'harga'
                     harga = it.get("harga")
                     # jika harga None skip
-                    if harga is None:
+                    if harga is None or pd.isna(harga):
                         continue
                     normalized.append({
                         "kategori": it.get("kategori"),
                         "nama": it.get("nama"),
                         "keterangan": it.get("keterangan", ""),
-                        "harga": int(harga) if harga is not None else None
+                        "harga": int(harga)
                     })
 
         # jika tidak ada menu (kosong / semua harga None)
@@ -569,8 +569,6 @@ def page_redeem():
         if not categories:
             st.info("Tidak ada kategori menu untuk ditampilkan.")
             return
- 
-        categories = sorted(list(set([item["kategori"] for item in menu_items])))
     
         search_query = st.text_input("🔍 Cari menu", "").strip().lower()
 
@@ -1555,6 +1553,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
