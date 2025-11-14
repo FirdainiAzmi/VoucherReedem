@@ -454,7 +454,7 @@ def page_admin():
         with col3:
             filter_nominal = st.selectbox(
                 "Filter Nominal",
-                ["Semua", ">= 10000", ">= 20000", ">= 50000", "< 10000"]
+                ["Semua", "50000", "100000", "200000"]
             )
         
         # Query builder
@@ -510,12 +510,12 @@ def page_admin():
                         return "🔴 sold out"
                     return "⚪ inactive"
         
-                df_voucher["Status Badge"] = df_voucher["status"].apply(status_badge)
+                df_voucher["status"] = df_voucher["status"].apply(status_badge)
         
                 # Display tabel dengan badge
                 st.dataframe(
                     df_voucher[
-                        ["code", "nama", "no_hp", "Status Badge", "seller",
+                        ["code", "nama", "no_hp", "status", "seller",
                          "initial_value", "balance", "tanggal_penjualan", "tanggal_aktivasi", "tunai"]
                     ],
                     use_container_width=True,
@@ -1553,6 +1553,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
