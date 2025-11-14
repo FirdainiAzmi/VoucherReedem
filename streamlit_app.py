@@ -772,604 +772,462 @@ if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
 # ---------------------------
 # Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
 # ---------------------------
-def page_daftar_voucher():
-    st.header("Edit Voucher")
+def page_admin():
+    tab_edit, tab_laporan, tab_histori, tab_edit_seller = st.tabs(["Edit Kupon", "Laporan warung", "Histori", "Edit Seller"])
 
-    # Input pencarian & filter
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        kode_cari = st.text_input("Masukkan kode voucher (opsional)").strip().upper()
-    with col2:
-        filter_status = st.selectbox(
-            "Filter Status",
-            ["semua", "inactive", "active", "habis"]
-        )
+    with tab_edit:
+        st.header("Edit Voucher")
 
-    # Ambil data dari database
-    try:
-        query = "SELECT * FROM vouchers"
-        conditions = []
-        params = {}
-
-        # Filter berdasarkan status
-        if filter_status != "semua":
-            conditions.append("status = :status")
-            params["status"] = filter_status
-
-        if kode_cari:
-            conditions.append("UPPER(code) LIKE :code")
-            params["code"] = f"%{kode_cari}%"
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-
-        query += " ORDER BY created_at DESC"
-
-        with engine.connect() as conn:
-            df_voucher = pd.read_sql(text(query), conn, params=params)
-
-        if df_voucher.empty:
-            st.info("Tidak ada voucher sesuai filter/pencarian.")
-            st.stop()
-
-        # Format tampilan tabel
-        df_voucher_display = df_voucher.copy()
-        df_voucher_display["initial_value"] = df_voucher_display["initial_value"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
-        df_voucher_display["balance"] = df_voucher_display["balance"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
-        df_voucher_display["tunai"] = df_voucher_display["tunai"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
-
-        if "tanggal_penjualan" not in df_voucher_display.columns:
-            df_voucher_display["tanggal_penjualan"] = None
-        if "tanggal_aktivasi" not in df_voucher_display.columns:
-            df_voucher_display["tanggal_aktivasi"] = None
-
-        st.dataframe(
-            df_voucher_display[
-                ["code", "nama", "no_hp", "status", "seller", "initial_value", "balance", "tanggal_penjualan", "tanggal_aktivasi", "tunai"]
-            ],
-            use_container_width=True
-        )
-
-        # === Jika ada kode voucher yang dicari spesifik ===
-        if kode_cari:
-            matched = df_voucher[df_voucher["code"].str.upper() == kode_cari]
-            if matched.empty:
-                st.warning("Kode voucher tidak ditemukan di hasil filter.")
-            else:
-                v = matched.iloc[0]
-                st.markdown("---")
-                st.subheader(f"✏️ Edit Voucher: {v['code']}")
-
-                with st.form(key=f"edit_{v['code']}"):
-                    nama_in = st.text_input("Nama Pembeli", value=v["nama"] or "")
-                    nohp_in = st.text_input("No HP Pembeli", value=v["no_hp"] or "")
-                    status_in = st.selectbox(
-                        "Status",
-                        ["inactive", "active", "soldout"],
-                        index=["inactive", "active", "soldout"].index(v["status"] if v["status"] in ["inactive", "active", "soldout"] else "inactive")
-                    )
-
-                    tanggal_penjualan_in = st.date_input(
-                        "Tanggal Penjualan",
-                        value=v["tanggal_penjualan"] if isinstance(v["tanggal_penjualan"], (datetime, date)) else date.today()
-                    )
-
-                    tanggal_aktivasi_in = st.date_input(
-                        "Tanggal Aktivasi",
-                        value=v["tanggal_aktivasi"] if isinstance(v["tanggal_aktivasi"], (datetime, date)) else date.today()
-                    )
-
-                    submit_edit = st.form_submit_button("💾 Simpan Perubahan")
-
-                    if submit_edit:
-                        try:
-                            with engine.begin() as conn2:
-                                conn2.execute(
-                                    text("""
-                                        UPDATE vouchers
-                                        SET nama = :nama,
-                                            no_hp = :no_hp,
-                                            status = :status,
-                                            tanggal_penjualan = :tgl_jual,
-                                            tanggal_aktivasi = :tgl_aktif
-                                        WHERE code = :code
-                                    """),
-                                    {
-                                        "nama": nama_in.strip(),
-                                        "no_hp": nohp_in.strip(),
-                                        "status": status_in,
-                                        "tgl_jual": tanggal_penjualan_in.strftime("%Y-%m-%d"),
-                                        "tgl_aktif": tanggal_aktivasi_in.strftime("%Y-%m-%d"),
-                                        "code": v["code"]
-                                    }
-                                )
-
-                            st.success(f"✅ Voucher {v['code']} berhasil diperbarui.")
-                            st.rerun()
-
-                        except NameError as e:
-                            st.error("❌ Gagal memperbarui data voucher.")
-                            st.code(str(e))
-    except NameError as e:
-        st.error("❌ Gagal memuat data voucher dari database.")
-        st.code(str(e))
-        
-# ---------------------------
-# Page: Histori Transaksi (admin)
-# ---------------------------
-def page_histori():
-    st.header("Histori Transaksi (Admin)")
-    df_tx = list_transactions(limit=5000)
-    if df_tx.empty:
-        st.info("Belum ada transaksi")
-        return
-
-    search_code = st.text_input("Cari kode voucher untuk detail histori")
-    if search_code:
-        df_filtered = df_tx[df_tx["code"].str.contains(search_code.strip().upper(), case=False)]
-        if df_filtered.empty:
-            st.warning(f"Tidak ada transaksi untuk voucher {search_code}")
-        else:
-            st.subheader(f"Detail Voucher: {search_code.strip().upper()}")
-            total_transaksi = len(df_filtered)
-            total_nominal = df_filtered["used_amount"].sum()
-            st.write(f"- Jumlah transaksi: {total_transaksi}")
-            st.write(f"- Total nominal terpakai: Rp {total_nominal:,}")
-            df_display = df_filtered.copy()
-            df_display["tanggal_transaksi"] = pd.to_datetime(df_display["tanggal_transaksi"])
-            df_display = df_display.rename(columns={"code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Tanggal_transaksi","branch":"Cabang","items":"Menu", "tunai":"Tunai"})
-            st.dataframe(df_display[["Kode","Tanggal_transaksi","Jumlah","Cabang","Menu", "Tunai"]], use_container_width=True)
-            st.download_button(f"Download CSV {search_code.strip().upper()}", data=df_to_csv_bytes(df_display), file_name=f"transactions_{search_code.strip().upper()}.csv", mime="text/csv")
-    else:
-        df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
-        df_tx["tunai"] = df_tx["tunai"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
-        df_tx = df_tx.rename(columns={"code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Tanggal_transaksi","branch":"Cabang","items":"Menu", "tunai":"Tunai"})
-        st.dataframe(df_tx[["Kode","Tanggal_transaksi","Jumlah","Cabang","Menu", "Tunai"]], use_container_width=True)
-        st.download_button("Download CSV Transaksi", data=df_to_csv_bytes(df_tx), file_name="transactions.csv", mime="text/csv")
-
-
-# ---------------------------
-# Page: Laporan Warung (admin)
-# ---------------------------
-def page_laporan_global():
-    st.header("Laporan Warung (Admin)")
-
-    # Tabs untuk membagi laporan
-    tab_voucher, tab_transaksi, tab_seller = st.tabs(["Voucher", "Transaksi", "Seller"])
-
-    df_vouchers = list_vouchers(limit=5000)
-    df_tx = list_transactions(limit=100000)
-
-    if "tanggal_transaksi" in df_tx.columns:
-        df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
-
-    # # ===== TAB Voucher =====
-    with tab_voucher:
-        st.subheader("📊 Laporan Voucher")
-    
-        vouchers = pd.read_sql("SELECT * FROM vouchers", engine)
-        transactions = pd.read_sql("SELECT * FROM transactions", engine)
-    
-        # Ensure numeric & date columns
-        vouchers["initial_value"] = vouchers["initial_value"].fillna(0).astype(float)
-        vouchers["balance"] = vouchers["balance"].fillna(0).astype(float)
-        vouchers["tanggal_penjualan"] = pd.to_datetime(vouchers["tanggal_penjualan"], errors="coerce")
-        transactions["tanggal_transaksi"] = pd.to_datetime(transactions.get("tanggal_transaksi"), errors="coerce")
-    
-        # Perhitungan
-        vouchers["used_value"] = vouchers["initial_value"] - vouchers["balance"]
-        summary = {
-            "total_voucher_dijual": len(vouchers),
-            "total_voucher_aktif": len(vouchers[vouchers["status"] == "active"]),
-            "total_voucher_inaktif": len(vouchers[vouchers["status"] != "active"]),
-            "total_voucher_terpakai": len(transactions["code"].unique()),
-            "total_saldo_belum_terpakai": vouchers["balance"].sum(),
-            "total_saldo_sudah_terpakai": vouchers["used_value"].sum(),
-        }
-    
-        # ✅ Summary Cards
-        col1, col2, col3 = st.columns(3)
-        col1.metric("🎫 Total Voucher Dijual", summary["total_voucher_dijual"])
-        col2.metric("✅ Total Voucher Terpakai", summary["total_voucher_terpakai"])
-        col3.metric("💰 Saldo Belum Terpakai", f"Rp {summary['total_saldo_belum_terpakai']:,.0f}")
-    
-        col4, col5, col6 = st.columns(3)
-        col4.metric("💸 Saldo Sudah Terpakai", f"Rp {summary['total_saldo_sudah_terpakai']:,.0f}")
-        col5.metric("📌 Voucher Aktif", summary["total_voucher_aktif"])
-        col6.metric("🚫 Voucher Inaktif", summary["total_voucher_inaktif"])
-    
-        st.markdown("---")
-    
-        # ✅ Grafik Penukaran Voucher per Hari
-        if not transactions.empty:
-            redeem_daily = transactions.groupby(transactions["tanggal_transaksi"].dt.date).size()
-            st.subheader("📈 Penukaran Voucher per Hari")
-            st.line_chart(redeem_daily)
-        else:
-            st.info("Belum ada transaksi penukaran voucher ✅")
-    
-        st.markdown("---")
-    
-        # ✅ Grafik Total Nilai Transaksi
-        if not transactions.empty:
-            total_transaksi = transactions.groupby(transactions["tanggal_transaksi"].dt.date)["used_amount"].sum()
-            st.subheader("📊 Total Nilai Transaksi per Hari")
-            st.bar_chart(total_transaksi)
-        
-        st.markdown("---")
-    
-        # ✅ Pie Chart Status Voucher Breakdown
-        st.subheader("🧩 Status Voucher")
-        status_count = vouchers["status"].value_counts()
-        fig, ax = plt.subplots()
-        ax.pie(status_count, labels=status_count.index, autopct="%1.1f%%")
-        ax.axis("equal")
-        st.pyplot(fig)
-    
-        st.markdown("---")
-
-    
-        # ✅ Export CSV
-        csv = vouchers.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            label="📥 Download Laporan Voucher (CSV)",
-            data=csv,
-            file_name="voucher_report.csv",
-            mime="text/csv",
-        )
-
-    # ===== TAB Transaksi =====
-    with tab_transaksi:
-        st.subheader("📊 Ringkasan Transaksi")
-    
-        # 🔹 Filter tanggal
-        min_date = pd.to_datetime(df_tx["tanggal_transaksi"]).min()
-        max_date = pd.to_datetime(df_tx["tanggal_transaksi"]).max()
-        date_filter = st.date_input("Filter tanggal", [min_date, max_date])
-    
-        df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
-        df_filtered = df_tx[
-            (df_tx["tanggal_transaksi"] >= pd.to_datetime(date_filter[0])) &
-            (df_tx["tanggal_transaksi"] <= pd.to_datetime(date_filter[1]))
-        ]
-    
-        # 🔹 Filter cabang
-        if "branch" in df_filtered.columns:
-            cabang_list = ["Semua"] + sorted(df_filtered["branch"].dropna().unique().tolist())
-            selected_cabang = st.selectbox("Filter Cabang", cabang_list)
-    
-            if selected_cabang != "Semua":
-                df_filtered = df_filtered[df_filtered["branch"] == selected_cabang]
-    
-        # 🔹 Summary
-        total_tx = len(df_filtered)
-        total_tx_nominal = df_filtered["used_amount"].sum()
-        avg_tx = df_filtered["used_amount"].mean() if total_tx > 0 else 0
-    
-        st.write(f"- Total transaksi: {total_tx:,}")
-        st.write(f"- Total nominal digunakan: Rp {int(total_tx_nominal):,}")
-        st.write(f"- Rata-rata nominal transaksi: Rp {int(avg_tx):,}")
-    
-        # =============================== #
-        # 📌 Chart Transaksi per Cabang
-        # =============================== #
-        if "branch" in df_filtered.columns:
-            st.subheader("🏪 Total Transaksi per Cabang")
-            tx_count = df_filtered.groupby("branch")["code"].count().reset_index()
-            tx_count.columns = ["Cabang", "Jumlah Transaksi"]
-            st.bar_chart(tx_count, x="Cabang", y="Jumlah Transaksi")
-    
-            st.subheader("💰 Total Nominal per Cabang")
-            tx_sum = df_filtered.groupby("branch")["used_amount"].sum().reset_index()
-            tx_sum.columns = ["Cabang", "Total Nominal"]
-            st.bar_chart(tx_sum, x="Cabang", y="Total Nominal")
-    
-        # =============================== #
-        # 🏆 Top 5 Voucher Berdasarkan Jumlah Transaksi
-        # =============================== #
-        if "code" in df_filtered.columns:
-            st.subheader("🏆 Top 5 Voucher Paling Sering Digunakan")
-            top_voucher = (
-                df_filtered.groupby("code")["code"].count()
-                .sort_values(ascending=False)
-                .head(5)
-                .reset_index(name="Jumlah Transaksi")
+        # Input pencarian & filter
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            kode_cari = st.text_input("Masukkan kode voucher (opsional)").strip().upper()
+        with col2:
+            filter_status = st.selectbox(
+                "Filter Status",
+                ["semua", "inactive", "active", "habis"]
             )
-            st.table(top_voucher)
-            st.bar_chart(top_voucher, x="code", y="Jumlah Transaksi")
-       
-        # =============================== #
-        # 🍽 Top 5 Menu Terlaris
-        # =============================== #
-        
-        st.subheader("🍽 Top 5 Menu Terlaris")
-        
+    
+        # Ambil data dari database
         try:
-            # Query tergantung cabang yang dipilih
-            if "selected_cabang" not in locals():
-                st.warning("Silakan pilih cabang terlebih dahulu untuk melihat menu terlaris.")
-            else:
-                if selected_cabang == "Semua":
-                    query_menu = """
-                        SELECT nama_item,
-                        COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0) AS "Terjual"
-                        FROM menu_items
-                    """
-                else:
-                    column = "terjual_twsari" if selected_cabang == "Tawangsari" else "terjual_sedati"
-                    query_menu = f"""
-                        SELECT nama_item,
-                        COALESCE({column},0) AS "Terjual"
-                        FROM menu_items
-                    """
-        
-                df_menu = pd.read_sql(query_menu, engine)
-                df_menu = df_menu.rename(columns={"nama_item": "Menu"})
-        
-                if "Terjual" not in df_menu.columns:
-                    st.info("Kolom 'Terjual' tidak ditemukan di hasil query.")
-                elif df_menu.empty:
-                    st.info("Belum ada data penjualan menu.")
-                else:
-                    df_menu = df_menu.sort_values("Terjual", ascending=False).head(5)
-                    chart_menu = alt.Chart(df_menu).mark_bar().encode(
-                        x=alt.X("Menu:N", title="Menu"),
-                        y=alt.Y("Terjual:Q", title="Jumlah Terjual"),
-                        tooltip=["Menu", "Terjual"]
-                    )
-                    st.altair_chart(chart_menu, use_container_width=True)
-        
-        except Exception as e:
-            st.error(f"Gagal memuat data menu terlaris: {e}")
-
-
-    # ===== TAB Seller =====
-    with tab_seller:
-        st.subheader("📊 Analisis Seller")
+            query = "SELECT * FROM vouchers"
+            conditions = []
+            params = {}
     
-        # Pastikan kolom seller tersedia
-        if "seller" not in df_vouchers.columns:
-            st.warning("Kolom 'seller' tidak tersedia di tabel vouchers.")
-            st.stop()
+            # Filter berdasarkan status
+            if filter_status != "semua":
+                conditions.append("status = :status")
+                params["status"] = filter_status
     
-        df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
+            if kode_cari:
+                conditions.append("UPPER(code) LIKE :code")
+                params["code"] = f"%{kode_cari}%"
     
-        # ========================= #
-        # Filter Tanggal
-        # ========================= #
-        min_date = pd.to_datetime(df_vouchers["created_at"]).min()
-        max_date = pd.to_datetime(df_vouchers["created_at"]).max()
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
     
-        date_filter = st.date_input(
-            "📅 Filter Tanggal Voucher Dibuat",
-            [min_date, max_date],
-            key="seller_date_filter"
-        )
+            query += " ORDER BY created_at DESC"
     
-        df_filtered_seller = df_vouchers.copy()
-        df_filtered_seller["created_at"] = pd.to_datetime(df_filtered_seller["created_at"])
-        df_filtered_seller = df_filtered_seller[
-            (df_filtered_seller["created_at"] >= pd.to_datetime(date_filter[0])) &
-            (df_filtered_seller["created_at"] <= pd.to_datetime(date_filter[1]))
-        ]
-    
-        # ========================= #
-        # Filter Cabang
-        # ========================= #
-        # (This assumes vouchers table might have 'branch' column; if not, skip)
-        if "branch" in df_filtered_seller.columns:
-            cabang_list = ["Semua"] + sorted(df_filtered_seller["branch"].dropna().unique().tolist())
-            selected_branch_seller = st.selectbox(
-                "🏬 Filter Cabang Seller",
-                cabang_list,
-                key="seller_branch_filter"
-            )
-    
-            if selected_branch_seller != "Semua":
-                df_filtered_seller = df_filtered_seller[
-                    df_filtered_seller["branch"] == selected_branch_seller
-                ]
-    
-        # ========================= #
-        # Card Metrics
-        # ========================= #
-        
-        # Hanya voucher yang benar-benar dibawa seller
-        df_seller_only = df_filtered_seller[df_filtered_seller["seller"] != "-"]
-        
-        # ✅ Total Seller (count unique seller)
-        total_seller = df_seller_only["seller"].nunique()
-        
-        # ✅ Total Voucher Dibawa Seller (count voucher)
-        total_voucher = len(df_seller_only)
-        
-        st.success(f"👤 Total Seller: **{total_seller}**")
-        st.info(f"🎟️ Total Voucher Dibawa Seller: **{total_voucher:,}**")
-        
-        # Filter voucher aktif oleh seller
-        df_active = df_seller_only[df_seller_only["status"] == "active"]
-    
-        # ========================= #
-        # Voucher Aktif Per Seller
-        # ========================= #
-        st.subheader("✅ Voucher Aktif per Seller")
-    
-        df_active = df_filtered_seller[df_filtered_seller["status"] == "active"]
-    
-        if not df_active.empty:
-            seller_active = (
-                df_active.groupby("seller")
-                .size()
-                .reset_index(name="Voucher Aktif")
-                .sort_values(by="Voucher Aktif", ascending=False)
-            )
-    
-            st.table(seller_active.rename(columns={"seller": "Seller"}))
-            st.bar_chart(seller_active, x="seller", y="Voucher Aktif")
-    
-        else:
-            st.info("Tidak ada voucher aktif.")
-
-        # ========================= #
-        # 🎟️ Total Voucher Dibawa per Seller
-        # ========================= #
-        st.subheader("🎟️ Total Voucher Dibawa per Seller")
-        
-        if not df_seller_only.empty:
-            voucher_by_seller = (
-                df_seller_only.groupby("seller")
-                .size()
-                .reset_index(name="Total Voucher Dibawa")
-                .sort_values(by="Total Voucher Dibawa", ascending=False)
-            )
-        
-            st.table(voucher_by_seller.rename(columns={"seller": "Seller"}))
-        
-            st.bar_chart(voucher_by_seller, x="seller", y="Total Voucher Dibawa")
-        
-        else:
-            st.info("Belum ada seller yang membawa voucher.")
-
-
-# ---------------------------
-# Page: Seller Activation (seller-only)
-# ---------------------------
-def page_seller_activation():
-    st.header("Aktivasi Voucher (Seller)")
-
-    st.info(
-        "Masukkan Nama Seller (sesuai dengan data seller pada voucher), Nama Pembeli, No HP, dan Kode Voucher.\n"
-        "Jika voucher belum diassign seller oleh admin → aktivasi ditolak."
-    )
-
-    with st.form(key="seller_activation_form"):
-        kode = st.text_input("Kode Voucher").strip().upper()
-        seller_name_input = st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)").strip()
-        buyer_name_input = st.text_input("Nama Pembeli").strip()
-        buyer_phone_input = st.text_input("No HP Pembeli").strip()
-        tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
-        submit = st.form_submit_button("Simpan dan Aktifkan")
-        reset = st.form_submit_button("Kembali")
-
-    if submit:
-        if not kode:
-            st.error("Masukkan kode voucher.")
-            return
-
-        if not seller_name_input:
-            st.error("Masukkan nama seller (sesuai yang terdaftar pada voucher).")
-            return
-
-        try:
-            with engine.begin() as conn:
-                # Cek apakah voucher ada dan seller cocok
-                result = conn.execute(
-                    text("""
-                        SELECT seller, status FROM vouchers WHERE code = :code
-                    """),
-                    {"code": kode}
-                ).fetchone()
-
-                if not result:
-                    st.error("Kode voucher tidak ditemukan.")
-                    return
-
-                db_seller, db_status = result
-
-                # Jika voucher belum diassign seller oleh admin
-                if not db_seller or db_seller.strip() == "":
-                    st.error("Voucher belum diassign ke seller mana pun. Aktivasi ditolak.")
-                    return
-
-                # Jika seller input tidak cocok dengan seller di database
-                if db_seller.strip().lower() != seller_name_input.lower():
-                    st.error(f"Nama seller tidak sesuai. Voucher ini terdaftar untuk seller: **{db_seller}**.")
-                    return
-
-                # Jika sudah aktif sebelumnya
-                if db_status and db_status.lower() == "active":
-                    st.warning("Voucher ini sudah diaktivasi sebelumnya.")
-                    return
-
-                # Update data voucher
-                conn.execute(
-                    text("""
-                        UPDATE vouchers
-                        SET nama = :nama,
-                            no_hp = :no_hp,
-                            tanggal_aktivasi = :tgl,
-                            status = 'Active'
-                        WHERE code = :code
-                    """),
-                    {
-                        "nama": buyer_name_input,
-                        "no_hp": buyer_phone_input,
-                        "tgl": tanggal_aktivasi,
-                        "code": kode,
-                    }
-                )
-
-            st.success(f"✅ Voucher {kode} berhasil diaktivasi untuk pembeli {buyer_name_input}.")
-
-        except Exception as e:
-            st.error("❌ Terjadi kesalahan saat mengupdate data voucher.")
-            st.code(str(e))
-
-    st.markdown("---")
-    st.info(
-        "Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). "
-        "Jika perlu koreksi, minta admin untuk ubah data."
-    )
-
-    # Bagian lookup cepat
-    st.subheader("Cek Status Voucher (Lookup cepat)")
-    kode_lookup = st.text_input("Masukkan kode voucher untuk cek status (opsional)").strip().upper()
-    if kode_lookup:
-        try:
             with engine.connect() as conn:
-                v = conn.execute(
-                    text("""
-                        SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan, tanggal_aktivasi
-                        FROM vouchers
-                        WHERE code = :code
-                    """),
-                    {"code": kode_lookup}
-                ).fetchone()
-
-            if not v:
-                st.error("Voucher tidak ditemukan.")
-            else:
-                (
-                    code,
-                    initial_value,
-                    balance,
-                    created_at,
-                    nama,
-                    no_hp,
-                    status,
-                    seller_db,
-                    tanggal_penjualan,
-                    tanggal_aktivasi_db,
-                ) = v
-
-                st.write(f"- **Kode:** {code}")
-                st.write(f"- **Seller (di DB):** {seller_db or '-'}")
-                st.write(f"- **Status:** {status or 'inactive'}")
-                st.write(f"- **Nama pembeli:** {nama or '-'}")
-                st.write(f"- **No HP pembeli:** {no_hp or '-'}")
-                st.write(f"- **Tgl penjualan:** {tanggal_penjualan or '-'}")
-                st.write(f"- **Tgl aktivasi:** {tanggal_aktivasi_db or '-'}")
-
-        except Exception as e:
-            st.error("❌ Gagal melakukan lookup voucher.")
+                df_voucher = pd.read_sql(text(query), conn, params=params)
+    
+            if df_voucher.empty:
+                st.info("Tidak ada voucher sesuai filter/pencarian.")
+                st.stop()
+    
+            # Format tampilan tabel
+            df_voucher_display = df_voucher.copy()
+            df_voucher_display["initial_value"] = df_voucher_display["initial_value"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
+            df_voucher_display["balance"] = df_voucher_display["balance"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
+            df_voucher_display["tunai"] = df_voucher_display["tunai"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
+    
+            if "tanggal_penjualan" not in df_voucher_display.columns:
+                df_voucher_display["tanggal_penjualan"] = None
+            if "tanggal_aktivasi" not in df_voucher_display.columns:
+                df_voucher_display["tanggal_aktivasi"] = None
+    
+            st.dataframe(
+                df_voucher_display[
+                    ["code", "nama", "no_hp", "status", "seller", "initial_value", "balance", "tanggal_penjualan", "tanggal_aktivasi", "tunai"]
+                ],
+                use_container_width=True
+            )
+    
+            # === Jika ada kode voucher yang dicari spesifik ===
+            if kode_cari:
+                matched = df_voucher[df_voucher["code"].str.upper() == kode_cari]
+                if matched.empty:
+                    st.warning("Kode voucher tidak ditemukan di hasil filter.")
+                else:
+                    v = matched.iloc[0]
+                    st.markdown("---")
+                    st.subheader(f"✏️ Edit Voucher: {v['code']}")
+    
+                    with st.form(key=f"edit_{v['code']}"):
+                        nama_in = st.text_input("Nama Pembeli", value=v["nama"] or "")
+                        nohp_in = st.text_input("No HP Pembeli", value=v["no_hp"] or "")
+                        status_in = st.selectbox(
+                            "Status",
+                            ["inactive", "active", "soldout"],
+                            index=["inactive", "active", "soldout"].index(v["status"] if v["status"] in ["inactive", "active", "soldout"] else "inactive")
+                        )
+    
+                        tanggal_penjualan_in = st.date_input(
+                            "Tanggal Penjualan",
+                            value=v["tanggal_penjualan"] if isinstance(v["tanggal_penjualan"], (datetime, date)) else date.today()
+                        )
+    
+                        tanggal_aktivasi_in = st.date_input(
+                            "Tanggal Aktivasi",
+                            value=v["tanggal_aktivasi"] if isinstance(v["tanggal_aktivasi"], (datetime, date)) else date.today()
+                        )
+    
+                        submit_edit = st.form_submit_button("💾 Simpan Perubahan")
+    
+                        if submit_edit:
+                            try:
+                                with engine.begin() as conn2:
+                                    conn2.execute(
+                                        text("""
+                                            UPDATE vouchers
+                                            SET nama = :nama,
+                                                no_hp = :no_hp,
+                                                status = :status,
+                                                tanggal_penjualan = :tgl_jual,
+                                                tanggal_aktivasi = :tgl_aktif
+                                            WHERE code = :code
+                                        """),
+                                        {
+                                            "nama": nama_in.strip(),
+                                            "no_hp": nohp_in.strip(),
+                                            "status": status_in,
+                                            "tgl_jual": tanggal_penjualan_in.strftime("%Y-%m-%d"),
+                                            "tgl_aktif": tanggal_aktivasi_in.strftime("%Y-%m-%d"),
+                                            "code": v["code"]
+                                        }
+                                    )
+    
+                                st.success(f"✅ Voucher {v['code']} berhasil diperbarui.")
+                                st.rerun()
+    
+                            except NameError as e:
+                                st.error("❌ Gagal memperbarui data voucher.")
+                                st.code(str(e))
+        except NameError as e:
+            st.error("❌ Gagal memuat data voucher dari database.")
             st.code(str(e))
+        
+    with tab_histori:
+        st.header("Histori Transaksi (Admin)")
+        df_tx = list_transactions(limit=5000)
+        if df_tx.empty:
+            st.info("Belum ada transaksi")
+            return
+    
+        search_code = st.text_input("Cari kode voucher untuk detail histori")
+        if search_code:
+            df_filtered = df_tx[df_tx["code"].str.contains(search_code.strip().upper(), case=False)]
+            if df_filtered.empty:
+                st.warning(f"Tidak ada transaksi untuk voucher {search_code}")
+            else:
+                st.subheader(f"Detail Voucher: {search_code.strip().upper()}")
+                total_transaksi = len(df_filtered)
+                total_nominal = df_filtered["used_amount"].sum()
+                st.write(f"- Jumlah transaksi: {total_transaksi}")
+                st.write(f"- Total nominal terpakai: Rp {total_nominal:,}")
+                df_display = df_filtered.copy()
+                df_display["tanggal_transaksi"] = pd.to_datetime(df_display["tanggal_transaksi"])
+                df_display = df_display.rename(columns={"code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Tanggal_transaksi","branch":"Cabang","items":"Menu", "tunai":"Tunai"})
+                st.dataframe(df_display[["Kode","Tanggal_transaksi","Jumlah","Cabang","Menu", "Tunai"]], use_container_width=True)
+                st.download_button(f"Download CSV {search_code.strip().upper()}", data=df_to_csv_bytes(df_display), file_name=f"transactions_{search_code.strip().upper()}.csv", mime="text/csv")
+        else:
+            df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
+            df_tx["tunai"] = df_tx["tunai"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
+            df_tx = df_tx.rename(columns={"code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Tanggal_transaksi","branch":"Cabang","items":"Menu", "tunai":"Tunai"})
+            st.dataframe(df_tx[["Kode","Tanggal_transaksi","Jumlah","Cabang","Menu", "Tunai"]], use_container_width=True)
+            st.download_button("Download CSV Transaksi", data=df_to_csv_bytes(df_tx), file_name="transactions.csv", mime="text/csv")
+    
+    with tab_laporan:
+        st.header("Laporan Warung (Admin)")
+    
+        # Tabs untuk membagi laporan
+        tab_voucher, tab_transaksi, tab_seller = st.tabs(["Voucher", "Transaksi", "Seller"])
+    
+        df_vouchers = list_vouchers(limit=5000)
+        df_tx = list_transactions(limit=100000)
+    
+        if "tanggal_transaksi" in df_tx.columns:
+            df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
+    
+        # # ===== TAB Voucher =====
+        with tab_voucher:
+            st.subheader("📊 Laporan Voucher")
+        
+            vouchers = pd.read_sql("SELECT * FROM vouchers", engine)
+            transactions = pd.read_sql("SELECT * FROM transactions", engine)
+        
+            # Ensure numeric & date columns
+            vouchers["initial_value"] = vouchers["initial_value"].fillna(0).astype(float)
+            vouchers["balance"] = vouchers["balance"].fillna(0).astype(float)
+            vouchers["tanggal_penjualan"] = pd.to_datetime(vouchers["tanggal_penjualan"], errors="coerce")
+            transactions["tanggal_transaksi"] = pd.to_datetime(transactions.get("tanggal_transaksi"), errors="coerce")
+        
+            # Perhitungan
+            vouchers["used_value"] = vouchers["initial_value"] - vouchers["balance"]
+            summary = {
+                "total_voucher_dijual": len(vouchers),
+                "total_voucher_aktif": len(vouchers[vouchers["status"] == "active"]),
+                "total_voucher_inaktif": len(vouchers[vouchers["status"] != "active"]),
+                "total_voucher_terpakai": len(transactions["code"].unique()),
+                "total_saldo_belum_terpakai": vouchers["balance"].sum(),
+                "total_saldo_sudah_terpakai": vouchers["used_value"].sum(),
+            }
+        
+            # ✅ Summary Cards
+            col1, col2, col3 = st.columns(3)
+            col1.metric("🎫 Total Voucher Dijual", summary["total_voucher_dijual"])
+            col2.metric("✅ Total Voucher Terpakai", summary["total_voucher_terpakai"])
+            col3.metric("💰 Saldo Belum Terpakai", f"Rp {summary['total_saldo_belum_terpakai']:,.0f}")
+        
+            col4, col5, col6 = st.columns(3)
+            col4.metric("💸 Saldo Sudah Terpakai", f"Rp {summary['total_saldo_sudah_terpakai']:,.0f}")
+            col5.metric("📌 Voucher Aktif", summary["total_voucher_aktif"])
+            col6.metric("🚫 Voucher Inaktif", summary["total_voucher_inaktif"])
+        
+            st.markdown("---")
+        
+            # ✅ Grafik Penukaran Voucher per Hari
+            if not transactions.empty:
+                redeem_daily = transactions.groupby(transactions["tanggal_transaksi"].dt.date).size()
+                st.subheader("📈 Penukaran Voucher per Hari")
+                st.line_chart(redeem_daily)
+            else:
+                st.info("Belum ada transaksi penukaran voucher ✅")
+        
+            st.markdown("---")
+        
+            # ✅ Grafik Total Nilai Transaksi
+            if not transactions.empty:
+                total_transaksi = transactions.groupby(transactions["tanggal_transaksi"].dt.date)["used_amount"].sum()
+                st.subheader("📊 Total Nilai Transaksi per Hari")
+                st.bar_chart(total_transaksi)
+            
+            st.markdown("---")
+        
+            # ✅ Pie Chart Status Voucher Breakdown
+            st.subheader("🧩 Status Voucher")
+            status_count = vouchers["status"].value_counts()
+            fig, ax = plt.subplots()
+            ax.pie(status_count, labels=status_count.index, autopct="%1.1f%%")
+            ax.axis("equal")
+            st.pyplot(fig)
+        
+            st.markdown("---")
+    
+        
+            # ✅ Export CSV
+            csv = vouchers.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="📥 Download Laporan Voucher (CSV)",
+                data=csv,
+                file_name="voucher_report.csv",
+                mime="text/csv",
+            )
+    
+        # ===== TAB Transaksi =====
+        with tab_transaksi:
+            st.subheader("📊 Ringkasan Transaksi")
+        
+            # 🔹 Filter tanggal
+            min_date = pd.to_datetime(df_tx["tanggal_transaksi"]).min()
+            max_date = pd.to_datetime(df_tx["tanggal_transaksi"]).max()
+            date_filter = st.date_input("Filter tanggal", [min_date, max_date])
+        
+            df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
+            df_filtered = df_tx[
+                (df_tx["tanggal_transaksi"] >= pd.to_datetime(date_filter[0])) &
+                (df_tx["tanggal_transaksi"] <= pd.to_datetime(date_filter[1]))
+            ]
+        
+            # 🔹 Filter cabang
+            if "branch" in df_filtered.columns:
+                cabang_list = ["Semua"] + sorted(df_filtered["branch"].dropna().unique().tolist())
+                selected_cabang = st.selectbox("Filter Cabang", cabang_list)
+        
+                if selected_cabang != "Semua":
+                    df_filtered = df_filtered[df_filtered["branch"] == selected_cabang]
+        
+            # 🔹 Summary
+            total_tx = len(df_filtered)
+            total_tx_nominal = df_filtered["used_amount"].sum()
+            avg_tx = df_filtered["used_amount"].mean() if total_tx > 0 else 0
+        
+            st.write(f"- Total transaksi: {total_tx:,}")
+            st.write(f"- Total nominal digunakan: Rp {int(total_tx_nominal):,}")
+            st.write(f"- Rata-rata nominal transaksi: Rp {int(avg_tx):,}")
+        
+            # =============================== #
+            # 📌 Chart Transaksi per Cabang
+            # =============================== #
+            if "branch" in df_filtered.columns:
+                st.subheader("🏪 Total Transaksi per Cabang")
+                tx_count = df_filtered.groupby("branch")["code"].count().reset_index()
+                tx_count.columns = ["Cabang", "Jumlah Transaksi"]
+                st.bar_chart(tx_count, x="Cabang", y="Jumlah Transaksi")
+        
+                st.subheader("💰 Total Nominal per Cabang")
+                tx_sum = df_filtered.groupby("branch")["used_amount"].sum().reset_index()
+                tx_sum.columns = ["Cabang", "Total Nominal"]
+                st.bar_chart(tx_sum, x="Cabang", y="Total Nominal")
+        
+            # =============================== #
+            # 🏆 Top 5 Voucher Berdasarkan Jumlah Transaksi
+            # =============================== #
+            if "code" in df_filtered.columns:
+                st.subheader("🏆 Top 5 Voucher Paling Sering Digunakan")
+                top_voucher = (
+                    df_filtered.groupby("code")["code"].count()
+                    .sort_values(ascending=False)
+                    .head(5)
+                    .reset_index(name="Jumlah Transaksi")
+                )
+                st.table(top_voucher)
+                st.bar_chart(top_voucher, x="code", y="Jumlah Transaksi")
+           
+            # =============================== #
+            # 🍽 Top 5 Menu Terlaris
+            # =============================== #
+            
+            st.subheader("🍽 Top 5 Menu Terlaris")
+            
+            try:
+                # Query tergantung cabang yang dipilih
+                if "selected_cabang" not in locals():
+                    st.warning("Silakan pilih cabang terlebih dahulu untuk melihat menu terlaris.")
+                else:
+                    if selected_cabang == "Semua":
+                        query_menu = """
+                            SELECT nama_item,
+                            COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0) AS "Terjual"
+                            FROM menu_items
+                        """
+                    else:
+                        column = "terjual_twsari" if selected_cabang == "Tawangsari" else "terjual_sedati"
+                        query_menu = f"""
+                            SELECT nama_item,
+                            COALESCE({column},0) AS "Terjual"
+                            FROM menu_items
+                        """
+            
+                    df_menu = pd.read_sql(query_menu, engine)
+                    df_menu = df_menu.rename(columns={"nama_item": "Menu"})
+            
+                    if "Terjual" not in df_menu.columns:
+                        st.info("Kolom 'Terjual' tidak ditemukan di hasil query.")
+                    elif df_menu.empty:
+                        st.info("Belum ada data penjualan menu.")
+                    else:
+                        df_menu = df_menu.sort_values("Terjual", ascending=False).head(5)
+                        chart_menu = alt.Chart(df_menu).mark_bar().encode(
+                            x=alt.X("Menu:N", title="Menu"),
+                            y=alt.Y("Terjual:Q", title="Jumlah Terjual"),
+                            tooltip=["Menu", "Terjual"]
+                        )
+                        st.altair_chart(chart_menu, use_container_width=True)
+            
+            except Exception as e:
+                st.error(f"Gagal memuat data menu terlaris: {e}")
+    
+    
+        # ===== TAB Seller =====
+        with tab_seller:
+            st.subheader("📊 Analisis Seller")
+        
+            # Pastikan kolom seller tersedia
+            if "seller" not in df_vouchers.columns:
+                st.warning("Kolom 'seller' tidak tersedia di tabel vouchers.")
+                st.stop()
+        
+            df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
+        
+            # ========================= #
+            # Filter Tanggal
+            # ========================= #
+            min_date = pd.to_datetime(df_vouchers["created_at"]).min()
+            max_date = pd.to_datetime(df_vouchers["created_at"]).max()
+        
+            date_filter = st.date_input(
+                "📅 Filter Tanggal Voucher Dibuat",
+                [min_date, max_date],
+                key="seller_date_filter"
+            )
+        
+            df_filtered_seller = df_vouchers.copy()
+            df_filtered_seller["created_at"] = pd.to_datetime(df_filtered_seller["created_at"])
+            df_filtered_seller = df_filtered_seller[
+                (df_filtered_seller["created_at"] >= pd.to_datetime(date_filter[0])) &
+                (df_filtered_seller["created_at"] <= pd.to_datetime(date_filter[1]))
+            ]
+        
+            # ========================= #
+            # Filter Cabang
+            # ========================= #
+            # (This assumes vouchers table might have 'branch' column; if not, skip)
+            if "branch" in df_filtered_seller.columns:
+                cabang_list = ["Semua"] + sorted(df_filtered_seller["branch"].dropna().unique().tolist())
+                selected_branch_seller = st.selectbox(
+                    "🏬 Filter Cabang Seller",
+                    cabang_list,
+                    key="seller_branch_filter"
+                )
+        
+                if selected_branch_seller != "Semua":
+                    df_filtered_seller = df_filtered_seller[
+                        df_filtered_seller["branch"] == selected_branch_seller
+                    ]
+        
+            # ========================= #
+            # Card Metrics
+            # ========================= #
+            
+            # Hanya voucher yang benar-benar dibawa seller
+            df_seller_only = df_filtered_seller[df_filtered_seller["seller"] != "-"]
+            
+            # ✅ Total Seller (count unique seller)
+            total_seller = df_seller_only["seller"].nunique()
+            
+            # ✅ Total Voucher Dibawa Seller (count voucher)
+            total_voucher = len(df_seller_only)
+            
+            st.success(f"👤 Total Seller: **{total_seller}**")
+            st.info(f"🎟️ Total Voucher Dibawa Seller: **{total_voucher:,}**")
+            
+            # Filter voucher aktif oleh seller
+            df_active = df_seller_only[df_seller_only["status"] == "active"]
+        
+            # ========================= #
+            # Voucher Aktif Per Seller
+            # ========================= #
+            st.subheader("✅ Voucher Aktif per Seller")
+        
+            df_active = df_filtered_seller[df_filtered_seller["status"] == "active"]
+        
+            if not df_active.empty:
+                seller_active = (
+                    df_active.groupby("seller")
+                    .size()
+                    .reset_index(name="Voucher Aktif")
+                    .sort_values(by="Voucher Aktif", ascending=False)
+                )
+        
+                st.table(seller_active.rename(columns={"seller": "Seller"}))
+                st.bar_chart(seller_active, x="seller", y="Voucher Aktif")
+        
+            else:
+                st.info("Tidak ada voucher aktif.")
+    
+            # ========================= #
+            # 🎟️ Total Voucher Dibawa per Seller
+            # ========================= #
+            st.subheader("🎟️ Total Voucher Dibawa per Seller")
+            
+            if not df_seller_only.empty:
+                voucher_by_seller = (
+                    df_seller_only.groupby("seller")
+                    .size()
+                    .reset_index(name="Total Voucher Dibawa")
+                    .sort_values(by="Total Voucher Dibawa", ascending=False)
+                )
+            
+                st.table(voucher_by_seller.rename(columns={"seller": "Seller"}))
+            
+                st.bar_chart(voucher_by_seller, x="seller", y="Total Voucher Dibawa")
+            
+            else:
+                st.info("Belum ada seller yang membawa voucher.")
 
-
-# ---------------------------
-# Page: Seller (admin-only assign seller) — keep an admin-only page to assign seller to voucher
-# ---------------------------
-def page_seller_admin_assign():
-    tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Voucher", "Penerimaan Seller"])
+    with tab_edit_seller:
+        tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Voucher", "Penerimaan Seller"])
 
     with tab_kepemilikan:
         st.header("🎯 Assign Voucher ke Seller")
@@ -1549,6 +1407,325 @@ def page_seller_admin_assign():
         except Exception as e:
             st.error("❌ Gagal mengambil data seller dari database.")
             st.code(str(e))
+            
+# ---------------------------
+# Page: Seller Activation (seller-only)
+# ---------------------------
+def page_seller_activation():
+    st.header("Aktivasi Voucher (Seller)")
+
+    st.info(
+        "Masukkan Nama Seller (sesuai dengan data seller pada voucher), Nama Pembeli, No HP, dan Kode Voucher.\n"
+        "Jika voucher belum diassign seller oleh admin → aktivasi ditolak."
+    )
+
+    with st.form(key="seller_activation_form"):
+        kode = st.text_input("Kode Voucher").strip().upper()
+        seller_name_input = st.text_input("Nama Seller (isi sesuai yang tercantum pada voucher)").strip()
+        buyer_name_input = st.text_input("Nama Pembeli").strip()
+        buyer_phone_input = st.text_input("No HP Pembeli").strip()
+        tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
+        submit = st.form_submit_button("Simpan dan Aktifkan")
+        reset = st.form_submit_button("Kembali")
+
+    if submit:
+        if not kode:
+            st.error("Masukkan kode voucher.")
+            return
+
+        if not seller_name_input:
+            st.error("Masukkan nama seller (sesuai yang terdaftar pada voucher).")
+            return
+
+        try:
+            with engine.begin() as conn:
+                # Cek apakah voucher ada dan seller cocok
+                result = conn.execute(
+                    text("""
+                        SELECT seller, status FROM vouchers WHERE code = :code
+                    """),
+                    {"code": kode}
+                ).fetchone()
+
+                if not result:
+                    st.error("Kode voucher tidak ditemukan.")
+                    return
+
+                db_seller, db_status = result
+
+                # Jika voucher belum diassign seller oleh admin
+                if not db_seller or db_seller.strip() == "":
+                    st.error("Voucher belum diassign ke seller mana pun. Aktivasi ditolak.")
+                    return
+
+                # Jika seller input tidak cocok dengan seller di database
+                if db_seller.strip().lower() != seller_name_input.lower():
+                    st.error(f"Nama seller tidak sesuai. Voucher ini terdaftar untuk seller: **{db_seller}**.")
+                    return
+
+                # Jika sudah aktif sebelumnya
+                if db_status and db_status.lower() == "active":
+                    st.warning("Voucher ini sudah diaktivasi sebelumnya.")
+                    return
+
+                # Update data voucher
+                conn.execute(
+                    text("""
+                        UPDATE vouchers
+                        SET nama = :nama,
+                            no_hp = :no_hp,
+                            tanggal_aktivasi = :tgl,
+                            status = 'Active'
+                        WHERE code = :code
+                    """),
+                    {
+                        "nama": buyer_name_input,
+                        "no_hp": buyer_phone_input,
+                        "tgl": tanggal_aktivasi,
+                        "code": kode,
+                    }
+                )
+
+            st.success(f"✅ Voucher {kode} berhasil diaktivasi untuk pembeli {buyer_name_input}.")
+
+        except Exception as e:
+            st.error("❌ Terjadi kesalahan saat mengupdate data voucher.")
+            st.code(str(e))
+
+    st.markdown("---")
+    st.info(
+        "Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). "
+        "Jika perlu koreksi, minta admin untuk ubah data."
+    )
+
+    # Bagian lookup cepat
+    st.subheader("Cek Status Voucher (Lookup cepat)")
+    kode_lookup = st.text_input("Masukkan kode voucher untuk cek status (opsional)").strip().upper()
+    if kode_lookup:
+        try:
+            with engine.connect() as conn:
+                v = conn.execute(
+                    text("""
+                        SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan, tanggal_aktivasi
+                        FROM vouchers
+                        WHERE code = :code
+                    """),
+                    {"code": kode_lookup}
+                ).fetchone()
+
+            if not v:
+                st.error("Voucher tidak ditemukan.")
+            else:
+                (
+                    code,
+                    initial_value,
+                    balance,
+                    created_at,
+                    nama,
+                    no_hp,
+                    status,
+                    seller_db,
+                    tanggal_penjualan,
+                    tanggal_aktivasi_db,
+                ) = v
+
+                st.write(f"- **Kode:** {code}")
+                st.write(f"- **Seller (di DB):** {seller_db or '-'}")
+                st.write(f"- **Status:** {status or 'inactive'}")
+                st.write(f"- **Nama pembeli:** {nama or '-'}")
+                st.write(f"- **No HP pembeli:** {no_hp or '-'}")
+                st.write(f"- **Tgl penjualan:** {tanggal_penjualan or '-'}")
+                st.write(f"- **Tgl aktivasi:** {tanggal_aktivasi_db or '-'}")
+
+        except Exception as e:
+            st.error("❌ Gagal melakukan lookup voucher.")
+            st.code(str(e))
+
+
+# ---------------------------
+# Page: Seller (admin-only assign seller) — keep an admin-only page to assign seller to voucher
+# ---------------------------
+# def page_seller_admin_assign():
+    # tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Voucher", "Penerimaan Seller"])
+
+    # with tab_kepemilikan:
+    #     st.header("🎯 Assign Voucher ke Seller")
+
+    #     try:
+    #         with engine.connect() as conn:
+    #             df_seller = pd.read_sql("""
+    #                 SELECT * FROM seller
+    #                 WHERE status = 'Accepted'
+    #                 ORDER BY nama_seller ASC
+    #             """, conn)
+
+    #         if df_seller.empty:
+    #             st.info("Belum ada seller yang berstatus 'Accepted'.")
+    #         else:
+    #             selected_seller = st.selectbox(
+    #                 "Pilih Seller untuk diberikan voucher",
+    #                 df_seller["nama_seller"].tolist()
+    #             )
+
+    #             selected_row = df_seller[df_seller["nama_seller"] == selected_seller].iloc[0]
+    #             seller_hp = selected_row["no_hp"]
+
+    #             # Ambil voucher yang dimiliki seller
+    #             with engine.connect() as conn:
+    #                 df_current_voucher = pd.read_sql(
+    #                     text("""
+    #                         SELECT code, initial_value, balance, status, tanggal_penjualan
+    #                         FROM vouchers
+    #                         WHERE seller = :seller
+    #                         ORDER BY tanggal_penjualan DESC NULLS LAST
+    #                     """),
+    #                     conn,
+    #                     params={"seller": selected_seller}
+    #                 )
+
+    #             st.markdown("---")
+    #             st.subheader("📋 Informasi Seller")
+    #             st.write(f"**Nama:** {selected_seller}")
+    #             st.write(f"**No HP:** {seller_hp}")
+    #             st.write(f"**Jumlah Voucher yang Dimiliki:** {len(df_current_voucher)}")
+
+    #             if not df_current_voucher.empty:
+    #                 st.markdown("**Voucher yang Saat Ini Dimiliki:**")
+    #                 df_sorted = df_current_voucher.sort_values(
+    #                     by=["status", "tanggal_penjualan"],
+    #                     ascending=[True, False]
+    #                 )
+                
+    #                 st.dataframe(
+    #                     df_sorted[["code", "tanggal_penjualan", "status"]],
+    #                     use_container_width=True
+    #                 )
+    #             else:
+    #                 st.info("Seller ini belum memiliki voucher apa pun.")
+
+    #             # Ambil voucher yang belum diassign
+    #             with engine.connect() as conn:
+    #                 df_voucher = pd.read_sql("""
+    #                     SELECT code, initial_value, balance, status
+    #                     FROM vouchers
+    #                     WHERE seller IS NULL OR TRIM(seller) = ''
+    #                     ORDER BY created_at ASC
+    #                 """, conn)
+
+    #             st.markdown("---")
+    #             st.subheader(f"🧾 Pilih Voucher Baru untuk {selected_seller}")
+
+    #             if df_voucher.empty:
+    #                 st.info("Semua voucher sudah diassign ke seller.")
+    #             else:
+    #                 selected_vouchers = st.multiselect(
+    #                     "Pilih kode voucher yang akan diberikan",
+    #                     df_voucher["code"].tolist()
+    #                 )
+
+    #                 if st.button("💾 Simpan Assign Voucher") and selected_vouchers:
+    #                     try:
+    #                         today = date.today()
+
+    #                         with engine.begin() as conn2:
+    #                             for code in selected_vouchers:
+    #                                 conn2.execute(
+    #                                     text("""
+    #                                         UPDATE vouchers
+    #                                         SET seller = :seller,
+    #                                             tanggal_penjualan = :tgl
+    #                                         WHERE code = :code
+    #                                     """),
+    #                                     {
+    #                                         "seller": selected_seller,
+    #                                         "tgl": today,
+    #                                         "code": code
+    #                                     }
+    #                                 )
+
+    #                         with engine.connect() as conn3:
+    #                             df_changed = pd.read_sql(
+    #                                 text("""
+    #                                     SELECT code, seller, tanggal_penjualan
+    #                                     FROM vouchers
+    #                                     WHERE code IN :codes
+    #                                 """),
+    #                                 conn3,
+    #                                 params={"codes": tuple(selected_vouchers)}
+    #                             )
+
+    #                         st.success(f"✅ {len(selected_vouchers)} voucher berhasil diassign ke seller {selected_seller}.")
+    #                         st.markdown("### 🔍 Voucher yang baru saja diubah:")
+    #                         st.dataframe(df_changed, use_container_width=True)
+
+    #                     except Exception as e:
+    #                         st.error("❌ Gagal menyimpan assign voucher ke database.")
+    #                         st.code(str(e))
+
+    #     except Exception as e:
+    #         st.error("❌ Gagal memuat data seller atau voucher.")
+    #         st.code(str(e))
+
+    # with tab_acc:
+    #     st.header("🧾 Daftar Calon Seller")
+    #     st.write("Berikut adalah daftar seller yang mendaftar. Klik 'Accept' untuk menyetujui pendaftaran.")
+
+    #     try:
+    #         with engine.connect() as conn:
+    #             df_seller_pending = pd.read_sql("""
+    #                 SELECT * FROM seller
+    #                 WHERE status = 'not accepted'
+    #                 ORDER BY nama_seller ASC
+    #             """, conn)
+    
+    #         if df_seller_pending.empty:
+    #             st.info("Belum ada data seller yang mendaftar.")
+    #         else:
+    #             for idx, row in df_seller_pending.iterrows():
+    #                 col1, col2, col3, col4 = st.columns([3, 3, 2, 2])
+    #                 with col1:
+    #                     st.write(f"**Nama:** {row['nama_seller']}")
+    #                     st.write(f"No HP: {row['no_hp']}")
+    #                 with col2:
+    #                     st.write(f"Status: {row['status'] or '-'}")
+    #                 with col3:
+    #                     if st.button("✅ Accept", key=f"accept_{row['nama_seller']}_{idx}"):
+    #                         try:
+    #                             with engine.begin() as conn2:
+    #                                 conn2.execute(
+    #                                     text("""
+    #                                         UPDATE seller
+    #                                         SET status = 'Accepted'
+    #                                         WHERE nama_seller = :nama_seller
+    #                                           AND no_hp = :no_hp
+    #                                     """),
+    #                                     {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
+    #                                 )
+    #                             st.success(f"Seller {row['nama_seller']} diterima ✅")
+    #                             st.rerun()
+    #                         except Exception as e:
+    #                             st.error(f"Gagal update status seller: {e}")
+    
+    #                 with col4:
+    #                     if st.button("🗑️ Hapus", key=f"hapus_{row['nama_seller']}_{idx}"):
+    #                         try:
+    #                             with engine.begin() as conn3:
+    #                                 conn3.execute(
+    #                                     text("""
+    #                                         DELETE FROM seller
+    #                                         WHERE nama_seller = :nama_seller
+    #                                           AND no_hp = :no_hp
+    #                                     """),
+    #                                     {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
+    #                                 )
+    #                             st.warning(f"Data seller {row['nama_seller']} telah dihapus ❌")
+    #                             st.rerun()
+    #                         except Exception as e:
+    #                             st.error(f"Gagal menghapus data seller: {e}")
+    
+    #     except Exception as e:
+    #         st.error("❌ Gagal mengambil data seller dari database.")
+    #         st.code(str(e))
         
 # ---------------------------
 # Init app
@@ -1560,16 +1737,17 @@ st.title("🎫 Kupon Pawon Sappitoe")
 
 # Jika admin login → langsung tampilkan page admin
 if st.session_state.admin_logged_in:
+    page_admin()
     # Router admin
-    if st.session_state.page == "Edit Voucher":
-        page_daftar_voucher()
-    elif st.session_state.page == "Histori Transaksi":
-        page_histori()
-    elif st.session_state.page == "Laporan Warung":
-        page_laporan_global()
-    elif st.session_state.page == "Kelola Seller":
-        page_seller_admin_assign()
-    st.stop()   # ⛔ Hentikan render tab public
+    # if st.session_state.page == "Edit Voucher":
+    #     page_daftar_voucher()
+    # elif st.session_state.page == "Histori Transaksi":
+    #     page_histori()
+    # elif st.session_state.page == "Laporan Warung":
+    #     page_laporan_global()
+    # elif st.session_state.page == "Kelola Seller":
+    #     page_seller_admin_assign()
+    # st.stop()   # ⛔ Hentikan render tab public
 
 if st.session_state.seller_logged_in:
     if st.session_state.page == "Aktivasi Voucher Seller":
@@ -1886,3 +2064,4 @@ with daftar_seller:
             except Exception as e:
                 st.error("❌ Gagal menyimpan data ke database.")
                 st.code(str(e))
+
