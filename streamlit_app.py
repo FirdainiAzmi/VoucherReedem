@@ -445,18 +445,15 @@ def page_admin():
             ).strip().upper()
         
         with col2:
-            filter_status = st.multiselect(
+            filter_status = st.selectbox(
                 "Filter Status",
-                ["inactive", "active", "sold out"],
-                default=[]
+                ["semua", "inactive", "active", "soldout"]
             )
         
         with col3:
             filter_nominal = st.selectbox(
                 "Filter Nominal",
                 ["50000", "100000", "200000"],
-                # default=[],
-                help="Pilih lebih dari satu nilai jika diperlukan"
             )
         
         # Query builder
@@ -1550,6 +1547,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
