@@ -504,8 +504,20 @@ def page_redeem():
         branch_options = ["Sedati", "Tawangsari"]
         selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
         st.session_state.selected_branch = selected_branch
+        menu_items = get_menu_from_db(selected_branch)
+    
+        # Filter item sesuai cabang → jika harga NULL, jangan tampilkan
+        if selected_branch == "Sedati":
+            menu_items = [m for m in menu_items if m["harga_sedati"] is not None]
+            # Normalisasi ke satu key: harga
+            for m in menu_items:
+                m["harga"] = m["harga_sedati"]
+        
+        elif selected_branch == "Tawangsari":
+            menu_items = [m for m in menu_items if m["harga_twsari"] is not None]
+            for m in menu_items:
+                m["harga"] = m["harga_twsari"]
  
-        menu_items = get_menu_from_db(selected_branch)  
         categories = sorted(list(set([item["kategori"] for item in menu_items])))
     
         search_query = st.text_input("🔍 Cari menu", "").strip().lower()
@@ -1491,6 +1503,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
