@@ -431,10 +431,10 @@ if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
 # Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
 # ---------------------------
 def page_admin():
-    tab_edit, tab_laporan, tab_histori, tab_edit_seller = st.tabs(["Edit Kupon", "Laporan warung", "Histori", "Edit Seller"])
+    tab_edit, tab_laporan, tab_histori, tab_edit_seller = st.tabs(["Informasi Kupon", "Laporan warung", "Histori", "Edit Seller"])
 
     with tab_edit:
-        st.subheader("Edit Kupon")
+        st.subheader("Informasi Kupon")
 
         # Input pencarian & filter
         col1, col2 = st.columns([2, 1])
@@ -1534,6 +1534,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
