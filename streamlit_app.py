@@ -449,7 +449,7 @@ if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
 # Page: Penukaran Voucher (public)
 # ---------------------------
 def page_redeem():
-    st.header("Penukaran Voucher")
+    st.header("Penukaran Kupon")
 
     # Inisialisasi state
     if "redeem_step" not in st.session_state:
@@ -461,7 +461,7 @@ def page_redeem():
     if st.session_state.redeem_step == 1:
         # Gunakan key agar Streamlit tidak kehilangan nilai antar rerun
         entered_code = st.text_input(
-            "Masukkan kode voucher",
+            "Masukkan kode kupon",
             key="entered_code_input",
             value=st.session_state.entered_code
         ).strip().upper()
@@ -469,7 +469,7 @@ def page_redeem():
         # Update session_state tiap kali ada perubahan input
         st.session_state.entered_code = entered_code
     
-        if st.button("Submit Kode"):
+        if st.button("Tukar Kupon"):
             code = st.session_state.entered_code
             st.session_state.pop('redeem_error', None)  # hapus error lama
 
@@ -481,35 +481,43 @@ def page_redeem():
                     st.session_state['redeem_error'] = "❌ Voucher tidak ditemukan."
                 else:
                     code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_aktivasi = row
-
-                    if status is None or str(status).lower() != "active":
-                        st.session_state['redeem_error'] = "⛔ Voucher belum dapat digunakan. Status masih INACTIVE."
-                    elif tanggal_aktivasi is None:
-                        st.session_state['redeem_error'] = "⛔ Voucher belum bisa digunakan. Tanggal aktivasi belum tercatat."
+                
+                    # --- LOGIKA STATUS VOUCHER ---
+                    status_normalized = (status or "").strip().lower()
+                
+                    if status_normalized == "inactive":
+                        st.session_state['redeem_error'] = "⛔ Voucher belum aktif dan tidak bisa digunakan."
+                    elif status_normalized == "sold out" or balance <= 0:
+                        st.session_state['redeem_error'] = "⛔ Saldo voucher sudah habis dan tidak bisa digunakan."
+                    elif status_normalized != "active":
+                        # fallback untuk status tidak dikenal
+                        st.session_state['redeem_error'] = f"⛔ Voucher tidak dapat digunakan. Status: {status}"
                     else:
-                        # Cek tanggal aktivasi
-                        if hasattr(tanggal_aktivasi, "date"):
-                            tgl_aktivasi = tanggal_aktivasi.date()
+                        # status aktif → lanjutkan pengecekan tanggal aktivasi
+                        if tanggal_aktivasi is None:
+                            st.session_state['redeem_error'] = "⛔ Voucher belum bisa digunakan. Tanggal aktivasi belum tercatat."
                         else:
-                            try:
-                                tgl_aktivasi = datetime.strptime(str(tanggal_aktivasi), "%Y-%m-%d").date()
-                            except Exception:
-                                tgl_aktivasi = None
-            
-                        if tgl_aktivasi == date.today():
-                            st.session_state['redeem_error'] = "⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher diaktifkan."
-                        else:
-                            # ✅ Semua valid → lanjut
-                            st.session_state.voucher_row = row
-                            st.session_state.redeem_step = 2
-                            st.session_state.pop('redeem_error', None)
-                            st.rerun()
+                            # Cek tanggal aktivasi
+                            if hasattr(tanggal_aktivasi, "date"):
+                                tgl_aktivasi = tanggal_aktivasi.date()
+                            else:
+                                try:
+                                    tgl_aktivasi = datetime.strptime(str(tanggal_aktivasi), "%Y-%m-%d").date()
+                                except Exception:
+                                    tgl_aktivasi = None
+                
+                            if tgl_aktivasi == date.today():
+                                st.session_state['redeem_error'] = "⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher diaktifkan."
+                            else:
+                                # Semua valid → lanjut
+                                st.session_state.voucher_row = row
+                                st.session_state.redeem_step = 2
+                                st.session_state.pop('redeem_error', None)
+                                st.rerun()
 
         # Tampilkan error jika ada
         if 'redeem_error' in st.session_state:
             st.error(st.session_state['redeem_error'])
-
-
 
     # STEP 2: Pilih cabang & menu
     elif st.session_state.redeem_step == 2:
@@ -1590,6 +1598,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
