@@ -412,26 +412,29 @@ with st.sidebar:
     else:
         st.markdown("### Login")
         login_admin, login_seller = st.tabs(["Admin", "Seller"])
-        pwd_admin = st.text_input("Password Admin", type="password", key="pwd_admin")
-        if st.button("Login sebagai Admin"):
-            if admin_login(pwd_admin):
-                st.session_state.admin_logged_in = True
-                st.session_state.page = "Aktivasi Voucher"
-                st.success("Login admin berhasil")
-                st.rerun()
-            else:
-                st.error("Password admin salah")
-
-        st.markdown("---")
-        pwd_seller = st.text_input("Password Seller", type="password", key="pwd_seller")
-        if st.button("Login sebagai Seller"):
-            if pwd_seller == SELLER_PASSWORD:
-                st.session_state.seller_logged_in = True
-                st.session_state.page = "Aktivasi Voucher Seller"
-                st.success("Login seller berhasil")
-                st.rerun()
-            else:
-                st.error("Password seller salah")
+        
+        with login_admin:
+            pwd_admin = st.text_input("Password Admin", type="password", key="pwd_admin")
+            if st.button("Login sebagai Admin"):
+                if admin_login(pwd_admin):
+                    st.session_state.admin_logged_in = True
+                    st.session_state.page = "Aktivasi Voucher"
+                    st.success("Login admin berhasil")
+                    st.rerun()
+                else:
+                    st.error("Password admin salah")
+                    
+        with login_seller:
+            # st.markdown("---")
+            pwd_seller = st.text_input("Password Seller", type="password", key="pwd_seller")
+            if st.button("Login sebagai Seller"):
+                if pwd_seller == SELLER_PASSWORD:
+                    st.session_state.seller_logged_in = True
+                    st.session_state.page = "Aktivasi Voucher Seller"
+                    st.success("Login seller berhasil")
+                    st.rerun()
+                else:
+                    st.error("Password seller salah")
 
 # ---------------------------
 # Force page for non-admin/non-seller
@@ -1598,6 +1601,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
