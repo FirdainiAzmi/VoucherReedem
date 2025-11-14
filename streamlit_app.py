@@ -832,7 +832,7 @@ def page_daftar_voucher():
 
         st.dataframe(
             df_voucher_display[
-                ["code", "nama", "no_hp", "status", "seller", "initial_value", "balance", "tanggal_penjualan", "tanggal_aktivasi"]
+                ["code", "nama", "no_hp", "status", "seller", "initial_value", "balance", "tanggal_penjualan", "tanggal_aktivasi", "tunai"]
             ],
             use_container_width=True
         )
@@ -1598,6 +1598,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
