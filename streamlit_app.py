@@ -485,7 +485,7 @@ def page_admin():
                 elif cari_berdasarkan == "Nama Pembeli":
                     where_conditions.append("UPPER(nama) LIKE :val")
             
-                params["val"] = f"%{kode_cari}%"
+                params["val"] = f"%{kode_cari.upper()}%"
                     
             # Filter nominal
             if filter_nominal != "semua":
@@ -1576,6 +1576,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
