@@ -5,6 +5,7 @@ from datetime import datetime, date
 from sqlalchemy import create_engine, text
 from io import BytesIO
 import altair as alt
+import plotly.express as px
 import matplotlib.pyplot as plt
 import math
 import traceback
@@ -463,21 +464,6 @@ def page_admin():
                 index=0
             )
         
-        # filter1, filter2, filter3, filter4 = st.columns([1, 1, 1, 1])
-
-        # with filter3:
-        #     filter_status = st.selectbox(
-        #         "Filter Status",
-        #         ["semua", "active", "habis", "inactive"]
-        #     )
-        
-        # with filter4:
-        #     filter_nominal = st.selectbox(
-        #         "Filter Nominal",
-        #         ["semua", "50000", "100000", "200000"],
-        #         index=0
-        #     )
-        
         # Query builder
         try:
             query = "SELECT * FROM vouchers"
@@ -721,13 +707,34 @@ def page_admin():
         
             # ✅ Pie Chart Status Voucher Breakdown
             st.subheader("🧩 Status Kupon")
-            status_count = vouchers["status"].value_counts()
-            fig, ax = plt.subplots()
-            ax.pie(status_count, labels=status_count.index, autopct="%1.1f%%")
-            ax.axis("equal")
-            st.pyplot(fig)
-        
-            st.markdown("---")
+            status_count = vouchers["status"].value_counts().reset_index()
+            status_count.columns = ["status", "jumlah"]
+            
+            # Warna khusus biar status lebih informatif
+            color_map = {
+                "active": "#23C552",
+                "habis": "#FF4646",
+                "inactive": "#A8A8A8",
+                "soldout": "#C60000"
+            }
+            
+            fig = px.pie(
+                status_count,
+                names="status",
+                values="jumlah",
+                title="Distribusi Status Kupon",
+                color="status",
+                color_discrete_map=color_map,
+                hole=0.35  # biar jadi donut chart, tampilan lebih modern 👍
+            )
+            
+            fig.update_layout(
+                legend_title="Status Kupon",
+                title_x=0.5,  # center title
+                margin=dict(t=40, b=10, l=10, r=10),
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
     
         
             # ✅ Export CSV
@@ -1555,6 +1562,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
