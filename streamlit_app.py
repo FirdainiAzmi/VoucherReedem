@@ -434,7 +434,7 @@ def page_admin():
     tab_edit, tab_laporan, tab_histori, tab_edit_seller = st.tabs(["Informasi Kupon", "Laporan warung", "Histori", "Edit Seller"])
 
     with tab_edit:
-       st.subheader("Informasi Kupon")
+        st.subheader("Informasi Kupon")
 
         # Search & Filter Inputs
         col1, col2, col3 = st.columns([2, 1.3, 1.3])
@@ -1553,6 +1553,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
