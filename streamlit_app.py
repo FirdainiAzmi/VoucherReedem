@@ -1071,7 +1071,7 @@ def page_admin():
 # Page: Seller Activation (seller-only)
 # ---------------------------
 def page_seller_activation():
-    st.header("Aktivasi Voucher (Seller)")
+    st.subheader("Aktivasi Voucher")
 
     st.info(
         "Masukkan kode kupon dan nama anda, setelah itu masukkan nama dan nomer HP pembeli kupon untuk aktivasi."
@@ -1533,6 +1533,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
