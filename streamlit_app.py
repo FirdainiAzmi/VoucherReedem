@@ -734,7 +734,7 @@ def page_admin():
                 margin=dict(t=40, b=10, l=10, r=10),
             )
             
-            st.plotly_chart(fig, use_container_width=False, height=300, width=300)
+            st.plotly_chart(fig, use_container_width=False, width=600)
     
         
             # ✅ Export CSV
@@ -1562,6 +1562,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
