@@ -853,6 +853,7 @@ def page_admin():
     
         # ===== TAB Seller =====
         with tab_seller:
+            import plotly.express as px
             st.subheader("📊 Analisis Voucher per Seller")
         
             if "seller" not in df_vouchers.columns:
@@ -1526,6 +1527,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
