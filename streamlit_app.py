@@ -895,10 +895,10 @@ def page_daftar_voucher():
                             st.success(f"✅ Voucher {v['code']} berhasil diperbarui.")
                             st.rerun()
 
-                        except Exception as e:
+                        except NameError as e:
                             st.error("❌ Gagal memperbarui data voucher.")
                             st.code(str(e))
-    except Exception as e:
+    except NameError as e:
         st.error("❌ Gagal memuat data voucher dari database.")
         st.code(str(e))
         
@@ -1598,6 +1598,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
