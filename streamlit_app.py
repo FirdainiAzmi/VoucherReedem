@@ -453,7 +453,8 @@ def page_admin():
         with col3:
             filter_nominal = st.selectbox(
                 "Filter Nominal",
-                ["50000", "100000", "200000"],
+                ["semua", "50000", "100000", "200000"],
+                index=0
             )
         
         # Query builder
@@ -463,24 +464,24 @@ def page_admin():
             params = {}
         
             # Filter status
-            if filter_status:
-                conditions.append("status IN :statuses")
-                params["statuses"] = tuple(filter_status)
+            if filter_status != "semua":
+                where_conditions.append("status = :status")
+                params["status"] = filter_status
         
             # Filter kode
             if kode_cari:
-                conditions.append("UPPER(code) LIKE :code")
+                where_conditions.append("UPPER(code) LIKE :code")
                 params["code"] = f"%{kode_cari}%"
         
             # Filter nominal
-            if filter_nominal:
-                where_conditions.append("CAST(initial_value AS TEXT) IN :nominals")
-                params["nominals"] = tuple(filter_nominal)
+            if filter_nominal != "semua":
+                where_conditions.append("initial_value = :nominal")
+                params["nominal"] = int(filter_nominal)
         
-            if conditions:
-                query += " WHERE " + " AND ".join(conditions)
+            # Gabungkan SQL final
+            if where_conditions:
+                query += " WHERE " + " AND ".join(where_conditions)
         
-            # Sort abjad
             query += " ORDER BY code ASC"
         
             with engine.connect() as conn:
@@ -1547,6 +1548,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
