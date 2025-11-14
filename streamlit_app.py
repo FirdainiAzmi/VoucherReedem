@@ -823,9 +823,10 @@ def page_daftar_voucher():
 
         # Format tampilan tabel
         df_voucher_display = df_voucher.copy()
-        df_voucher_display["initial_value"] = df_voucher_display["initial_value"].apply(lambda x: "-" if x is None else f"Rp {int(x):,}")
-        df_voucher_display["balance"] = df_voucher_display["balance"].apply(lambda x: "-" if x is None else f"Rp {int(x):,}")
-        df_voucher_display["tunai"] = df_voucher_display["tunai"].apply(lambda x: "-" if x is None else f"Rp {int(x):,}")
+        df_voucher_display["initial_value"] = df_voucher_display["initial_value"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
+        df_voucher_display["balance"] = df_voucher_display["balance"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
+        df_voucher_display["tunai"] = df_voucher_display["tunai"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
+
         if "tanggal_penjualan" not in df_voucher_display.columns:
             df_voucher_display["tanggal_penjualan"] = None
         if "tanggal_aktivasi" not in df_voucher_display.columns:
@@ -1598,6 +1599,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
