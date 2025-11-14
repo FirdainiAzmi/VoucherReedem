@@ -431,10 +431,6 @@ with st.sidebar:
             else:
                 st.error("Password seller salah")
 
-        st.markdown("---")
-        st.info("Admin: akses penuh. Seller: akses terbatas (Aktivasi Voucher).")
-
-
 # ---------------------------
 # Force page for non-admin/non-seller
 # ---------------------------
@@ -926,8 +922,8 @@ def page_histori():
             st.write(f"- Total nominal terpakai: Rp {total_nominal:,}")
             df_display = df_filtered.copy()
             df_display["tanggal_transaksi"] = pd.to_datetime(df_display["tanggal_transaksi"])
-            df_display = df_display.rename(columns={"id":"ID","code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Waktu","branch":"Cabang","items":"Menu"})
-            st.dataframe(df_display[["ID","Kode","Waktu","Jumlah","Cabang","Menu"]], use_container_width=True)
+            df_display = df_display.rename(columns={"code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Tanggal_transaksi","branch":"Cabang","items":"Menu", "tunai":"Tunai"})
+            st.dataframe(df_display[["Kode","Tanggal_transaksi","Jumlah","Cabang","Menu", "Tunai"]], use_container_width=True)
             st.download_button(f"Download CSV {search_code.strip().upper()}", data=df_to_csv_bytes(df_display), file_name=f"transactions_{search_code.strip().upper()}.csv", mime="text/csv")
     else:
         df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
@@ -1599,6 +1595,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
