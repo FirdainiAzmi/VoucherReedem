@@ -437,20 +437,28 @@ def page_admin():
         st.subheader("Informasi Kupon")
 
         # Search & Filter Inputs
-        col1, col2, col3 = st.columns([2, 1.3, 1.3])
+        col1, col2 = st.columns([2, 1])
         with col1:
             kode_cari = st.text_input(
                 "Cari kode kupon",
                 placeholder="Masukkan kode",
             ).strip().upper()
-        
+
         with col2:
+            cari_berdasarkan = st.selectbox(
+                "Cari berdasarkan",
+                ["Kode", "Nama Seller", "Nama Pembeli"]
+            )
+
+        filter1, filter2 = st.columns([1, 1])
+
+        with filter1:
             filter_status = st.selectbox(
                 "Filter Status",
                 ["semua", "active", "habis", "inactive"]
             )
         
-        with col3:
+        with filter2:
             filter_nominal = st.selectbox(
                 "Filter Nominal",
                 ["semua", "50000", "100000", "200000"],
@@ -470,9 +478,15 @@ def page_admin():
         
             # Filter kode
             if kode_cari:
-                where_conditions.append("UPPER(code) LIKE :code")
-                params["code"] = f"%{kode_cari}%"
-        
+                if cari_berdasarkan == "Kode":
+                    where_conditions.append("UPPER(code) LIKE :val")
+                elif cari_berdasarkan == "Nama Seller":
+                    where_conditions.append("UPPER(seller) LIKE :val")
+                elif cari_berdasarkan == "Nama Pembeli":
+                    where_conditions.append("UPPER(nama) LIKE :val")
+            
+                params["val"] = f"%{kode_cari}%"
+                    
             # Filter nominal
             if filter_nominal != "semua":
                 where_conditions.append("initial_value = :nominal")
@@ -1562,6 +1576,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
