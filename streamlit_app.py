@@ -482,7 +482,16 @@ def page_admin():
             if where_conditions:
                 query += " WHERE " + " AND ".join(where_conditions)
         
-            query += " ORDER BY code ASC"
+            query += """
+             ORDER BY 
+                CASE 
+                    WHEN status = 'active' THEN 1
+                    WHEN status = 'soldout' THEN 2
+                    WHEN status = 'inactive' THEN 3
+                    ELSE 4
+                END,
+                code ASC
+            """
         
             with engine.connect() as conn:
                 df_voucher = pd.read_sql(text(query), conn, params=params)
@@ -1548,6 +1557,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
