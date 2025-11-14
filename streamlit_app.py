@@ -639,6 +639,40 @@ with tukar_kupon:
             st.session_state.show_success = False
             st.rerun()
 
+with daftar_seller:
+    st.header("📋 Daftar Sebagai Seller")
+    st.write("Silakan isi data berikut untuk mendaftar sebagai seller.")
+
+    with st.form("form_daftar_seller"):
+        nama = st.text_input("Nama lengkap")
+        nohp = st.text_input("No HP")
+
+        submit = st.form_submit_button("Daftar")
+
+    if submit:
+        if not nama.strip():
+            st.error("Nama tidak boleh kosong.")
+        elif not nohp.strip():
+            st.error("No HP tidak boleh kosong.")
+        else:
+            try:
+                # Simpan ke database
+                with engine.begin() as conn:
+                    conn.execute(
+                        text("""
+                            INSERT INTO seller (nama_seller, no_hp, status)
+                            VALUES (:nama, :no_hp, :status)
+                        """),
+                        {"nama": nama.strip(), "no_hp": nohp.strip(), "status": "not accepted"}
+                    )
+
+                st.success("✅ Pendaftaran berhasil! Data Anda telah disimpan ke database.")
+                st.info("Admin akan menghubungi Anda untuk proses verifikasi.")
+
+            except Exception as e:
+                st.error("❌ Gagal menyimpan data ke database.")
+                st.code(str(e))
+
 # ---------------------------
 # Sidebar / Login UI
 # ---------------------------
@@ -1020,39 +1054,39 @@ if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
 #             st.session_state.show_success = False
 #             st.rerun()
 
-def page_daftar_seller():
-    st.header("📋 Daftar Sebagai Seller")
-    st.write("Silakan isi data berikut untuk mendaftar sebagai seller.")
+# def page_daftar_seller():
+#     st.header("📋 Daftar Sebagai Seller")
+#     st.write("Silakan isi data berikut untuk mendaftar sebagai seller.")
 
-    with st.form("form_daftar_seller"):
-        nama = st.text_input("Nama lengkap")
-        nohp = st.text_input("No HP")
+#     with st.form("form_daftar_seller"):
+#         nama = st.text_input("Nama lengkap")
+#         nohp = st.text_input("No HP")
 
-        submit = st.form_submit_button("Daftar")
+#         submit = st.form_submit_button("Daftar")
 
-    if submit:
-        if not nama.strip():
-            st.error("Nama tidak boleh kosong.")
-        elif not nohp.strip():
-            st.error("No HP tidak boleh kosong.")
-        else:
-            try:
-                # Simpan ke database
-                with engine.begin() as conn:
-                    conn.execute(
-                        text("""
-                            INSERT INTO seller (nama_seller, no_hp, status)
-                            VALUES (:nama, :no_hp, :status)
-                        """),
-                        {"nama": nama.strip(), "no_hp": nohp.strip(), "status": "not accepted"}
-                    )
+#     if submit:
+#         if not nama.strip():
+#             st.error("Nama tidak boleh kosong.")
+#         elif not nohp.strip():
+#             st.error("No HP tidak boleh kosong.")
+#         else:
+#             try:
+#                 # Simpan ke database
+#                 with engine.begin() as conn:
+#                     conn.execute(
+#                         text("""
+#                             INSERT INTO seller (nama_seller, no_hp, status)
+#                             VALUES (:nama, :no_hp, :status)
+#                         """),
+#                         {"nama": nama.strip(), "no_hp": nohp.strip(), "status": "not accepted"}
+#                     )
 
-                st.success("✅ Pendaftaran berhasil! Data Anda telah disimpan ke database.")
-                st.info("Admin akan menghubungi Anda untuk proses verifikasi.")
+#                 st.success("✅ Pendaftaran berhasil! Data Anda telah disimpan ke database.")
+#                 st.info("Admin akan menghubungi Anda untuk proses verifikasi.")
 
-            except Exception as e:
-                st.error("❌ Gagal menyimpan data ke database.")
-                st.code(str(e))
+#             except Exception as e:
+#                 st.error("❌ Gagal menyimpan data ke database.")
+#                 st.code(str(e))
 
 # ---------------------------
 # Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
@@ -1874,8 +1908,9 @@ elif page == "Aktivasi Voucher Seller":
     else:
         page_seller_activation()
 
-else:
-    st.info("Halaman tidak ditemukan.")
+# else:
+#     st.info("Halaman tidak ditemukan.")
+
 
 
 
