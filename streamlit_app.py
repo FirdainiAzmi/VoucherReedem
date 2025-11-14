@@ -106,7 +106,7 @@ def atomic_redeem(code, amount, branch, items_str):
 
             # Ambil saldo voucher (lock row)
             r = conn.execute(
-                text("SELECT balance FROM vouchers WHERE code = :c FOR UPDATE"),
+                text("SELECT balance, COALESCE(tunai, 0) FROM vouchers WHERE code = :c FOR UPDATE"),
                 {"c": code}
             ).fetchone()
 
@@ -114,38 +114,41 @@ def atomic_redeem(code, amount, branch, items_str):
                 return False, "Voucher tidak ditemukan.", None
 
             balance = int(r[0])
+            tunai_existing = int(r[1])
 
             # Jika saldo 0 → tidak boleh dipakai
             if balance <= 0:
                 return False, "Saldo voucher sudah habis.", balance
 
-            # Hitung saldo baru (tanpa saldo minus)
+            # Hitung saldo baru & cash shortage
             if amount > balance:
+                shortage = amount - balance  # kekurangan
                 new_balance = 0
             else:
+                shortage = 0
                 new_balance = balance - amount
 
-            # Update saldo & status voucher
-            if new_balance == 0:
-                new_status = "sold out"
-            else:
-                new_status = "active"
-            
+            # Update status voucher
+            new_status = "habis" if new_balance == 0 else "active"
+
+            # Update saldo, status, dan tunai (tambahkan shortage)
             conn.execute(
                 text("""
                     UPDATE vouchers 
                     SET balance = :newbal,
-                        status = :newstatus
+                        status = :newstatus,
+                        tunai = :newtunai
                     WHERE code = :c
                 """),
                 {
                     "newbal": new_balance,
                     "newstatus": new_status,
+                    "newtunai": tunai_existing + shortage,
                     "c": code
                 }
             )
 
-            # Simpan transaksi ke database (tanpa cash shortage)
+            # Simpan transaksi ke database
             conn.execute(text("""
                 INSERT INTO transactions 
                 (code, used_amount, tanggal_transaksi, branch, items)
@@ -780,7 +783,7 @@ def page_daftar_voucher():
     with col2:
         filter_status = st.selectbox(
             "Filter Status",
-            ["semua", "inactive", "active", "soldout"]
+            ["semua", "inactive", "active", "habis"]
         )
 
     # Ambil data dari database
@@ -1587,6 +1590,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
