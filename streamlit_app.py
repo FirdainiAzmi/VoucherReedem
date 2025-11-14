@@ -486,7 +486,7 @@ def page_admin():
              ORDER BY 
                 CASE 
                     WHEN status = 'active' THEN 1
-                    WHEN status = 'soldout' THEN 2
+                    WHEN status = 'habis' THEN 2
                     WHEN status = 'inactive' THEN 3
                     ELSE 4
                 END,
@@ -510,7 +510,7 @@ def page_admin():
                 def status_badge(x):
                     if x == "active":
                         return "🟢 active"
-                    elif x == "habis":
+                    elif x == "habis" or x == "sold out":
                         return "🔴 habis"
                     return "⚪ inactive"
         
@@ -1557,6 +1557,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
