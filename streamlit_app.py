@@ -381,8 +381,6 @@ with st.sidebar:
             )
         )
         st.session_state.page = pageumum_choice
-
-    login_admin, login_seller = st.tabs(["Admin", "Seller"])
     
     # If admin logged in -> full admin menu
     if st.session_state.admin_logged_in:
@@ -413,6 +411,7 @@ with st.sidebar:
     # Not logged in -> show login options
     else:
         st.markdown("### Login")
+        login_admin, login_seller = st.tabs(["Admin", "Seller"])
         pwd_admin = st.text_input("Password Admin", type="password", key="pwd_admin")
         if st.button("Login sebagai Admin"):
             if admin_login(pwd_admin):
@@ -1599,6 +1598,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
