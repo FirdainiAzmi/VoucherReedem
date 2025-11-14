@@ -437,7 +437,7 @@ def page_admin():
         st.subheader("Informasi Kupon")
 
         # Search & Filter Inputs
-        col1, col2 = st.columns([2, 1])
+        col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
         with col1:
             kode_cari = st.text_input(
                 "Cari kode kupon",
@@ -450,20 +450,33 @@ def page_admin():
                 ["Kode", "Nama Seller", "Nama Pembeli"]
             )
 
-        filter1, filter2, filter3, filter4 = st.columns([1, 1, 1, 1])
-
-        with filter3:
+        with col3:
             filter_status = st.selectbox(
                 "Filter Status",
                 ["semua", "active", "habis", "inactive"]
             )
-        
-        with filter4:
+
+        with col4:
             filter_nominal = st.selectbox(
                 "Filter Nominal",
                 ["semua", "50000", "100000", "200000"],
                 index=0
             )
+        
+        # filter1, filter2, filter3, filter4 = st.columns([1, 1, 1, 1])
+
+        # with filter3:
+        #     filter_status = st.selectbox(
+        #         "Filter Status",
+        #         ["semua", "active", "habis", "inactive"]
+        #     )
+        
+        # with filter4:
+        #     filter_nominal = st.selectbox(
+        #         "Filter Nominal",
+        #         ["semua", "50000", "100000", "200000"],
+        #         index=0
+        #     )
         
         # Query builder
         try:
@@ -1542,6 +1555,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
