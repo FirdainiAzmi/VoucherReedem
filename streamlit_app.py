@@ -625,8 +625,6 @@ def page_redeem():
             if st.button("Cek & Bayar"):
                 if checkout_total == 0:
                     st.warning("Pilih minimal 1 menu")
-                elif checkout_total > int(balance):
-                    st.error(f"Saldo tidak cukup. Total: Rp {checkout_total:,} — Saldo: Rp {int(balance):,}")
                 else:
                     st.session_state.redeem_step = 3
                     st.rerun()
@@ -654,7 +652,7 @@ def page_redeem():
         st.write(f"- Voucher: {code}")
         st.write(f"- Cabang: {st.session_state.selected_branch}")
         st.write(f"- Sisa Voucher: Rp {int(balance):,}")
-   
+    
         menu_items = get_menu_from_db(st.session_state.selected_branch)
         price_map = {item['nama']: item['harga'] for item in menu_items}
     
@@ -664,19 +662,28 @@ def page_redeem():
             st.warning("Tidak ada menu yang dipilih.")
             return
     
+        total = st.session_state.checkout_total
+        saldo = int(balance)
+        shortage = total - saldo if total > saldo else 0
+    
         st.write("Detail pesanan:")
         for it, q in ordered_items.items():
             st.write(f"- {it} x{q} — Rp {price_map.get(it,0)*q:,}")
     
-        st.write(f"### Total: Rp {st.session_state.checkout_total:,}")
+        st.write(f"### Total: Rp {total:,}")
+    
+        if shortage > 0:
+            st.error(f"⚠️ Saldo voucher kurang Rp {shortage:,}.")
+            st.info("Sisa total harus dibayar dengan *cash* oleh pembeli.")
+        else:
+            st.success("Saldo voucher mencukupi 🎉")
     
         cA, cB = st.columns([1,1])
         with cA:
             if st.button("Ya, Bayar"):
                 items_str = ", ".join([f"{k} x{v}" for k,v in ordered_items.items()])
                 ok, msg, newbal = atomic_redeem(
-                    code, st.session_state.checkout_total,
-                    st.session_state.selected_branch, items_str
+                    code, total, st.session_state.selected_branch, items_str
                 )
                 if ok:
                     st.session_state.newbal = newbal
@@ -1553,6 +1560,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
