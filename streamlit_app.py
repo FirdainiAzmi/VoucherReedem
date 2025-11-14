@@ -455,7 +455,7 @@ def page_admin():
             filter_nominal = st.selectbox(
                 "Filter Nominal",
                 ["50000", "100000", "200000"],
-                default=[],
+                # default=[],
                 help="Pilih lebih dari satu nilai jika diperlukan"
             )
         
@@ -1550,6 +1550,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
