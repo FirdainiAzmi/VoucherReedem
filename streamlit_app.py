@@ -151,14 +151,15 @@ def atomic_redeem(code, amount, branch, items_str):
             # Simpan transaksi ke database
             conn.execute(text("""
                 INSERT INTO transactions 
-                (code, used_amount, tanggal_transaksi, branch, items)
-                VALUES (:c, :amt, :now, :branch, :items)
+                (code, used_amount, tanggal_transaksi, branch, items, tunai)
+                VALUES (:c, :amt, :now, :branch, :items, :tunai)
             """), {
                 "c": code,
                 "amt": amount,
                 "now": datetime.utcnow(),
                 "branch": branch,
-                "items": items_str
+                "items": items_str,
+                "tunai": shortage
             })
 
             # Update penjualan menu
@@ -1595,6 +1596,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
