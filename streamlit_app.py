@@ -9,11 +9,6 @@ import matplotlib.pyplot as plt
 import math
 import traceback
 
-init_db()
-ensure_session_state()
-st.set_page_config(page_title="Voucher Pawon Sappitoe", layout="wide")
-st.title("🎫 Kupon Pawon Sappitoe")
-
 # ========== Session State Default ==========
 if "admin_logged_in" not in st.session_state:
     st.session_state.admin_logged_in = False
@@ -369,6 +364,11 @@ def admin_logout():
 def seller_logout():
     st.session_state.seller_logged_in = False
     st.session_state.page = "Penukaran Voucher"
+
+init_db()
+ensure_session_state()
+st.set_page_config(page_title="Voucher Pawon Sappitoe", layout="wide")
+st.title("🎫 Kupon Pawon Sappitoe")
 
 # ---------------------------
 # Sidebar / Login UI
@@ -1717,6 +1717,7 @@ with daftar_seller:
             except Exception as e:
                 st.error("❌ Gagal menyimpan data ke database.")
                 st.code(str(e))
+
 
 
 
