@@ -1315,7 +1315,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             row = st.session_state.voucher_row
             code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
         
-            st.subheader(f"Voucher: {code}")
+            st.subheader(f"Kupon: {code}")
             st.write(f"- Nilai awal: Rp {int(initial_value):,}")
             st.write(f"- Sisa saldo: Rp {int(balance):,}")
             st.write(f"- Nama: {nama or '-'}")
@@ -1323,7 +1323,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             st.write(f"- Status: {status or 'inactive'}")
         
             if int(balance) <= 0:
-                st.warning("Voucher sudah tidak dapat digunakan (saldo 0).")
+                st.warning("Kupon sudah tidak dapat digunakan (saldo 0).")
                 if st.button("Kembali"):
                     reset_redeem_state()
                     st.rerun()
@@ -1463,7 +1463,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             code, initial, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
             
             st.header("Konfirmasi Pembayaran")
-            st.write(f"- Voucher: {code}")
+            st.write(f"- Kupon: {code}")
             st.write(f"- Cabang: {st.session_state.selected_branch}")
             st.write(f"- Sisa Voucher: Rp {int(balance):,}")
         
@@ -1487,10 +1487,9 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             st.write(f"### Total: Rp {total:,}")
         
             if shortage > 0:
-                st.error(f"⚠️ Saldo voucher kurang Rp {shortage:,}.")
-                st.info("Sisa total harus dibayar dengan *cash* oleh pembeli.")
+                st.error(f"⚠️ Saldo kupon kurang Rp {shortage:,}. Sisa total harus dibayar dengan *cash* oleh pembeli.")
             else:
-                st.success("Saldo voucher mencukupi 🎉")
+                st.success("Saldo kuponr mencukupi 🎉")
         
             cA, cB = st.columns([1,1])
             with cA:
@@ -1563,6 +1562,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
