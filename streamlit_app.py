@@ -1875,110 +1875,20 @@ def page_seller_admin_assign():
 # if page == "Penukaran Voucher" or page == "Redeem Voucher":
 #     page_redeem()
 
-if page == "Daftar Sebagai Seller":
-    page_daftar_seller()
-
-elif page == "Edit Voucher":
-    if not st.session_state.admin_logged_in:
-        st.error("Hanya admin yang dapat mengakses halaman ini.")
-    else:
+# Jika admin login → langsung tampilkan page admin
+if st.session_state.admin_logged_in:
+    # Router admin
+    if st.session_state.page == "Edit Voucher":
         page_daftar_voucher()
-
-elif page == "Histori Transaksi":
-    if not st.session_state.admin_logged_in:
-        st.error("Hanya admin yang dapat mengakses histori transaksi.")
-    else:
+    elif st.session_state.page == "Histori Transaksi":
         page_histori()
-
-elif page == "Kelola Seller":
-    if not st.session_state.admin_logged_in:
-        st.error("Hanya admin yang dapat mengakses halaman Seller.")
-    else:
-        page_seller_admin_assign()
-
-elif page == "Laporan Warung":
-    if not st.session_state.admin_logged_in:
-        st.error("Hanya admin yang dapat mengakses laporan.")
-    else:
+    elif st.session_state.page == "Laporan Warung":
         page_laporan_global()
+    elif st.session_state.page == "Kelola Seller":
+        page_seller_admin_assign()
+    st.stop()   # ⛔ Hentikan render tab public
 
-elif page == "Aktivasi Voucher Seller":
-    if not st.session_state.seller_logged_in:
-        st.error("Hanya seller yang dapat mengakses halaman Seller Activation.")
-    else:
+if st.session_state.seller_logged_in:
+    if st.session_state.page == "Aktivasi Voucher Seller":
         page_seller_activation()
-
-# else:
-#     st.info("Halaman tidak ditemukan.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    st.stop()
