@@ -459,7 +459,7 @@ def page_admin():
         # Query builder
         try:
             query = "SELECT * FROM vouchers"
-            conditions = []
+            where_conditions = []
             params = {}
         
             # Filter status
@@ -1547,6 +1547,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
