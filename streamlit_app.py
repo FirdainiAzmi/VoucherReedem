@@ -434,12 +434,12 @@ def page_admin():
     tab_edit, tab_laporan, tab_histori, tab_edit_seller = st.tabs(["Edit Kupon", "Laporan warung", "Histori", "Edit Seller"])
 
     with tab_edit:
-        st.header("Edit Voucher")
+        st.subheader("Edit Kupon")
 
         # Input pencarian & filter
         col1, col2 = st.columns([2, 1])
         with col1:
-            kode_cari = st.text_input("Masukkan kode voucher (opsional)").strip().upper()
+            kode_cari = st.text_input("Masukkan kode kupon (opsional)").strip().upper()
         with col2:
             filter_status = st.selectbox(
                 "Filter Status",
@@ -552,23 +552,23 @@ def page_admin():
                                 st.error("❌ Gagal memperbarui data voucher.")
                                 st.code(str(e))
         except NameError as e:
-            st.error("❌ Gagal memuat data voucher dari database.")
+            st.error("❌ Gagal memuat data kupon dari database.")
             st.code(str(e))
         
     with tab_histori:
-        st.header("Histori Transaksi (Admin)")
+        st.subheader("Histori Transaksi")
         df_tx = list_transactions(limit=5000)
         if df_tx.empty:
             st.info("Belum ada transaksi")
             return
     
-        search_code = st.text_input("Cari kode voucher untuk detail histori")
+        search_code = st.text_input("Cari kode kupon untuk detail histori")
         if search_code:
             df_filtered = df_tx[df_tx["code"].str.contains(search_code.strip().upper(), case=False)]
             if df_filtered.empty:
-                st.warning(f"Tidak ada transaksi untuk voucher {search_code}")
+                st.warning(f"Tidak ada transaksi untuk kupon {search_code}")
             else:
-                st.subheader(f"Detail Voucher: {search_code.strip().upper()}")
+                st.subheader(f"Detail Kupon: {search_code.strip().upper()}")
                 total_transaksi = len(df_filtered)
                 total_nominal = df_filtered["used_amount"].sum()
                 st.write(f"- Jumlah transaksi: {total_transaksi}")
@@ -586,7 +586,7 @@ def page_admin():
             st.download_button("Download CSV Transaksi", data=df_to_csv_bytes(df_tx), file_name="transactions.csv", mime="text/csv")
     
     with tab_laporan:
-        st.header("Laporan Warung (Admin)")
+        st.subheader("Laporan Warung")
     
         # Tabs untuk membagi laporan
         tab_voucher, tab_transaksi, tab_seller = st.tabs(["Voucher", "Transaksi", "Seller"])
@@ -889,7 +889,7 @@ def page_admin():
         tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Voucher", "Penerimaan Seller"])
 
         with tab_kepemilikan:
-            st.header("🎯 Assign Voucher ke Seller")
+            st.subheader("🎯 Assign Voucher ke Seller")
     
             try:
                 with engine.connect() as conn:
@@ -1534,6 +1534,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
