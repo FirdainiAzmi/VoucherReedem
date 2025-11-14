@@ -1074,8 +1074,7 @@ def page_seller_activation():
     st.header("Aktivasi Voucher (Seller)")
 
     st.info(
-        "Masukkan Nama Seller (sesuai dengan data seller pada voucher), Nama Pembeli, No HP, dan Kode Voucher.\n"
-        "Jika voucher belum diassign seller oleh admin → aktivasi ditolak."
+        "Masukkan kode kupon dan nama anda, setelah itu masukkan nama dan nomer HP pembeli kupon untuk aktivasi."
     )
 
     with st.form(key="seller_activation_form"):
@@ -1534,6 +1533,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
