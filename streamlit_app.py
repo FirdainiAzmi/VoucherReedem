@@ -440,7 +440,7 @@ def page_admin():
         col1, col2, col3 = st.columns([2, 1.3, 1.3])
         with col1:
             kode_cari = st.text_input(
-                "Cari kode voucher (realtime)",
+                "Cari kode kupon",
                 placeholder="Masukkan kode",
             ).strip().upper()
         
@@ -531,7 +531,7 @@ def page_admin():
                     if not matched.empty:
                         v = matched.iloc[0]
                         st.markdown("---")
-                        st.subheader(f"✏️ Edit Voucher: {v['code']}")
+                        st.subheader(f"✏️ Edit Kupon: {v['code']}")
         
                         with st.form(key=f"edit_form_{v['code']}"):
                             nama_in = st.text_input("Nama Pembeli", v["nama"] or "")
@@ -913,7 +913,7 @@ def page_admin():
         tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Kupon", "Penerimaan Seller"])
 
         with tab_kepemilikan:
-            st.subheader("🎯 Assign Kupon ke Seller")
+            st.subheader("🎯 Serahkan Kupon ke Seller")
     
             try:
                 with engine.connect() as conn:
@@ -987,7 +987,7 @@ def page_admin():
                             df_voucher["code"].tolist()
                         )
     
-                        if st.button("💾 Simpan Assign Kupon") and selected_vouchers:
+                        if st.button("💾 Simpan Penyerahan Kupon") and selected_vouchers:
                             try:
                                 today = date.today()
     
@@ -1137,12 +1137,12 @@ def page_seller_activation():
 
                 # Jika voucher belum diassign seller oleh admin
                 if not db_seller or db_seller.strip() == "":
-                    st.error("Kupon belum diassign ke seller mana pun. Aktivasi ditolak.")
+                    st.error("Kupon belum diserahkan ke seller mana pun. Aktivasi ditolak.")
                     return
 
                 # Jika seller input tidak cocok dengan seller di database
                 if db_seller.strip().lower() != seller_name_input.lower():
-                    st.error(f"Nama seller tidak sesuai. Kupon ini terdaftar untuk seller: **{db_seller}**.")
+                    st.error(f"Nama seller tidak sesuai. Kupon ini terdaftar untuk seller yang lain. Silahkan cek lagi nama yang anda input")
                     return
 
                 # Jika sudah aktif sebelumnya
@@ -1557,6 +1557,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
     
     
+
 
 
 
