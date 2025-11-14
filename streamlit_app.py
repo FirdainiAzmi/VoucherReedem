@@ -10,15 +10,14 @@ import math
 import traceback
 
 # ========== Session State Default ==========
-if "admin_logged_in" not in st.session_state:
-    st.session_state.admin_logged_in = False
+# if "admin_logged_in" not in st.session_state:
+#     st.session_state.admin_logged_in = False
 
-if "seller_logged_in" not in st.session_state:
-    st.session_state.seller_logged_in = False
+# if "seller_logged_in" not in st.session_state:
+#     st.session_state.seller_logged_in = False
 
-if "page" not in st.session_state:
-    st.session_state.page = "Redeem Voucher"
-
+# if "page" not in st.session_state:
+#     st.session_state.page = "Redeem Voucher"
 
 # ---------------------------
 # Config / Secrets
@@ -29,7 +28,6 @@ ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")  # admin password in st.secret
 SELLER_PASSWORD = st.secrets.get("SELLER_PASSWORD")
 
 engine = create_engine(DB_URL, future=True)
-
 
 # ---------------------------
 # Database initialization
@@ -364,6 +362,16 @@ def admin_logout():
 def seller_logout():
     st.session_state.seller_logged_in = False
     st.session_state.page = "Penukaran Voucher"
+
+def ensure_session_state():
+    defaults = {
+        "admin_logged_in": False,
+        "seller_logged_in": False,
+        "page": "Redeem Voucher",
+    }
+    for key, val in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = val
 
 init_db()
 ensure_session_state()
@@ -1717,6 +1725,7 @@ with daftar_seller:
             except Exception as e:
                 st.error("❌ Gagal menyimpan data ke database.")
                 st.code(str(e))
+
 
 
 
