@@ -104,6 +104,8 @@ def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
 def atomic_redeem(code, amount, branch, items_str):
     try:
         with engine.begin() as conn:
+
+            # Ambil saldo voucher
             r = conn.execute(
                 text("SELECT balance FROM vouchers WHERE code = :c FOR UPDATE"),
                 {"c": code}
@@ -112,46 +114,62 @@ def atomic_redeem(code, amount, branch, items_str):
             if not r:
                 return False, "Voucher tidak ditemukan.", None
 
-            balance = r[0]
-            if balance < amount:
-                return False, f"Saldo tidak cukup (sisa: {balance}).", balance
+            balance = int(r[0])
 
+            # Restriction: Kalau saldo sudah 0, tidak boleh dipakai
+            if balance <= 0:
+                return False, "Saldo voucher sudah habis.", balance
+
+            # Hitung apakah saldo cukup
+            if amount > balance:
+                # Kekurangan → dibayar cash
+                cash_shortage = amount - balance
+                new_balance = 0
+            else:
+                cash_shortage = 0
+                new_balance = balance - amount
+
+            # Update saldo voucher
             conn.execute(
-                text("UPDATE vouchers SET balance = balance - :amt WHERE code = :c"),
-                {"amt": amount, "c": code}
+                text("UPDATE vouchers SET balance = :newbal WHERE code = :c"),
+                {"newbal": new_balance, "c": code}
             )
 
+            # Simpan transaksi ke database
             conn.execute(text("""
-                INSERT INTO transactions (code, used_amount, tanggal_transaksi, branch, items)
-                VALUES (:c, :amt, :now, :branch, :items)
+                INSERT INTO transactions 
+                (code, used_amount, cash_shortage, tanggal_transaksi, branch, items)
+                VALUES (:c, :amt, :shortage, :now, :branch, :items)
             """), {
                 "c": code,
                 "amt": amount,
+                "shortage": cash_shortage,
                 "now": datetime.utcnow(),
                 "branch": branch,
                 "items": items_str
             })
 
-            # update menu sold count
+            # Update penjualan menu
             items = [x.strip() for x in items_str.split(",")]
             for i in items:
                 if " x" not in i:
                     continue
                 nama_item, qty = i.split(" x")
                 qty = int(qty)
+
                 column = "terjual_twsari" if branch == "Tawangsari" else "terjual_sedati"
+
                 conn.execute(text(f"""
                     UPDATE menu_items
                     SET {column} = COALESCE({column}, 0) + :qty
                     WHERE nama_item = :item
                 """), {"qty": qty, "item": nama_item})
 
-            return True, "Redeem berhasil ✅", balance - amount
+            return True, "Redeem berhasil ✅", new_balance
 
     except Exception as e:
         traceback.print_exc()
         return False, f"DB error saat redeem: {e}", None
-
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
     q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_aktivasi FROM vouchers"
@@ -1560,6 +1578,7 @@ elif page == "Aktivasi Voucher Seller":
 
 else:
     st.info("Halaman tidak ditemukan.")
+
 
 
 
