@@ -628,11 +628,12 @@ def page_admin():
                             nohp_in = st.text_input("No HP Pembeli", v["no_hp"] or "")
                             status_in = st.selectbox(
                                 "Status",
-                                ["inactive", "active", "sold out"],
-                                index=["inactive", "active", "sold out"].index(
-                                    v["status"] if v["status"] in ["inactive", "active", "sold out"] else "inactive"
+                                ["inactive", "active", "habis"],
+                                index=["inactive", "active", "habis"].index(
+                                    v["status"] if v["status"] in ["inactive", "active", "habis"] else "active"
                                 )
                             )
+                            nama_sell = st.text_input("Nama Seller", v["seller"] or "")
                             tgl_jual_in = st.date_input(
                                 "Tanggal Penjualan",
                                 value=v["tanggal_penjualan"] if isinstance(v["tanggal_penjualan"], (date, datetime)) else date.today()
@@ -644,6 +645,18 @@ def page_admin():
         
                             submit = st.form_submit_button("💾 Simpan Perubahan")
                             if submit:
+                                if not nama_in:
+                                    st.error("Nama Pembeli tidak boleh kosong.")
+                                    st.stop()
+
+                                if not nohp_in:
+                                    st.error("Nomor HP Pembeli tidak boleh kosong.")
+                                    st.stop()
+
+                                if not nama_sell:
+                                    st.error("Nama Seller tidak boleh kosong.")
+                                    st.stop()
+                                    
                                 with engine.begin() as conn2:
                                     conn2.execute(text("""
                                         UPDATE vouchers
@@ -1816,6 +1829,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
