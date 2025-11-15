@@ -1110,7 +1110,7 @@ def page_admin():
                 xaxis_tickangle=-30,
                 legend_title_text="Status"
             )
-            st.plotly_chart(fig, use_container_width=True) buatkan filter tanggal dan nama seller
+            st.plotly_chart(fig, use_container_width=True) 
 
     with tab_edit_seller:
         st.subheader("Kelola Seller")
@@ -1752,6 +1752,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
