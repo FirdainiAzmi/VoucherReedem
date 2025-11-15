@@ -630,7 +630,7 @@ def page_admin():
                                 "Status",
                                 ["inactive", "active", "habis"],
                                 index=["inactive", "active", "habis"].index(
-                                    v["status"] if v["status"] in ["inactive", "active", "habis"] else "active"
+                                    v["status"] if v["status"] in ["inactive", "active", "habis"] else v["status"]
                                 )
                             )
                             nama_sell = st.text_input("Nama Seller", v["seller"] or "")
@@ -1831,6 +1831,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
