@@ -1704,7 +1704,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 st.error("ID Seller tidak boleh kosong.")
                 st.stop()
 
-            if len(nohp) < 11 or len(nohp) > 13
+            if len(nohp) < 11 or len(nohp) > 13:
                 st.error("Nomor HP seharusnya 11-13 digit.")
                 st.stop()
             
@@ -1756,6 +1756,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
