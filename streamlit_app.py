@@ -411,7 +411,6 @@ with st.sidebar:
                     st.error("Password admin salah")
                     
         with login_seller:
-            st.markdown("### Login Seller")
             seller_id_input = st.text_input("Masukkan ID Seller Anda")
         
             if st.button("Login sebagai Seller"):
@@ -420,7 +419,7 @@ with st.sidebar:
                 else:
                     with engine.connect() as conn:
                         row = conn.execute(
-                            text("SELECT seller_id, nama_seller, status FROM seller WHERE seller_id = :id"),
+                            text("SELECT id_seller, nama_seller, status FROM seller WHERE id_seller = :id"),
                             {"id": seller_id_input.upper()}
                         ).fetchone()
         
@@ -1554,5 +1553,6 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
+
 
 
