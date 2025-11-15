@@ -1399,7 +1399,7 @@ def page_seller_activation():
 # Jika admin login → langsung ke halaman admin
 if st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
     page_admin()
-    st.stop()
+    # st.stop()
 
 # Jika seller login → langsung ke halaman seller
 if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
@@ -1756,6 +1756,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
