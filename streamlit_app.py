@@ -427,7 +427,7 @@ with st.sidebar:
                         st.error("❌ ID tidak ditemukan")
                     else:
                         seller_id, seller_name, status = row
-                        if status != "Accepted":
+                        if status != "diterima":
                             st.error("⛔ Akun Anda belum disetujui admin")
                         else:
                             st.session_state.seller_logged_in = True
@@ -1195,12 +1195,12 @@ def page_admin():
                 with engine.connect() as conn:
                     df_seller = pd.read_sql("""
                         SELECT * FROM seller
-                        WHERE status = 'Accepted'
+                        WHERE status = 'diterima'
                         ORDER BY nama_seller ASC
                     """, conn)
     
                 if df_seller.empty:
-                    st.info("Belum ada seller yang berstatus 'Accepted'.")
+                    st.info("Belum ada seller yang berstatus 'diterima'.")
                 else:
                     selected_seller = st.selectbox(
                         "Pilih Seller untuk diberikan kupon",
@@ -1209,6 +1209,7 @@ def page_admin():
     
                     selected_row = df_seller[df_seller["nama_seller"] == selected_seller].iloc[0]
                     seller_hp = selected_row["no_hp"]
+                    id_unik = selected_row["id_seller"]
     
                     # Ambil voucher yang dimiliki seller
                     with engine.connect() as conn:
@@ -1227,6 +1228,7 @@ def page_admin():
                     st.subheader("📋 Informasi Seller")
                     st.write(f"**Nama:** {selected_seller}")
                     st.write(f"**No HP:** {seller_hp}")
+                    st.write(f"**ID Seller:** {id_unik}")
                     st.write(f"**Jumlah kupon yang dimiliki:** {len(df_current_voucher)}")
     
                     if not df_current_voucher.empty:
@@ -1314,7 +1316,7 @@ def page_admin():
                 with engine.connect() as conn:
                     df_seller_pending = pd.read_sql("""
                         SELECT * FROM seller
-                        WHERE status = 'not accepted'
+                        WHERE status = 'belum diterima'
                         ORDER BY nama_seller ASC
                     """, conn)
         
@@ -1328,6 +1330,7 @@ def page_admin():
                             st.write(f"No HP: {row['no_hp']}")
                         with col2:
                             st.write(f"Status: {row['status'] or '-'}")
+                            st.write(f"ID Seller: {row['id_seller']}")
                         with col3:
                             if st.button("✅ Accept", key=f"accept_{row['nama_seller']}_{idx}"):
                                 try:
@@ -1335,7 +1338,7 @@ def page_admin():
                                         conn2.execute(
                                             text("""
                                                 UPDATE seller
-                                                SET status = 'Accepted'
+                                                SET status = 'diterima'
                                                 WHERE nama_seller = :nama_seller
                                                   AND no_hp = :no_hp
                                             """),
@@ -1757,67 +1760,68 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     with daftar_seller:
         st.header("📋 Daftar Sebagai Seller")
         st.write("Silakan isi data berikut untuk mendaftar sebagai seller.")
-    
+        
         with st.form("form_daftar_seller"):
             nama = st.text_input("Nama lengkap")
             nohp = st.text_input("No HP")
-    
+            id_seller = st.text_input("Buat ID unik Anda (3 digit, contoh: A1B)").upper().strip()
+            st.caption("ID terdiri dari 3 karakter huruf/angka, contoh: A9X, 4TB, B01")
+        
             submit = st.form_submit_button("Daftar")
-    
+        
         if submit:
+        
+            # === Validasi basic ===
+            if not id_seller:
+                st.error("ID Seller tidak boleh kosong.")
+                st.stop()
+        
+            if len(id_seller) != 3:
+                st.error("ID harus 3 karakter!")
+                st.stop()
+        
             if not nama.strip():
                 st.error("Nama tidak boleh kosong.")
-            elif not nohp.strip():
+                st.stop()
+        
+            if not nohp.strip():
                 st.error("No HP tidak boleh kosong.")
-            else:
-                try:
-                    def generate_unique_id():
-                        chars = string.ascii_uppercase + string.digits
-                        new_id = "".join(random.choices(chars, k=3))
-                        
-                        # Cek apakah sudah ada di DB
-                        with engine.connect() as conn_check:
-                            existing = conn_check.execute(
-                                text("SELECT id_seller FROM seller WHERE id_seller = :id"),
-                                {"id": new_id}
-                            ).fetchone()
+                st.stop()
         
-                        # Jika sudah ada → ulangi
-                        if existing:
-                            return generate_unique_id()
-                        return new_id
+            try:
+                # === Cek ID apakah sudah ada ===
+                with engine.connect() as conn:
+                    exists = conn.execute(
+                        text("SELECT 1 FROM seller WHERE seller_id = :id"),
+                        {"id": id_seller}
+                    ).fetchone()
         
-                    id_seller = generate_unique_id()
+                if exists:
+                    st.error("❌ ID sudah digunakan seller lain! Silakan buat ID baru.")
+                    st.stop()
         
-                    # Simpan ke database
-                    with engine.begin() as conn:
-                        conn.execute(
-                            text("""
-                                INSERT INTO seller (nama_seller, no_hp, status, id_seller)
-                                VALUES (:nama, :no_hp, :status, :id_seller)
-                            """),
-                            {
-                                "nama": nama.strip(),
-                                "no_hp": nohp.strip(),
-                                "status": "not accepted",
-                                "id_seller": id_seller,
-                            }
-                        )
-        
-                    st.warning(
-                        f"⚠️ **SANGAT PENTING!**\n"
-                        f"Simpan ID berikut untuk aktivasi voucher setelah Anda disetujui admin:\n\n"
-                        f"🔐 **ID Seller Anda: {id_seller}**"
+                # === Simpan ke database ===
+                with engine.begin() as conn:
+                    conn.execute(
+                        text("""
+                            INSERT INTO seller (nama_seller, no_hp, status, id_seller)
+                            VALUES (:nama, :no_hp, :status, :id_seller)
+                        """),
+                        {
+                            "nama": nama.strip(),
+                            "no_hp": nohp.strip(),
+                            "status": "belum diterima",
+                            "id_seller": id_seller,
+                        }
                     )
-                    st.success(f"🎉 Pendaftaran berhasil!")
         
-                except Exception as e:
-                    st.error("❌ Gagal menyimpan data ke database.")
-                    st.code(str(e))
-
-
-
-
-
-
-
+                st.success(f"🎉 Pendaftaran berhasil!")
+                st.warning(
+                    f"⚠️ **PENTING!** Simpan ID ini baik-baik untuk login nanti:\n\n"
+                    f"🔐 **ID Seller Anda: {id_seller}**"
+                )
+                st.info("Admin akan segera memverifikasi akun Anda.")
+        
+            except Exception as e:
+                st.error("❌ Terjadi error saat menyimpan data")
+                st.code(str(e))
