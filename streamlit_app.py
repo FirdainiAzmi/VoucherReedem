@@ -1495,7 +1495,7 @@ def page_seller_activation():
 
     with st.form(key="seller_activation_form"):
         seller_name_input = st.session_state.get("nama_seller", "-")
-        st.success(f"Seller: **{seller_name_input}** (otomatis dari login)")
+        st.success(f"Seller: **{seller_name_input}** ")
         kode = st.text_input("Kode Kupon").strip().upper()
         buyer_name_input = st.text_input("Nama Pembeli").strip()
         buyer_phone_input = st.text_input("No HP Pembeli").strip()
