@@ -818,109 +818,109 @@ def page_admin():
         df_tx = list_transactions(limit=5000)
         if df_tx.empty:
             st.info("Belum ada transaksi")
-    
-        df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
-        min_date = df_tx["tanggal_transaksi"].min()
-        max_date = df_tx["tanggal_transaksi"].max()
-        
-        col1, col2, col3, col4 = st.columns([2, 1.3, 1.3, 1.3])
-        with col1:
-            search_code = st.text_input("Cari kode kupon untuk detail histori", "").strip()
-        
-        with col2:
-            start_date = st.date_input(
-                "Tanggal Mulai",
-                value=min_date,
-                min_value=min_date,
-                max_value=max_date
-            )
-        
-        with col3:
-            end_date = st.date_input(
-                "Tanggal Akhir",
-                value=max_date,
-                min_value=min_date,
-                max_value=max_date
-            )
-
-        with col4:
-            filter_cabang = st.selectbox(
-            "Filter Cabang",
-            ["semua", "Sedati", "Tawangsari"]
-        )
-    
-        # Normalisasi format tanggal transaksi
-        df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
-    
-        # Filter tanggal transaksi berdasarkan rentang
-        if start_date and end_date:
-            if start_date > end_date:
-                st.error("❌ Tanggal Mulai tidak boleh setelah Tanggal Akhir")
-                st.stop()
-        
-            df_tx = df_tx[
-                (df_tx["tanggal_transaksi"] >= start_date) &
-                (df_tx["tanggal_transaksi"] <= end_date)
-            ]
-    
-        # 🏷 Filter cabang (jika tidak 'semua')
-        if filter_cabang != "semua":
-            df_tx = df_tx[df_tx["branch"] == filter_cabang]
-    
-        # Jika tidak ada data setelah filter
-        if df_tx.empty:
-            st.warning("Tidak ada transaksi dengan filter tersebut.")
-            return
-    
-        try:
-            # Jika user mencari kode tertentu
-            if search_code:
-                df_filtered = df_tx[df_tx["code"].str.contains(search_code.upper(), case=False)]
-                if df_filtered.empty:
-                    st.warning(f"Tidak ada transaksi untuk kupon {search_code}")
-                else:
-                    st.subheader(f"Detail Kupon: {search_code.upper()}")
-                    total_transaksi = len(df_filtered)
-                    total_nominal = df_filtered["used_amount"].sum()
-                    st.write(f"- Jumlah transaksi: {total_transaksi}")
-                    st.write(f"- Total nominal terpakai: Rp {total_nominal:,}")
-                    
-                    df_display = df_filtered.copy()
-                    df_display = df_display.rename(columns={
-                        "code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Tanggal_transaksi",
-                        "branch":"Cabang","items":"Menu", "tunai":"Tunai"
-                    })
-                    df_display["Tunai"] = df_display["Tunai"].apply(
-                        lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}"
-                    )
-    
-                    st.dataframe(df_display[["Kode","Tanggal_transaksi","Jumlah","Cabang","Menu", "Tunai"]], use_container_width=True)
-                    st.download_button(
-                        f"Download CSV {search_code.upper()}",
-                        data=df_to_csv_bytes(df_display),
-                        file_name=f"transactions_{search_code.upper()}.csv",
-                        mime="text/csv"
-                    )
-    
-            # Jika tidak ada kode yang dicari
-            else:
-                df_tx["Tunai"] = df_tx["tunai"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
-                df_tx = df_tx.rename(columns={
-                    "code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Tanggal_transaksi",
-                    "branch":"Cabang","items":"Menu"
-                })
-    
-                st.dataframe(df_tx[["Kode","Tanggal_transaksi","Jumlah","Cabang","Menu","Tunai"]], use_container_width=True)
-                st.download_button(
-                    "Download CSV Transaksi",
-                    data=df_to_csv_bytes(df_tx),
-                    file_name="transactions.csv",
-                    mime="text/csv"
+        else:
+            df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
+            min_date = df_tx["tanggal_transaksi"].min()
+            max_date = df_tx["tanggal_transaksi"].max()
+            
+            col1, col2, col3, col4 = st.columns([2, 1.3, 1.3, 1.3])
+            with col1:
+                search_code = st.text_input("Cari kode kupon untuk detail histori", "").strip()
+            
+            with col2:
+                start_date = st.date_input(
+                    "Tanggal Mulai",
+                    value=min_date,
+                    min_value=min_date,
+                    max_value=max_date
+                )
+            
+            with col3:
+                end_date = st.date_input(
+                    "Tanggal Akhir",
+                    value=max_date,
+                    min_value=min_date,
+                    max_value=max_date
                 )
     
-        except Exception as e:
-            st.error("❌ Gagal memuat transaksi")
-            st.code(str(e))
+            with col4:
+                filter_cabang = st.selectbox(
+                "Filter Cabang",
+                ["semua", "Sedati", "Tawangsari"]
+            )
+        
+            # Normalisasi format tanggal transaksi
+            df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
+        
+            # Filter tanggal transaksi berdasarkan rentang
+            if start_date and end_date:
+                if start_date > end_date:
+                    st.error("❌ Tanggal Mulai tidak boleh setelah Tanggal Akhir")
+                    st.stop()
+            
+                df_tx = df_tx[
+                    (df_tx["tanggal_transaksi"] >= start_date) &
+                    (df_tx["tanggal_transaksi"] <= end_date)
+                ]
+        
+            # 🏷 Filter cabang (jika tidak 'semua')
+            if filter_cabang != "semua":
+                df_tx = df_tx[df_tx["branch"] == filter_cabang]
+        
+            # Jika tidak ada data setelah filter
+            if df_tx.empty:
+                st.warning("Tidak ada transaksi dengan filter tersebut.")
+                return
+        
+            try:
+                # Jika user mencari kode tertentu
+                if search_code:
+                    df_filtered = df_tx[df_tx["code"].str.contains(search_code.upper(), case=False)]
+                    if df_filtered.empty:
+                        st.warning(f"Tidak ada transaksi untuk kupon {search_code}")
+                    else:
+                        st.subheader(f"Detail Kupon: {search_code.upper()}")
+                        total_transaksi = len(df_filtered)
+                        total_nominal = df_filtered["used_amount"].sum()
+                        st.write(f"- Jumlah transaksi: {total_transaksi}")
+                        st.write(f"- Total nominal terpakai: Rp {total_nominal:,}")
+                        
+                        df_display = df_filtered.copy()
+                        df_display = df_display.rename(columns={
+                            "code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Tanggal_transaksi",
+                            "branch":"Cabang","items":"Menu", "tunai":"Tunai"
+                        })
+                        df_display["Tunai"] = df_display["Tunai"].apply(
+                            lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}"
+                        )
+        
+                        st.dataframe(df_display[["Kode","Tanggal_transaksi","Jumlah","Cabang","Menu", "Tunai"]], use_container_width=True)
+                        st.download_button(
+                            f"Download CSV {search_code.upper()}",
+                            data=df_to_csv_bytes(df_display),
+                            file_name=f"transactions_{search_code.upper()}.csv",
+                            mime="text/csv"
+                        )
+        
+                # Jika tidak ada kode yang dicari
+                else:
+                    df_tx["Tunai"] = df_tx["tunai"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
+                    df_tx = df_tx.rename(columns={
+                        "code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Tanggal_transaksi",
+                        "branch":"Cabang","items":"Menu"
+                    })
+        
+                    st.dataframe(df_tx[["Kode","Tanggal_transaksi","Jumlah","Cabang","Menu","Tunai"]], use_container_width=True)
+                    st.download_button(
+                        "Download CSV Transaksi",
+                        data=df_to_csv_bytes(df_tx),
+                        file_name="transactions.csv",
+                        mime="text/csv"
+                    )
+        
+            except Exception as e:
+                st.error("❌ Gagal memuat transaksi")
+                st.code(str(e))
 
     # with tab_edit_seller:
     #     st.subheader("Kelola Seller")
@@ -1941,6 +1941,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
