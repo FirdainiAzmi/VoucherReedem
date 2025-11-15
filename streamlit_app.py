@@ -1764,7 +1764,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
         with st.form("form_daftar_seller"):
             nama = st.text_input("Nama lengkap")
             nohp = st.text_input("No HP")
-            id_seller = st.text_input("Buat ID unik Anda (3 digit, contoh: A1B)").upper().strip()
+            id_seller = st.text_input("Buat ID unik Anda (3 digit)").upper().strip()
             st.caption("ID terdiri dari 3 karakter huruf/angka, contoh: A9X, 4TB, B01")
         
             submit = st.form_submit_button("Daftar")
@@ -1825,4 +1825,5 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
