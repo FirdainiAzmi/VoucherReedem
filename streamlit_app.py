@@ -546,7 +546,7 @@ def page_admin():
         
                 # Status + badge warna 🎨
                 def status_badge(x):
-                    if x == "active":
+                    if x == "active" or x == "Active":
                         return "🟢 active"
                     elif x == "habis" or x == "sold out":
                         return "🔴 habis"
@@ -1559,6 +1559,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
+
 
 
 
