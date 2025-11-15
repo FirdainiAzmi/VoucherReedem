@@ -1551,7 +1551,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
         # STEP 2: Pilih cabang & menu
         elif st.session_state.redeem_step == 2:
             row = st.session_state.voucher_row
-            code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_penjualan = row
+            code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_aktivasi, akhir_berlaku = row
         
             st.subheader(f"Kupon: {code}")
             st.write(f"- Nilai awal: Rp {int(initial_value):,}")
@@ -1831,6 +1831,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
