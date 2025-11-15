@@ -1125,7 +1125,7 @@ def page_seller_activation():
 
     with st.form(key="seller_activation_form"):
         seller_name_input = st.session_state.get("nama_seller", "-")
-        st.info(f"Seller: **{seller_name_input}** (otomatis dari login)")
+        st.success(f"Seller: **{seller_name_input}** (otomatis dari login)")
         kode = st.text_input("Kode Kupon").strip().upper()
         buyer_name_input = st.text_input("Nama Pembeli").strip()
         buyer_phone_input = st.text_input("No HP Pembeli").strip()
@@ -1165,6 +1165,10 @@ def page_seller_activation():
                 # Jika seller input tidak cocok dengan seller di database
                 if seller_from_db != st.session_state.nama_seller:
                     return False, "Voucher bukan milik Anda", None
+
+                if tanggal_penjualan and tanggal_aktivasi < tanggal_penjualan:
+                    st.error(f"❌ Tanggal Aktivasi tidak boleh sebelum Tanggal Penjualan ({tanggal_penjualan.date()})")
+                    tanggal_aktivasi = None  # opsional: reset nilai agar user pilih ulang
 
                 # Jika sudah aktif sebelumnya
                 if db_status and db_status.lower() == "active":
@@ -1553,6 +1557,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
+
 
 
 
