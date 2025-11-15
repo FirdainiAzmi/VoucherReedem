@@ -1079,6 +1079,8 @@ def page_admin():
             f1, f2 = st.columns([1, 1])
         
             # --- Filter tanggal (pakai tanggal_penjualan)
+            if "tanggal_penjualan" not in df_seller.columns:
+                df_seller["tanggal_penjualan"] = None
             df_seller["tanggal_penjualan"] = pd.to_datetime(df_seller["tanggal_penjualan"], errors="coerce")
         
             with f1:
@@ -1824,6 +1826,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
