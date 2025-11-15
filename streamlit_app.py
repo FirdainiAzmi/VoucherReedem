@@ -1056,52 +1056,26 @@ def page_admin():
         with tab_seller:
             st.subheader("📊 Analisis Kupon per Seller")
         
-            # Pastikan kolom tersedia
             if "seller" not in df_vouchers.columns:
                 st.warning("Kolom 'seller' tidak tersedia.")
                 st.stop()
         
-            # Normalisasi seller kosong
             df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
+            df_seller_only = df_vouchers[df_vouchers["seller"] != "-"].copy()
         
-            # Ambil hanya kupon yang punya seller
-            df_seller = df_vouchers[df_vouchers["seller"] != "-"].copy()
-        
-            if df_seller.empty:
+            if df_seller_only.empty:
                 st.info("Belum ada kupon yang dibawa seller.")
                 st.stop()
         
-            # ==============================
-            # 🔍 FILTER SELLER SAJA
-            # ==============================
-            st.markdown("### 🔎 Filter Nama Seller")
-        
-            seller_list = ["Semua"] + sorted(df_seller["seller"].unique().tolist())
-            selected_seller = st.selectbox("Pilih Seller", seller_list)
-        
-            # Terapkan filter seller
-            df_filtered = df_seller.copy()
-            if selected_seller != "Semua":
-                df_filtered = df_filtered[df_filtered["seller"] == selected_seller]
-        
-            if df_filtered.empty():
-                st.warning("Tidak ada data seller pada filter ini.")
-                st.stop()
-        
-            # ==============================
-            # Normalisasi status
-            # ==============================
-            df_filtered["status_clean"] = (
-                df_filtered["status"].astype(str).str.lower().replace({
+            # --- Normalize status for clean analytics ---
+            df_seller_only["status_clean"] = (
+                df_seller_only["status"].astype(str).str.lower().replace({
                     "sold out": "habis"
                 })
             )
         
-            # ==============================
-            # Pivot tabel
-            # ==============================
             status_pivot = (
-                df_filtered.pivot_table(
+                df_seller_only.pivot_table(
                     index="seller",
                     columns="status_clean",
                     values="code",
@@ -1111,6 +1085,7 @@ def page_admin():
                 .reset_index()
             )
         
+            # Pastikan kolom lengkap
             for col in ["active", "habis", "inactive"]:
                 if col not in status_pivot.columns:
                     status_pivot[col] = 0
@@ -1120,41 +1095,22 @@ def page_admin():
         
             st.dataframe(status_pivot, use_container_width=True)
         
-            # ==============================
-            # Bar Chart
-            # ==============================
             fig = px.bar(
                 status_pivot,
                 x="seller",
                 y=["active", "habis", "inactive"],
                 title="Distribusi Status Kupon per Seller",
                 color_discrete_map={
-                    "active": "#2ecc71",
-                    "habis": "#e74c3c",
-                    "inactive": "#bdc3c7"
+                    "active": "#2ecc71",   # Hijau
+                    "habis": "#e74c3c",    # Merah
+                    "inactive": "#bdc3c7"  # Abu-abu
                 }
             )
-        
             fig.update_layout(
                 xaxis_tickangle=-30,
                 legend_title_text="Status"
             )
-        
-            st.plotly_chart(fig, use_container_width=True)
-        
-            # ==============================
-            # Download CSV
-            # ==============================
-            st.subheader("📥 Download Laporan Seller (CSV)")
-        
-            csv_seller = df_filtered.to_csv(index=False).encode("utf-8")
-        
-            st.download_button(
-                label="Download CSV",
-                data=csv_seller,
-                file_name="laporan_seller_filter.csv",
-                mime="text/csv"
-            )
+            st.plotly_chart(fig, use_container_width=True) buatkan filter tanggal dan nama seller
 
     with tab_edit_seller:
         st.subheader("Kelola Seller")
@@ -1796,6 +1752,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
