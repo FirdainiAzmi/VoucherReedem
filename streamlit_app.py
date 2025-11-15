@@ -1184,7 +1184,7 @@ def page_seller_activation():
                         SET nama = :nama,
                             no_hp = :no_hp,
                             tanggal_aktivasi = :tgl,
-                            status = 'Active'
+                            status = 'active'
                         WHERE code = :code
                     """),
                     {
@@ -1559,6 +1559,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
+
 
 
 
