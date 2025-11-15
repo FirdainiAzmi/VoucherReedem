@@ -1059,61 +1059,61 @@ def page_admin():
         with tab_seller:
             st.subheader("📊 Analisis Kupon per Seller")
         
-            # if "seller" not in df_vouchers.columns:
-            #     st.warning("Kolom 'seller' tidak tersedia.")
-            #     st.stop()
+            if "seller" not in df_vouchers.columns:
+                st.warning("Kolom 'seller' tidak tersedia.")
+                st.stop()
         
-            # df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
-            # df_seller_only = df_vouchers[df_vouchers["seller"] != "-"].copy()
+            df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
+            df_seller_only = df_vouchers[df_vouchers["seller"] != "-"].copy()
         
-            # if df_seller_only.empty:
-            #     st.info("Belum ada kupon yang dibawa seller.")
-            #     st.stop()
+            if df_seller_only.empty:
+                st.info("Belum ada kupon yang dibawa seller.")
+                st.stop()
         
-            # # --- Normalize status for clean analytics ---
-            # df_seller_only["status_clean"] = (
-            #     df_seller_only["status"].astype(str).str.lower().replace({
-            #         "sold out": "habis"
-            #     })
-            # )
+            # --- Normalize status for clean analytics ---
+            df_seller_only["status_clean"] = (
+                df_seller_only["status"].astype(str).str.lower().replace({
+                    "sold out": "habis"
+                })
+            )
         
-            # status_pivot = (
-            #     df_seller_only.pivot_table(
-            #         index="seller",
-            #         columns="status_clean",
-            #         values="code",
-            #         aggfunc="count",
-            #         fill_value=0
-            #     )
-            #     .reset_index()
-            # )
+            status_pivot = (
+                df_seller_only.pivot_table(
+                    index="seller",
+                    columns="status_clean",
+                    values="code",
+                    aggfunc="count",
+                    fill_value=0
+                )
+                .reset_index()
+            )
         
-            # # Pastikan kolom lengkap
-            # for col in ["active", "habis", "inactive"]:
-            #     if col not in status_pivot.columns:
-            #         status_pivot[col] = 0
+            # Pastikan kolom lengkap
+            for col in ["active", "habis", "inactive"]:
+                if col not in status_pivot.columns:
+                    status_pivot[col] = 0
         
-            # status_pivot["Total"] = status_pivot[["active", "habis", "inactive"]].sum(axis=1)
-            # status_pivot = status_pivot.sort_values(by="Total", ascending=False)
+            status_pivot["Total"] = status_pivot[["active", "habis", "inactive"]].sum(axis=1)
+            status_pivot = status_pivot.sort_values(by="Total", ascending=False)
         
-            # st.dataframe(status_pivot, use_container_width=True)
+            st.dataframe(status_pivot, use_container_width=True)
         
-            # fig = px.bar(
-            #     status_pivot,
-            #     x="seller",
-            #     y=["active", "habis", "inactive"],
-            #     title="Distribusi Status Kupon per Seller",
-            #     color_discrete_map={
-            #         "active": "#2ecc71",   # Hijau
-            #         "habis": "#e74c3c",    # Merah
-            #         "inactive": "#bdc3c7"  # Abu-abu
-            #     }
-            # )
-            # fig.update_layout(
-            #     xaxis_tickangle=-30,
-            #     legend_title_text="Status"
-            # )
-            # st.plotly_chart(fig, use_container_width=True)
+            fig = px.bar(
+                status_pivot,
+                x="seller",
+                y=["active", "habis", "inactive"],
+                title="Distribusi Status Kupon per Seller",
+                color_discrete_map={
+                    "active": "#2ecc71",   # Hijau
+                    "habis": "#e74c3c",    # Merah
+                    "inactive": "#bdc3c7"  # Abu-abu
+                }
+            )
+            fig.update_layout(
+                xaxis_tickangle=-30,
+                legend_title_text="Status"
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
     with tab_edit_seller:
         st.subheader("Kelola Seller")
@@ -1745,6 +1745,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
+
 
 
 
