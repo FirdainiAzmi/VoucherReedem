@@ -1792,7 +1792,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 # === Cek ID apakah sudah ada ===
                 with engine.connect() as conn:
                     exists = conn.execute(
-                        text("SELECT 1 FROM seller WHERE seller_id = :id"),
+                        text("SELECT 1 FROM seller WHERE id_seller = :id"),
                         {"id": id_seller}
                     ).fetchone()
         
@@ -1825,3 +1825,4 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
