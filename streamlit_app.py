@@ -453,191 +453,191 @@ if not (st.session_state.admin_logged_in or st.session_state.seller_logged_in):
 def page_admin():
     tab_edit, tab_laporan, tab_histori, tab_edit_seller = st.tabs(["Informasi Kupon", "Laporan warung", "Histori", "Edit Seller"])
 
-    with tab_edit_seller:
-        st.subheader("Kelola Seller")
-        tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Kupon", "Penerimaan Seller"])
+    # with tab_edit_seller:
+    #     st.subheader("Kelola Seller")
+    #     tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Kupon", "Penerimaan Seller"])
     
-        with tab_kepemilikan:
-            st.subheader("🎯 Serahkan Kupon ke Seller")
+    #     with tab_kepemilikan:
+    #         st.subheader("🎯 Serahkan Kupon ke Seller")
     
-            try:
-                with engine.connect() as conn:
-                    df_seller = pd.read_sql("""
-                        SELECT * FROM seller
-                        WHERE status = 'diterima'
-                        ORDER BY nama_seller ASC
-                    """, conn)
+    #         try:
+    #             with engine.connect() as conn:
+    #                 df_seller = pd.read_sql("""
+    #                     SELECT * FROM seller
+    #                     WHERE status = 'diterima'
+    #                     ORDER BY nama_seller ASC
+    #                 """, conn)
     
-                if df_seller.empty:
-                    st.info("Belum ada seller yang berstatus 'diterima'.")
-                else:
-                    selected_seller = st.selectbox(
-                        "Pilih Seller untuk diberikan kupon",
-                        df_seller["nama_seller"].tolist()
-                    )
+    #             if df_seller.empty:
+    #                 st.info("Belum ada seller yang berstatus 'diterima'.")
+    #             else:
+    #                 selected_seller = st.selectbox(
+    #                     "Pilih Seller untuk diberikan kupon",
+    #                     df_seller["nama_seller"].tolist()
+    #                 )
     
-                    selected_row = df_seller[df_seller["nama_seller"] == selected_seller].iloc[0]
-                    seller_hp = selected_row["no_hp"]
-                    id_unik = selected_row["id_seller"]
+    #                 selected_row = df_seller[df_seller["nama_seller"] == selected_seller].iloc[0]
+    #                 seller_hp = selected_row["no_hp"]
+    #                 id_unik = selected_row["id_seller"]
     
-                    # Ambil voucher yang dimiliki seller
-                    with engine.connect() as conn:
-                        df_current_voucher = pd.read_sql(
-                            text("""
-                                SELECT code, initial_value, balance, status, tanggal_penjualan
-                                FROM vouchers
-                                WHERE seller = :seller
-                                ORDER BY tanggal_penjualan DESC NULLS LAST
-                            """),
-                            conn,
-                            params={"seller": selected_seller}
-                        )
+    #                 # Ambil voucher yang dimiliki seller
+    #                 with engine.connect() as conn:
+    #                     df_current_voucher = pd.read_sql(
+    #                         text("""
+    #                             SELECT code, initial_value, balance, status, tanggal_penjualan
+    #                             FROM vouchers
+    #                             WHERE seller = :seller
+    #                             ORDER BY tanggal_penjualan DESC NULLS LAST
+    #                         """),
+    #                         conn,
+    #                         params={"seller": selected_seller}
+    #                     )
     
-                    st.markdown("---")
-                    st.subheader("📋 Informasi Seller")
-                    st.write(f"**Nama:** {selected_seller}")
-                    st.write(f"**No HP:** {seller_hp}")
-                    st.write(f"**ID Seller:** {id_unik}")
-                    st.write(f"**Jumlah kupon yang dimiliki:** {len(df_current_voucher)}")
+    #                 st.markdown("---")
+    #                 st.subheader("📋 Informasi Seller")
+    #                 st.write(f"**Nama:** {selected_seller}")
+    #                 st.write(f"**No HP:** {seller_hp}")
+    #                 st.write(f"**ID Seller:** {id_unik}")
+    #                 st.write(f"**Jumlah kupon yang dimiliki:** {len(df_current_voucher)}")
     
-                    if not df_current_voucher.empty:
-                        st.markdown("**Kupon yang saat ini dimiliki:**")
-                        df_sorted = df_current_voucher.sort_values(
-                            by=["status", "tanggal_penjualan"],
-                            ascending=[True, False]
-                        )
+    #                 if not df_current_voucher.empty:
+    #                     st.markdown("**Kupon yang saat ini dimiliki:**")
+    #                     df_sorted = df_current_voucher.sort_values(
+    #                         by=["status", "tanggal_penjualan"],
+    #                         ascending=[True, False]
+    #                     )
                     
-                        st.dataframe(
-                            df_sorted[["code", "tanggal_penjualan", "status"]],
-                            use_container_width=True
-                        )
-                    else:
-                        st.info("Seller ini belum memiliki voucher apa pun.")
+    #                     st.dataframe(
+    #                         df_sorted[["code", "tanggal_penjualan", "status"]],
+    #                         use_container_width=True
+    #                     )
+    #                 else:
+    #                     st.info("Seller ini belum memiliki voucher apa pun.")
     
-                    # Ambil voucher yang belum diassign
-                    with engine.connect() as conn:
-                        df_voucher = pd.read_sql("""
-                            SELECT code, initial_value, balance, status
-                            FROM vouchers
-                            WHERE seller IS NULL OR TRIM(seller) = ''
-                            ORDER BY created_at ASC
-                        """, conn)
+    #                 # Ambil voucher yang belum diassign
+    #                 with engine.connect() as conn:
+    #                     df_voucher = pd.read_sql("""
+    #                         SELECT code, initial_value, balance, status
+    #                         FROM vouchers
+    #                         WHERE seller IS NULL OR TRIM(seller) = ''
+    #                         ORDER BY created_at ASC
+    #                     """, conn)
     
-                    st.markdown("---")
-                    st.subheader(f"🧾 Pilih Kupon Baru untuk {selected_seller}")
+    #                 st.markdown("---")
+    #                 st.subheader(f"🧾 Pilih Kupon Baru untuk {selected_seller}")
     
-                    if df_voucher.empty:
-                        st.info("Semua kupon sudah diassign ke seller.")
-                    else:
-                        selected_vouchers = st.multiselect(
-                            "Pilih kode kupon yang akan diberikan",
-                            df_voucher["code"].tolist()
-                        )
+    #                 if df_voucher.empty:
+    #                     st.info("Semua kupon sudah diassign ke seller.")
+    #                 else:
+    #                     selected_vouchers = st.multiselect(
+    #                         "Pilih kode kupon yang akan diberikan",
+    #                         df_voucher["code"].tolist()
+    #                     )
     
-                        if st.button("💾 Simpan Penyerahan Kupon") and selected_vouchers:
-                            try:
-                                today = date.today()
+    #                     if st.button("💾 Simpan Penyerahan Kupon") and selected_vouchers:
+    #                         try:
+    #                             today = date.today()
     
-                                with engine.begin() as conn2:
-                                    for code in selected_vouchers:
-                                        conn2.execute(
-                                            text("""
-                                                UPDATE vouchers
-                                                SET seller = :seller,
-                                                    tanggal_penjualan = :tgl
-                                                WHERE code = :code
-                                            """),
-                                            {
-                                                "seller": selected_seller,
-                                                "tgl": today,
-                                                "code": code
-                                            }
-                                        )
+    #                             with engine.begin() as conn2:
+    #                                 for code in selected_vouchers:
+    #                                     conn2.execute(
+    #                                         text("""
+    #                                             UPDATE vouchers
+    #                                             SET seller = :seller,
+    #                                                 tanggal_penjualan = :tgl
+    #                                             WHERE code = :code
+    #                                         """),
+    #                                         {
+    #                                             "seller": selected_seller,
+    #                                             "tgl": today,
+    #                                             "code": code
+    #                                         }
+    #                                     )
     
-                                with engine.connect() as conn3:
-                                    df_changed = pd.read_sql(
-                                        text("""
-                                            SELECT code, seller, tanggal_penjualan
-                                            FROM vouchers
-                                            WHERE code IN :codes
-                                        """),
-                                        conn3,
-                                        params={"codes": tuple(selected_vouchers)}
-                                    )
+    #                             with engine.connect() as conn3:
+    #                                 df_changed = pd.read_sql(
+    #                                     text("""
+    #                                         SELECT code, seller, tanggal_penjualan
+    #                                         FROM vouchers
+    #                                         WHERE code IN :codes
+    #                                     """),
+    #                                     conn3,
+    #                                     params={"codes": tuple(selected_vouchers)}
+    #                                 )
     
-                                st.success(f"✅ {len(selected_vouchers)} kupon berhasil diassign ke seller {selected_seller}.")
-                                st.markdown("### 🔍 Kupon yang baru saja diubah:")
-                                st.dataframe(df_changed, use_container_width=True)
+    #                             st.success(f"✅ {len(selected_vouchers)} kupon berhasil diassign ke seller {selected_seller}.")
+    #                             st.markdown("### 🔍 Kupon yang baru saja diubah:")
+    #                             st.dataframe(df_changed, use_container_width=True)
     
-                            except Exception as e:
-                                st.error("❌ Gagal menyimpan assign kupon ke database.")
-                                st.code(str(e))
+    #                         except Exception as e:
+    #                             st.error("❌ Gagal menyimpan assign kupon ke database.")
+    #                             st.code(str(e))
     
-            except Exception as e:
-                st.error("❌ Gagal memuat data seller atau kupon.")
-                st.code(str(e))
+    #         except Exception as e:
+    #             st.error("❌ Gagal memuat data seller atau kupon.")
+    #             st.code(str(e))
     
-        with tab_acc:
-            st.subheader("🧾 Daftar Calon Seller")
-            st.write("Berikut adalah daftar seller yang mendaftar. Klik 'Accept' untuk menyetujui pendaftaran.")
+    #     with tab_acc:
+    #         st.subheader("🧾 Daftar Calon Seller")
+    #         st.write("Berikut adalah daftar seller yang mendaftar. Klik 'Accept' untuk menyetujui pendaftaran.")
     
-            try:
-                with engine.connect() as conn:
-                    df_seller_pending = pd.read_sql("""
-                        SELECT * FROM seller
-                        WHERE status = 'belum diterima'
-                        ORDER BY nama_seller ASC
-                    """, conn)
+    #         try:
+    #             with engine.connect() as conn:
+    #                 df_seller_pending = pd.read_sql("""
+    #                     SELECT * FROM seller
+    #                     WHERE status = 'belum diterima'
+    #                     ORDER BY nama_seller ASC
+    #                 """, conn)
         
-                if df_seller_pending.empty:
-                    st.info("Belum ada data seller yang mendaftar.")
-                else:
-                    for idx, row in df_seller_pending.iterrows():
-                        col1, col2, col3, col4 = st.columns([3, 3, 2, 2])
-                        with col1:
-                            st.write(f"**Nama:** {row['nama_seller']}")
-                            st.write(f"No HP: {row['no_hp']}")
-                        with col2:
-                            st.write(f"Status: {row['status'] or '-'}")
-                            st.write(f"ID Seller: {row['id_seller']}")
-                        with col3:
-                            if st.button("✅ Accept", key=f"accept_{row['nama_seller']}_{idx}"):
-                                try:
-                                    with engine.begin() as conn2:
-                                        conn2.execute(
-                                            text("""
-                                                UPDATE seller
-                                                SET status = 'diterima'
-                                                WHERE nama_seller = :nama_seller
-                                                  AND no_hp = :no_hp
-                                            """),
-                                            {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
-                                        )
-                                    st.success(f"Seller {row['nama_seller']} diterima ✅")
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Gagal update status seller: {e}")
+    #             if df_seller_pending.empty:
+    #                 st.info("Belum ada data seller yang mendaftar.")
+    #             else:
+    #                 for idx, row in df_seller_pending.iterrows():
+    #                     col1, col2, col3, col4 = st.columns([3, 3, 2, 2])
+    #                     with col1:
+    #                         st.write(f"**Nama:** {row['nama_seller']}")
+    #                         st.write(f"No HP: {row['no_hp']}")
+    #                     with col2:
+    #                         st.write(f"Status: {row['status'] or '-'}")
+    #                         st.write(f"ID Seller: {row['id_seller']}")
+    #                     with col3:
+    #                         if st.button("✅ Accept", key=f"accept_{row['nama_seller']}_{idx}"):
+    #                             try:
+    #                                 with engine.begin() as conn2:
+    #                                     conn2.execute(
+    #                                         text("""
+    #                                             UPDATE seller
+    #                                             SET status = 'diterima'
+    #                                             WHERE nama_seller = :nama_seller
+    #                                               AND no_hp = :no_hp
+    #                                         """),
+    #                                         {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
+    #                                     )
+    #                                 st.success(f"Seller {row['nama_seller']} diterima ✅")
+    #                                 st.rerun()
+    #                             except Exception as e:
+    #                                 st.error(f"Gagal update status seller: {e}")
         
-                        with col4:
-                            if st.button("🗑️ Hapus", key=f"hapus_{row['nama_seller']}_{idx}"):
-                                try:
-                                    with engine.begin() as conn3:
-                                        conn3.execute(
-                                            text("""
-                                                DELETE FROM seller
-                                                WHERE nama_seller = :nama_seller
-                                                  AND no_hp = :no_hp
-                                            """),
-                                            {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
-                                        )
-                                    st.warning(f"Data seller {row['nama_seller']} telah dihapus ❌")
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Gagal menghapus data seller: {e}")
+    #                     with col4:
+    #                         if st.button("🗑️ Hapus", key=f"hapus_{row['nama_seller']}_{idx}"):
+    #                             try:
+    #                                 with engine.begin() as conn3:
+    #                                     conn3.execute(
+    #                                         text("""
+    #                                             DELETE FROM seller
+    #                                             WHERE nama_seller = :nama_seller
+    #                                               AND no_hp = :no_hp
+    #                                         """),
+    #                                         {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
+    #                                     )
+    #                                 st.warning(f"Data seller {row['nama_seller']} telah dihapus ❌")
+    #                                 st.rerun()
+    #                             except Exception as e:
+    #                                 st.error(f"Gagal menghapus data seller: {e}")
         
-            except Exception as e:
-                st.error("❌ Gagal mengambil data seller dari database.")
-                st.code(str(e))
+    #         except Exception as e:
+    #             st.error("❌ Gagal mengambil data seller dari database.")
+    #             st.code(str(e))
 
     with tab_edit:
         st.subheader("Informasi Kupon")
@@ -922,191 +922,191 @@ def page_admin():
                 st.error("❌ Gagal memuat transaksi")
                 st.code(str(e))
 
-    # with tab_edit_seller:
-    #     st.subheader("Kelola Seller")
-    #     tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Kupon", "Penerimaan Seller"])
+    with tab_edit_seller:
+        st.subheader("Kelola Seller")
+        tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Kupon", "Penerimaan Seller"])
     
-    #     with tab_kepemilikan:
-    #         st.subheader("🎯 Serahkan Kupon ke Seller")
+        with tab_kepemilikan:
+            st.subheader("🎯 Serahkan Kupon ke Seller")
     
-    #         try:
-    #             with engine.connect() as conn:
-    #                 df_seller = pd.read_sql("""
-    #                     SELECT * FROM seller
-    #                     WHERE status = 'diterima'
-    #                     ORDER BY nama_seller ASC
-    #                 """, conn)
+            try:
+                with engine.connect() as conn:
+                    df_seller = pd.read_sql("""
+                        SELECT * FROM seller
+                        WHERE status = 'diterima'
+                        ORDER BY nama_seller ASC
+                    """, conn)
     
-    #             if df_seller.empty:
-    #                 st.info("Belum ada seller yang berstatus 'diterima'.")
-    #             else:
-    #                 selected_seller = st.selectbox(
-    #                     "Pilih Seller untuk diberikan kupon",
-    #                     df_seller["nama_seller"].tolist()
-    #                 )
+                if df_seller.empty:
+                    st.info("Belum ada seller yang berstatus 'diterima'.")
+                else:
+                    selected_seller = st.selectbox(
+                        "Pilih Seller untuk diberikan kupon",
+                        df_seller["nama_seller"].tolist()
+                    )
     
-    #                 selected_row = df_seller[df_seller["nama_seller"] == selected_seller].iloc[0]
-    #                 seller_hp = selected_row["no_hp"]
-    #                 id_unik = selected_row["id_seller"]
+                    selected_row = df_seller[df_seller["nama_seller"] == selected_seller].iloc[0]
+                    seller_hp = selected_row["no_hp"]
+                    id_unik = selected_row["id_seller"]
     
-    #                 # Ambil voucher yang dimiliki seller
-    #                 with engine.connect() as conn:
-    #                     df_current_voucher = pd.read_sql(
-    #                         text("""
-    #                             SELECT code, initial_value, balance, status, tanggal_penjualan
-    #                             FROM vouchers
-    #                             WHERE seller = :seller
-    #                             ORDER BY tanggal_penjualan DESC NULLS LAST
-    #                         """),
-    #                         conn,
-    #                         params={"seller": selected_seller}
-    #                     )
+                    # Ambil voucher yang dimiliki seller
+                    with engine.connect() as conn:
+                        df_current_voucher = pd.read_sql(
+                            text("""
+                                SELECT code, initial_value, balance, status, tanggal_penjualan
+                                FROM vouchers
+                                WHERE seller = :seller
+                                ORDER BY tanggal_penjualan DESC NULLS LAST
+                            """),
+                            conn,
+                            params={"seller": selected_seller}
+                        )
     
-    #                 st.markdown("---")
-    #                 st.subheader("📋 Informasi Seller")
-    #                 st.write(f"**Nama:** {selected_seller}")
-    #                 st.write(f"**No HP:** {seller_hp}")
-    #                 st.write(f"**ID Seller:** {id_unik}")
-    #                 st.write(f"**Jumlah kupon yang dimiliki:** {len(df_current_voucher)}")
+                    st.markdown("---")
+                    st.subheader("📋 Informasi Seller")
+                    st.write(f"**Nama:** {selected_seller}")
+                    st.write(f"**No HP:** {seller_hp}")
+                    st.write(f"**ID Seller:** {id_unik}")
+                    st.write(f"**Jumlah kupon yang dimiliki:** {len(df_current_voucher)}")
     
-    #                 if not df_current_voucher.empty:
-    #                     st.markdown("**Kupon yang saat ini dimiliki:**")
-    #                     df_sorted = df_current_voucher.sort_values(
-    #                         by=["status", "tanggal_penjualan"],
-    #                         ascending=[True, False]
-    #                     )
+                    if not df_current_voucher.empty:
+                        st.markdown("**Kupon yang saat ini dimiliki:**")
+                        df_sorted = df_current_voucher.sort_values(
+                            by=["status", "tanggal_penjualan"],
+                            ascending=[True, False]
+                        )
                     
-    #                     st.dataframe(
-    #                         df_sorted[["code", "tanggal_penjualan", "status"]],
-    #                         use_container_width=True
-    #                     )
-    #                 else:
-    #                     st.info("Seller ini belum memiliki voucher apa pun.")
+                        st.dataframe(
+                            df_sorted[["code", "tanggal_penjualan", "status"]],
+                            use_container_width=True
+                        )
+                    else:
+                        st.info("Seller ini belum memiliki voucher apa pun.")
     
-    #                 # Ambil voucher yang belum diassign
-    #                 with engine.connect() as conn:
-    #                     df_voucher = pd.read_sql("""
-    #                         SELECT code, initial_value, balance, status
-    #                         FROM vouchers
-    #                         WHERE seller IS NULL OR TRIM(seller) = ''
-    #                         ORDER BY created_at ASC
-    #                     """, conn)
+                    # Ambil voucher yang belum diassign
+                    with engine.connect() as conn:
+                        df_voucher = pd.read_sql("""
+                            SELECT code, initial_value, balance, status
+                            FROM vouchers
+                            WHERE seller IS NULL OR TRIM(seller) = ''
+                            ORDER BY created_at ASC
+                        """, conn)
     
-    #                 st.markdown("---")
-    #                 st.subheader(f"🧾 Pilih Kupon Baru untuk {selected_seller}")
+                    st.markdown("---")
+                    st.subheader(f"🧾 Pilih Kupon Baru untuk {selected_seller}")
     
-    #                 if df_voucher.empty:
-    #                     st.info("Semua kupon sudah diassign ke seller.")
-    #                 else:
-    #                     selected_vouchers = st.multiselect(
-    #                         "Pilih kode kupon yang akan diberikan",
-    #                         df_voucher["code"].tolist()
-    #                     )
+                    if df_voucher.empty:
+                        st.info("Semua kupon sudah diassign ke seller.")
+                    else:
+                        selected_vouchers = st.multiselect(
+                            "Pilih kode kupon yang akan diberikan",
+                            df_voucher["code"].tolist()
+                        )
     
-    #                     if st.button("💾 Simpan Penyerahan Kupon") and selected_vouchers:
-    #                         try:
-    #                             today = date.today()
+                        if st.button("💾 Simpan Penyerahan Kupon") and selected_vouchers:
+                            try:
+                                today = date.today()
     
-    #                             with engine.begin() as conn2:
-    #                                 for code in selected_vouchers:
-    #                                     conn2.execute(
-    #                                         text("""
-    #                                             UPDATE vouchers
-    #                                             SET seller = :seller,
-    #                                                 tanggal_penjualan = :tgl
-    #                                             WHERE code = :code
-    #                                         """),
-    #                                         {
-    #                                             "seller": selected_seller,
-    #                                             "tgl": today,
-    #                                             "code": code
-    #                                         }
-    #                                     )
+                                with engine.begin() as conn2:
+                                    for code in selected_vouchers:
+                                        conn2.execute(
+                                            text("""
+                                                UPDATE vouchers
+                                                SET seller = :seller,
+                                                    tanggal_penjualan = :tgl
+                                                WHERE code = :code
+                                            """),
+                                            {
+                                                "seller": selected_seller,
+                                                "tgl": today,
+                                                "code": code
+                                            }
+                                        )
     
-    #                             with engine.connect() as conn3:
-    #                                 df_changed = pd.read_sql(
-    #                                     text("""
-    #                                         SELECT code, seller, tanggal_penjualan
-    #                                         FROM vouchers
-    #                                         WHERE code IN :codes
-    #                                     """),
-    #                                     conn3,
-    #                                     params={"codes": tuple(selected_vouchers)}
-    #                                 )
+                                with engine.connect() as conn3:
+                                    df_changed = pd.read_sql(
+                                        text("""
+                                            SELECT code, seller, tanggal_penjualan
+                                            FROM vouchers
+                                            WHERE code IN :codes
+                                        """),
+                                        conn3,
+                                        params={"codes": tuple(selected_vouchers)}
+                                    )
     
-    #                             st.success(f"✅ {len(selected_vouchers)} kupon berhasil diassign ke seller {selected_seller}.")
-    #                             st.markdown("### 🔍 Kupon yang baru saja diubah:")
-    #                             st.dataframe(df_changed, use_container_width=True)
+                                st.success(f"✅ {len(selected_vouchers)} kupon berhasil diassign ke seller {selected_seller}.")
+                                st.markdown("### 🔍 Kupon yang baru saja diubah:")
+                                st.dataframe(df_changed, use_container_width=True)
     
-    #                         except Exception as e:
-    #                             st.error("❌ Gagal menyimpan assign kupon ke database.")
-    #                             st.code(str(e))
+                            except Exception as e:
+                                st.error("❌ Gagal menyimpan assign kupon ke database.")
+                                st.code(str(e))
     
-    #         except Exception as e:
-    #             st.error("❌ Gagal memuat data seller atau kupon.")
-    #             st.code(str(e))
+            except Exception as e:
+                st.error("❌ Gagal memuat data seller atau kupon.")
+                st.code(str(e))
     
-    #     with tab_acc:
-    #         st.subheader("🧾 Daftar Calon Seller")
-    #         st.write("Berikut adalah daftar seller yang mendaftar. Klik 'Accept' untuk menyetujui pendaftaran.")
+        with tab_acc:
+            st.subheader("🧾 Daftar Calon Seller")
+            st.write("Berikut adalah daftar seller yang mendaftar. Klik 'Accept' untuk menyetujui pendaftaran.")
     
-    #         try:
-    #             with engine.connect() as conn:
-    #                 df_seller_pending = pd.read_sql("""
-    #                     SELECT * FROM seller
-    #                     WHERE status = 'belum diterima'
-    #                     ORDER BY nama_seller ASC
-    #                 """, conn)
+            try:
+                with engine.connect() as conn:
+                    df_seller_pending = pd.read_sql("""
+                        SELECT * FROM seller
+                        WHERE status = 'belum diterima'
+                        ORDER BY nama_seller ASC
+                    """, conn)
         
-    #             if df_seller_pending.empty:
-    #                 st.info("Belum ada data seller yang mendaftar.")
-    #             else:
-    #                 for idx, row in df_seller_pending.iterrows():
-    #                     col1, col2, col3, col4 = st.columns([3, 3, 2, 2])
-    #                     with col1:
-    #                         st.write(f"**Nama:** {row['nama_seller']}")
-    #                         st.write(f"No HP: {row['no_hp']}")
-    #                     with col2:
-    #                         st.write(f"Status: {row['status'] or '-'}")
-    #                         st.write(f"ID Seller: {row['id_seller']}")
-    #                     with col3:
-    #                         if st.button("✅ Accept", key=f"accept_{row['nama_seller']}_{idx}"):
-    #                             try:
-    #                                 with engine.begin() as conn2:
-    #                                     conn2.execute(
-    #                                         text("""
-    #                                             UPDATE seller
-    #                                             SET status = 'diterima'
-    #                                             WHERE nama_seller = :nama_seller
-    #                                               AND no_hp = :no_hp
-    #                                         """),
-    #                                         {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
-    #                                     )
-    #                                 st.success(f"Seller {row['nama_seller']} diterima ✅")
-    #                                 st.rerun()
-    #                             except Exception as e:
-    #                                 st.error(f"Gagal update status seller: {e}")
+                if df_seller_pending.empty:
+                    st.info("Belum ada data seller yang mendaftar.")
+                else:
+                    for idx, row in df_seller_pending.iterrows():
+                        col1, col2, col3, col4 = st.columns([3, 3, 2, 2])
+                        with col1:
+                            st.write(f"**Nama:** {row['nama_seller']}")
+                            st.write(f"No HP: {row['no_hp']}")
+                        with col2:
+                            st.write(f"Status: {row['status'] or '-'}")
+                            st.write(f"ID Seller: {row['id_seller']}")
+                        with col3:
+                            if st.button("✅ Accept", key=f"accept_{row['nama_seller']}_{idx}"):
+                                try:
+                                    with engine.begin() as conn2:
+                                        conn2.execute(
+                                            text("""
+                                                UPDATE seller
+                                                SET status = 'diterima'
+                                                WHERE nama_seller = :nama_seller
+                                                  AND no_hp = :no_hp
+                                            """),
+                                            {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
+                                        )
+                                    st.success(f"Seller {row['nama_seller']} diterima ✅")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Gagal update status seller: {e}")
         
-    #                     with col4:
-    #                         if st.button("🗑️ Hapus", key=f"hapus_{row['nama_seller']}_{idx}"):
-    #                             try:
-    #                                 with engine.begin() as conn3:
-    #                                     conn3.execute(
-    #                                         text("""
-    #                                             DELETE FROM seller
-    #                                             WHERE nama_seller = :nama_seller
-    #                                               AND no_hp = :no_hp
-    #                                         """),
-    #                                         {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
-    #                                     )
-    #                                 st.warning(f"Data seller {row['nama_seller']} telah dihapus ❌")
-    #                                 st.rerun()
-    #                             except Exception as e:
-    #                                 st.error(f"Gagal menghapus data seller: {e}")
+                        with col4:
+                            if st.button("🗑️ Hapus", key=f"hapus_{row['nama_seller']}_{idx}"):
+                                try:
+                                    with engine.begin() as conn3:
+                                        conn3.execute(
+                                            text("""
+                                                DELETE FROM seller
+                                                WHERE nama_seller = :nama_seller
+                                                  AND no_hp = :no_hp
+                                            """),
+                                            {"nama_seller": row["nama_seller"], "no_hp": row["no_hp"]}
+                                        )
+                                    st.warning(f"Data seller {row['nama_seller']} telah dihapus ❌")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Gagal menghapus data seller: {e}")
         
-    #         except Exception as e:
-    #             st.error("❌ Gagal mengambil data seller dari database.")
-    #             st.code(str(e))
+            except Exception as e:
+                st.error("❌ Gagal mengambil data seller dari database.")
+                st.code(str(e))
     
     with tab_laporan:
         st.subheader("Laporan Warung")
@@ -1941,6 +1941,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
