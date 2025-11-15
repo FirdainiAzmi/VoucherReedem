@@ -10,14 +10,20 @@ import matplotlib.pyplot as plt
 import math
 import traceback
 import string, random
+import smtplib
+from email.mime.text import MIMEText
+
+
 
 # ---------------------------
 # Config / Secrets
 # ---------------------------
 DB_URL = st.secrets["DB_URL"]
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")  # admin password in st.secrets
-# Seller password: fallback to the one you gave if not in secrets
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")  
 SELLER_PASSWORD = st.secrets.get("SELLER_PASSWORD")
+EMAIL = st.secrets["EMAIL"]
+APP_PASSWORD = st.secrets["APP_PASSWORD"]
+ADMIN_EMAIL = st.secrets["ADMIN_EMAIL"]
 
 engine = create_engine(DB_URL, future=True)
 
@@ -32,7 +38,7 @@ def init_db():
                     code TEXT PRIMARY KEY,
                     initial_value INTEGER NOT NULL,
                     balance INTEGER NOT NULL,
-                    created_at TIMESTAMP NOT NULL
+                    awal_berlaku TIMESTAMP NOT NULL
                 )
             """))
             conn.execute(text("""
@@ -68,6 +74,37 @@ def init_db():
         st.error(f"Gagal inisialisasi database: {e}")
         st.stop()
 
+def send_admin_notification(voucher_code, seller_name, buyer_name, buyer_phone):
+    subject = f"[INFO] Voucher {voucher_code} Diaktifkan Seller"
+    body = f"""
+Halo Admin,
+
+Voucher telah diaktivasi oleh seller.
+
+Kode Voucher : {voucher_code}
+Seller       : {seller_name}
+Pembeli      : {buyer_name}
+No HP        : {buyer_phone}
+
+Salam,
+Sistem Pawon Sappitoe
+"""
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = EMAIL
+    msg["To"] = ADMIN_EMAIL
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(EMAIL, APP_PASSWORD)
+            server.sendmail(EMAIL, ADMIN_EMAIL, msg.as_string())
+        return True
+    except Exception as e:
+        print("Email error:", e)
+        return False
+
+
 
 # ---------------------------
 # DB helpers
@@ -76,7 +113,7 @@ def find_voucher(code):
     try:
         with engine.connect() as conn:
             row = conn.execute(text("""
-                SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_aktivasi
+                SELECT code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_aktivasi, akhir_berlaku
                 FROM vouchers WHERE code = :c
             """), {"c": code}).fetchone()
         return row
@@ -186,7 +223,7 @@ def atomic_redeem(code, amount, branch, items_str):
         return False, f"DB error saat redeem: {e}", None
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
-    q = "SELECT code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_aktivasi FROM vouchers"
+    q = "SELECT code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_aktivasi, akhir_berlaku FROM vouchers"
     clauses = []
     params = {}
     if filter_status == "aktif":
@@ -198,7 +235,7 @@ def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
         params["search"] = f"%{search}%"
     if clauses:
         q += " WHERE " + " AND ".join(clauses)
-    q += " ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
+    q += " ORDER BY awal_berlaku DESC LIMIT :limit OFFSET :offset"
     params["limit"] = limit
     params["offset"] = offset
     with engine.connect() as conn:
@@ -520,7 +557,7 @@ def page_admin():
     #                         SELECT code, initial_value, balance, status
     #                         FROM vouchers
     #                         WHERE seller IS NULL OR TRIM(seller) = ''
-    #                         ORDER BY created_at ASC
+    #                         ORDER BY awal_berlaku ASC
     #                     """, conn)
     
     #                 st.markdown("---")
@@ -989,7 +1026,7 @@ def page_admin():
                             SELECT code, initial_value, balance, status
                             FROM vouchers
                             WHERE seller IS NULL OR TRIM(seller) = ''
-                            ORDER BY created_at ASC
+                            ORDER BY awal_berlaku ASC
                         """, conn)
     
                     st.markdown("---")
@@ -1566,6 +1603,12 @@ def page_seller_activation():
                 )
 
             st.success(f"✅ Kupon {kode} berhasil diaktivasi untuk pembeli {buyer_name_input}.")
+            send_admin_notification(
+                voucher_code=kode,
+                seller_name=seller_name_input,
+                buyer_name=buyer_name_input,
+                buyer_phone=buyer_phone_input
+            )
 
         except Exception as e:
             st.error("❌ Terjadi kesalahan saat mengupdate data kupon.")
@@ -1625,8 +1668,24 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                     if not row:
                         st.session_state['redeem_error'] = "❌ Voucher tidak ditemukan."
                     else:
-                        code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_aktivasi = row
-                    
+                        code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_aktivasi, akhir_berlaku = row
+                        # === VALIDASI PERIODE BERLAKU ===
+                        today = date.today()
+
+                        if today < awal_berlaku:
+                            st.session_state['redeem_error'] = (
+                                f"⛔ Kupon belum dapat digunakan.\n"
+                                f"Berlaku mulai: {awal_berlaku}"
+                            )
+                            st.rerun()
+
+                        if today > akhir_berlaku:
+                            st.session_state['redeem_error'] = (
+                                f"⛔ Kupon sudah tidak berlaku.\n"
+                                f"Masa berlaku berakhir: {akhir_berlaku}"
+                            )
+                            st.rerun()
+
                         status_normalized = (status or "").strip().lower()
                     
                         if status_normalized == "inactive":
@@ -1661,7 +1720,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
         # STEP 2: Pilih cabang & menu
         elif st.session_state.redeem_step == 2:
             row = st.session_state.voucher_row
-            code, initial_value, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
+            code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_penjualan = row
         
             st.subheader(f"Kupon: {code}")
             st.write(f"- Nilai awal: Rp {int(initial_value):,}")
@@ -1808,7 +1867,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
         # Step 3: Konfirmasi pembayaran
         if st.session_state.redeem_step == 3:
             row = st.session_state.voucher_row
-            code, initial, balance, created_at, nama, no_hp, status, seller, tanggal_penjualan = row
+            code, initial, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_penjualan = row
             
             st.header("Konfirmasi Pembayaran")
             st.write(f"- Kupon: {code}")
@@ -1941,9 +2000,6 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
-
-
-
 
 
 
