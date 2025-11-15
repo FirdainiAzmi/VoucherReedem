@@ -554,6 +554,10 @@ def page_admin():
         
             query += """
              ORDER BY 
+                 CASE 
+                    WHEN seller IS NOT NULL AND seller <> '' THEN 1
+                    ELSE 2
+                END,
                 CASE 
                     WHEN status = 'active' THEN 1
                     WHEN status = 'habis' THEN 2
@@ -565,10 +569,6 @@ def page_admin():
                     WHEN initial_value = 100000 THEN 2
                     WHEN initial_value = 200000 THEN 3
                     ELSE 4
-                END,
-                CASE 
-                    WHEN seller IS NOT NULL AND seller <> '' THEN 1
-                    ELSE 2
                 END,
                 code ASC
             """
@@ -1819,6 +1819,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
