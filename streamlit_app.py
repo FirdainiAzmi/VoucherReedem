@@ -1146,7 +1146,7 @@ def page_seller_activation():
                 # Cek apakah voucher ada dan seller cocok
                 result = conn.execute(
                     text("""
-                        SELECT seller, status FROM vouchers WHERE code = :code
+                        SELECT seller, status, tanggal_penjualan FROM vouchers WHERE code = :code
                     """),
                     {"code": kode}
                 ).fetchone()
@@ -1155,7 +1155,7 @@ def page_seller_activation():
                     st.error("Kode kupon tidak ditemukan.")
                     return
 
-                db_seller, db_status = result
+                db_seller, db_status, tanggal_penjualan = result
 
                 # Jika voucher belum diassign seller oleh admin
                 if not db_seller or db_seller.strip() == "":
@@ -1163,8 +1163,8 @@ def page_seller_activation():
                     return
 
                 # Jika seller input tidak cocok dengan seller di database
-                # if seller_from_db != st.session_state.nama_seller:
-                #     return False, "Voucher bukan milik Anda", None
+                if db_seller != st.session_state.nama_seller:
+                    return False, "Voucher bukan milik Anda", None
 
                 if tanggal_penjualan and tanggal_aktivasi < tanggal_penjualan:
                     st.error(f"❌ Tanggal Aktivasi tidak boleh sebelum Tanggal Penjualan ({tanggal_penjualan.date()})")
@@ -1557,6 +1557,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
+
 
 
 
