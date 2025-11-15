@@ -1164,11 +1164,13 @@ def page_seller_activation():
 
                 # Jika seller input tidak cocok dengan seller di database
                 if db_seller != st.session_state.nama_seller:
-                    return False, "Voucher bukan milik Anda", None
+                    st.error("Voucher bukan milik Anda.")
+                    return
 
                 if tanggal_penjualan and tanggal_aktivasi < tanggal_penjualan:
                     st.error(f"❌ Tanggal Aktivasi tidak boleh sebelum Tanggal Penjualan ({tanggal_penjualan})")
                     tanggal_aktivasi = None  # opsional: reset nilai agar user pilih ulang
+                    return
 
                 # Jika sudah aktif sebelumnya
                 if db_status and db_status.lower() == "active":
@@ -1557,6 +1559,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
+
 
 
 
