@@ -634,23 +634,49 @@ def page_admin():
             st.info("Belum ada transaksi")
             return
     
-        col1, col2, col3 = st.columns([2, 1.3, 1.3])
+        df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
+        min_date = df_tx["tanggal_transaksi"].min()
+        max_date = df_tx["tanggal_transaksi"].max()
+        
+        col1, col2, col3, col4 = st.columns([2, 1.3, 1.3, 1.3])
         with col1:
             search_code = st.text_input("Cari kode kupon untuk detail histori", "").strip()
+        
         with col2:
-            filter_tanggal = st.date_input("Tanggal Transaksi", value=None)  # default semua
-        with col3:
-            filter_cabang = st.selectbox(
-                "Filter Cabang",
-                ["semua", "Sedati", "Tawangsari"]
+            start_date = st.date_input(
+                "Tanggal Mulai",
+                value=min_date,
+                min_value=min_date,
+                max_value=max_date
             )
+        
+        with col3:
+            end_date = st.date_input(
+                "Tanggal Akhir",
+                value=max_date,
+                min_value=min_date,
+                max_value=max_date
+            )
+
+        with col4:
+            filter_cabang = st.selectbox(
+            "Filter Cabang",
+            ["semua", "Sedati", "Tawangsari"]
+        )
     
         # Normalisasi format tanggal transaksi
         df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
     
-        # 🔎 Filter tanggal (jika dipilih)
-        if filter_tanggal:
-            df_tx = df_tx[df_tx["tanggal_transaksi"] == filter_tanggal]
+        # Filter tanggal transaksi berdasarkan rentang
+        if start_date and end_date:
+            if start_date > end_date:
+                st.error("❌ Tanggal Mulai tidak boleh setelah Tanggal Akhir")
+                st.stop()
+        
+            df_tx = df_tx[
+                (df_tx["tanggal_transaksi"] >= start_date) &
+                (df_tx["tanggal_transaksi"] <= end_date)
+            ]
     
         # 🏷 Filter cabang (jika tidak 'semua')
         if filter_cabang != "semua":
@@ -1613,6 +1639,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
+
 
 
 
