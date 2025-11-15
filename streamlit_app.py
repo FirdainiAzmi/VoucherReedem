@@ -1525,16 +1525,14 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                             }
                         )
         
-                    st.success(f"🎉 Pendaftaran berhasil!")
-        
                     st.warning(
                         f"⚠️ **SANGAT PENTING!**\n"
                         f"Simpan ID berikut untuk aktivasi voucher setelah Anda disetujui admin:\n\n"
                         f"🔐 **ID Seller Anda: {id_seller}**"
                     )
+                    st.success(f"🎉 Pendaftaran berhasil!")
         
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
-            
 
