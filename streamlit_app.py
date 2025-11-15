@@ -1490,7 +1490,7 @@ def page_seller_activation():
     st.subheader("Aktivasi Kupon")
 
     st.info(
-        "Masukkan kode kupon dan nama anda (seller), setelah itu masukkan nama dan nomer HP pembeli kupon untuk aktivasi."
+        "Masukkan kode kupon, setelah itu masukkan nama dan nomer HP pembeli kupon untuk aktivasi."
     )
 
     with st.form(key="seller_activation_form"):
@@ -1941,6 +1941,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
