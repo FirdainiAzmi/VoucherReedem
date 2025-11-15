@@ -1815,15 +1815,15 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                         }
                     )
         
-                st.success(f"🎉 Pendaftaran berhasil!")
+                st.success(f"🎉 Pendaftaran berhasil! Admin akan segera memverifikasi akun Anda.")
                 st.warning(
                     f"⚠️ **PENTING!** Simpan ID ini baik-baik untuk login nanti:\n\n"
                     f"🔐 **ID Seller Anda: {id_seller}**"
                 )
-                st.info("Admin akan segera memverifikasi akun Anda.")
         
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
