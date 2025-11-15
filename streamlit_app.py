@@ -818,7 +818,7 @@ def page_admin():
         df_tx = list_transactions(limit=5000)
         if df_tx.empty:
             st.info("Belum ada transaksi")
-            continue
+            return
     
         df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
         min_date = df_tx["tanggal_transaksi"].min()
@@ -1942,6 +1942,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
