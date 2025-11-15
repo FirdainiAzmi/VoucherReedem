@@ -320,6 +320,8 @@ def seller_activate_voucher(code, seller_input, buyer_name, buyer_phone):
 def ensure_session_state():
     st.session_state.setdefault("admin_logged_in", False)
     st.session_state.setdefault("seller_logged_in", False)
+    st.session_state.setdefault("id_seller", None)
+    st.session_state.setdefault("nama_seller", None)
     st.session_state.setdefault("page", "Penukaran Voucher")
     st.session_state.setdefault("redeem_step", 1)
     st.session_state.setdefault("entered_code", "")
@@ -344,7 +346,6 @@ def reset_redeem_state():
 def admin_login(password):
     return password == ADMIN_PASSWORD
 
-
 def admin_logout():
     st.session_state.admin_logged_in = False
     st.session_state.page = "Penukaran Voucher"
@@ -353,7 +354,9 @@ def admin_logout():
 
 def seller_logout():
     st.session_state.seller_logged_in = False
-    st.session_state.page = "Penukaran Voucher"
+    st.session_state.id_seller = None
+    st.session_state.nama_seller = None
+    st.session_state.page = "Redeem Voucher"
 
 def ensure_session_state():
     defaults = {
@@ -408,16 +411,32 @@ with st.sidebar:
                     st.error("Password admin salah")
                     
         with login_seller:
-            # st.markdown("---")
-            pwd_seller = st.text_input("Password Seller", type="password", key="pwd_seller")
+            st.markdown("### Login Seller")
+            seller_id_input = st.text_input("Masukkan ID Seller Anda")
+        
             if st.button("Login sebagai Seller"):
-                if pwd_seller == SELLER_PASSWORD:
-                    st.session_state.seller_logged_in = True
-                    st.session_state.page = "Aktivasi Voucher Seller"
-                    st.success("Login seller berhasil")
-                    st.rerun()
+                if not seller_id_input.strip():
+                    st.error("ID tidak boleh kosong")
                 else:
-                    st.error("Password seller salah")
+                    with engine.connect() as conn:
+                        row = conn.execute(
+                            text("SELECT seller_id, nama_seller, status FROM seller WHERE seller_id = :id"),
+                            {"id": seller_id_input.upper()}
+                        ).fetchone()
+        
+                    if not row:
+                        st.error("❌ ID tidak ditemukan")
+                    else:
+                        seller_id, seller_name, status = row
+                        if status != "Accepted":
+                            st.error("⛔ Akun Anda belum disetujui admin")
+                        else:
+                            st.session_state.seller_logged_in = True
+                            st.session_state.id_seller = seller_id
+                            st.session_state.nama_seller = seller_name
+                            st.session_state.page = "Aktivasi Voucher Seller"
+                            st.success(f"Login berhasil, selamat datang **{seller_name}** 👋")
+                            st.rerun()
 
 # ---------------------------
 # Force page for non-admin/non-seller
@@ -1106,8 +1125,9 @@ def page_seller_activation():
     )
 
     with st.form(key="seller_activation_form"):
+        seller_name_input = st.session_state.get("nama_seller", "-")
+        st.info(f"Seller: **{seller_name_input}** (otomatis dari login)")
         kode = st.text_input("Kode Kupon").strip().upper()
-        seller_name_input = st.text_input("Nama Seller (isi sesuai nama saat mendaftar)").strip()
         buyer_name_input = st.text_input("Nama Pembeli").strip()
         buyer_phone_input = st.text_input("No HP Pembeli").strip()
         tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
@@ -1144,9 +1164,8 @@ def page_seller_activation():
                     return
 
                 # Jika seller input tidak cocok dengan seller di database
-                if db_seller.strip().lower() != seller_name_input.lower():
-                    st.error(f"Nama seller tidak sesuai. Kupon ini terdaftar untuk seller yang lain. Silahkan cek lagi nama yang anda input")
-                    return
+                if seller_from_db != st.session_state.nama_seller:
+                    return False, "Voucher bukan milik Anda", None
 
                 # Jika sudah aktif sebelumnya
                 if db_status and db_status.lower() == "active":
@@ -1535,4 +1554,5 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
+
 
