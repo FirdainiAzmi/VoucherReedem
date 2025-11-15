@@ -9,6 +9,7 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 import math
 import traceback
+import string, random
 
 # ---------------------------
 # Config / Secrets
@@ -1491,73 +1492,48 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 st.error("No HP tidak boleh kosong.")
             else:
                 try:
+                    def generate_unique_id():
+                        chars = string.ascii_uppercase + string.digits
+                        new_id = "".join(random.choices(chars, k=3))
+                        
+                        # Cek apakah sudah ada di DB
+                        with engine.connect() as conn_check:
+                            existing = conn_check.execute(
+                                text("SELECT id_seller FROM seller WHERE id_seller = :id"),
+                                {"id": new_id}
+                            ).fetchone()
+        
+                        # Jika sudah ada → ulangi
+                        if existing:
+                            return generate_unique_id()
+                        return new_id
+        
+                    seller_id = generate_unique_id()
+        
                     # Simpan ke database
                     with engine.begin() as conn:
                         conn.execute(
                             text("""
-                                INSERT INTO seller (nama_seller, no_hp, status)
-                                VALUES (:nama, :no_hp, :status)
+                                INSERT INTO seller (nama_seller, no_hp, status, id_seller)
+                                VALUES (:nama, :no_hp, :status, :id_seller)
                             """),
-                            {"nama": nama.strip(), "no_hp": nohp.strip(), "status": "not accepted"}
+                            {
+                                "nama": nama.strip(),
+                                "no_hp": nohp.strip(),
+                                "status": "not accepted",
+                                "id_seller": id_seller,
+                            }
                         )
-    
-                    st.success("✅ Pendaftaran berhasil! Data Anda telah disimpan ke database.")
-                    st.info("Admin akan menghubungi Anda untuk proses verifikasi.")
-    
+        
+                    st.success(f"🎉 Pendaftaran berhasil!")
+        
+                    st.warning(
+                        f"⚠️ **SANGAT PENTING!**\n"
+                        f"Simpan ID berikut untuk aktivasi voucher setelah Anda disetujui admin:\n\n"
+                        f"🔐 **ID Seller Anda: {seller_id}**"
+                    )
+        
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
-    
-    
-    
-    
-    
-    
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            
