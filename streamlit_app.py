@@ -822,7 +822,10 @@ def page_admin():
             col4.metric("🔥 Kupon Habis", summary["total_voucher_habis"])  # 🔴 Tambahan
             col5.metric("💸 Saldo Sudah Terpakai", f"Rp {summary['total_saldo_sudah_terpakai']:,.0f}")
             col6.metric("💰 Saldo Belum Terpakai", f"Rp {summary['total_saldo_belum_terpakai']:,.0f}")
-        
+
+            col7, _, _ = st.columns(3)
+            col7.metric("✅ Total Kupon Terpakai", summary["total_voucher_terpakai"])
+
             st.markdown("---")
         
             # ============================
@@ -1689,5 +1692,6 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 except Exception as e:
                     st.error("❌ Gagal menyimpan data ke database.")
                     st.code(str(e))
+
 
 
