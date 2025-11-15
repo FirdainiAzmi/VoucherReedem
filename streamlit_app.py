@@ -663,6 +663,7 @@ def page_admin():
                                         SET nama = :nama,
                                             no_hp = :no_hp,
                                             status = :status,
+                                            seller = :seller,
                                             tanggal_penjualan = :tgl_jual,
                                             tanggal_aktivasi = :tgl_aktif
                                         WHERE code = :code
@@ -670,6 +671,7 @@ def page_admin():
                                         "nama": nama_in.strip(),
                                         "no_hp": nohp_in.strip(),
                                         "status": status_in,
+                                        "seller": nama_sell.strip(),
                                         "tgl_jual": tgl_jual_in.strftime("%Y-%m-%d"),
                                         "tgl_aktif": tgl_aktif_in.strftime("%Y-%m-%d"),
                                         "code": v["code"]
@@ -1829,6 +1831,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
