@@ -86,6 +86,7 @@ Seller       : {seller_name}
 Pembeli      : {buyer_name}
 No HP        : {buyer_phone}
 
+Lihat detail lebih lengkap pada aplikasi penukaran kupon.
 Salam,
 Sistem Pawon Sappitoe
 """
@@ -2000,6 +2001,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
