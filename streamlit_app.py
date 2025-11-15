@@ -1285,14 +1285,14 @@ def page_admin():
         
             if "seller" not in df_vouchers.columns:
                 st.warning("Kolom 'seller' tidak tersedia.")
-                st.stop()
+                # st.stop()
         
             df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
             df_seller_only = df_vouchers[df_vouchers["seller"] != "-"].copy()
         
             if df_seller_only.empty:
                 st.info("Belum ada kupon yang dibawa seller.")
-                st.stop()
+                # st.stop()
         
             # --- Normalize status for clean analytics ---
             df_seller_only["status_clean"] = (
@@ -1819,6 +1819,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
