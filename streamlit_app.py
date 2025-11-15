@@ -1061,10 +1061,10 @@ def page_admin():
                 st.warning("Kolom 'seller' tidak tersedia.")
                 st.stop()
         
-            # Normalisasi data
+            # Normalisasi seller kosong
             df_vouchers["seller"] = df_vouchers["seller"].fillna("-")
         
-            # Gunakan hanya voucher yang punya seller
+            # Ambil hanya kupon yang punya seller
             df_seller = df_vouchers[df_vouchers["seller"] != "-"].copy()
         
             if df_seller.empty:
@@ -1072,53 +1072,24 @@ def page_admin():
                 st.stop()
         
             # ==============================
-            # 🔍 FILTER AREA (Tanggal + Seller)
+            # 🔍 FILTER SELLER SAJA
             # ==============================
-            st.markdown("### 🔎 Filter Data Seller")
+            st.markdown("### 🔎 Filter Nama Seller")
         
-            f1, f2 = st.columns([1, 1])
+            seller_list = ["Semua"] + sorted(df_seller["seller"].unique().tolist())
+            selected_seller = st.selectbox("Pilih Seller", seller_list)
         
-            # --- Filter tanggal (pakai tanggal_penjualan)
-            if "tanggal_penjualan" not in df_seller.columns:
-                df_seller["tanggal_penjualan"] = None
-            df_seller["tanggal_penjualan"] = pd.to_datetime(df_seller["tanggal_penjualan"], errors="coerce")
-        
-            with f1:
-                min_d = df_seller["tanggal_penjualan"].min()
-                max_d = df_seller["tanggal_penjualan"].max()
-        
-                start_date = st.date_input(
-                    "Dari Tanggal",
-                    min_d.date() if pd.notnull(min_d) else date.today()
-                )
-        
-                end_date = st.date_input(
-                    "Sampai Tanggal",
-                    max_d.date() if pd.notnull(max_d) else date.today()
-                )
-        
-            # --- Filter seller
-            with f2:
-                seller_list = ["Semua"] + sorted(df_seller["seller"].unique().tolist())
-                selected_seller = st.selectbox("Pilih Seller", seller_list)
-        
-            # ==============================
-            # 🔄 Terapkan filter
-            # ==============================
-            df_filtered = df_seller[
-                (df_seller["tanggal_penjualan"].dt.date >= start_date) &
-                (df_seller["tanggal_penjualan"].dt.date <= end_date)
-            ]
-        
+            # Terapkan filter seller
+            df_filtered = df_seller.copy()
             if selected_seller != "Semua":
                 df_filtered = df_filtered[df_filtered["seller"] == selected_seller]
         
-            if df_filtered.empty:
-                st.warning("Tidak ada data sesuai filter.")
+            if df_filtered.empty():
+                st.warning("Tidak ada data seller pada filter ini.")
                 st.stop()
         
             # ==============================
-            # 🔍 Normalisasi status
+            # Normalisasi status
             # ==============================
             df_filtered["status_clean"] = (
                 df_filtered["status"].astype(str).str.lower().replace({
@@ -1127,7 +1098,7 @@ def page_admin():
             )
         
             # ==============================
-            # 📌 Tabel Pivot per Seller
+            # Pivot tabel
             # ==============================
             status_pivot = (
                 df_filtered.pivot_table(
@@ -1150,7 +1121,7 @@ def page_admin():
             st.dataframe(status_pivot, use_container_width=True)
         
             # ==============================
-            # 📊 Bar Chart Status per Seller
+            # Bar Chart
             # ==============================
             fig = px.bar(
                 status_pivot,
@@ -1172,9 +1143,10 @@ def page_admin():
             st.plotly_chart(fig, use_container_width=True)
         
             # ==============================
-            # 📥 Download CSV Hasil Filter
+            # Download CSV
             # ==============================
             st.subheader("📥 Download Laporan Seller (CSV)")
+        
             csv_seller = df_filtered.to_csv(index=False).encode("utf-8")
         
             st.download_button(
@@ -1183,8 +1155,6 @@ def page_admin():
                 file_name="laporan_seller_filter.csv",
                 mime="text/csv"
             )
-
-
 
     with tab_edit_seller:
         st.subheader("Kelola Seller")
@@ -1826,6 +1796,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
