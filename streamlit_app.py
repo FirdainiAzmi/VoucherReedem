@@ -1698,7 +1698,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
         # Step 3: Konfirmasi pembayaran
         if st.session_state.redeem_step == 3:
             row = st.session_state.voucher_row
-            code, initial, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_penjualan = row
+            code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_aktivasi, akhir_berlaku = row
             
             st.header("Konfirmasi Pembayaran")
             st.write(f"- Kupon: {code}")
@@ -1831,6 +1831,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
