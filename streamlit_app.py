@@ -13,8 +13,6 @@ import string, random
 import smtplib
 from email.mime.text import MIMEText
 
-
-
 # ---------------------------
 # Config / Secrets
 # ---------------------------
@@ -38,7 +36,15 @@ def init_db():
                     code TEXT PRIMARY KEY,
                     initial_value INTEGER NOT NULL,
                     balance INTEGER NOT NULL,
-                    awal_berlaku TIMESTAMP NOT NULL
+                    nama TEXT,
+                    no_hp TEXT,
+                    status TEXT DEFAULT 'inactive',
+                    seller TEXT,
+                    tanggal_penjualan DATE,
+                    tanggal_aktivasi DATE,
+                    tunai INTEGER,
+                    jenis_kupon TEXT NOT NULL,
+                    FOREIGN KEY(jenis_kupon) REFERENCES jenis_db(jenis_kupon)
                 )
             """))
             conn.execute(text("""
@@ -61,15 +67,14 @@ def init_db():
                     harga_twsari INTEGER
                 )
             """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS jenis_db (
+                    jenis_kupon TEXT PRIMARY KEY,
+                    awal_berlaku DATE NOT NULL,
+                    akhir_berlaku DATE NOT NULL
+                )
+            """))
 
-            # optional columns used by app
-            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS nama TEXT"))
-            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS no_hp TEXT"))
-            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS status TEXT"))
-            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS seller TEXT"))
-            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS tanggal_penjualan DATE"))
-            conn.execute(text("ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS tanggal_aktivasi DATE"))
-            conn.execute(text("UPDATE vouchers SET status = 'inactive' WHERE status IS NULL"))
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
         st.stop()
@@ -77,19 +82,19 @@ def init_db():
 def send_admin_notification(voucher_code, seller_name, buyer_name, buyer_phone):
     subject = f"[INFO] Voucher {voucher_code} Diaktifkan Seller"
     body = f"""
-Halo Admin,
-
-Voucher telah diaktivasi oleh seller.
-
-Kode Voucher : {voucher_code}
-Seller       : {seller_name}
-Pembeli      : {buyer_name}
-No HP        : {buyer_phone}
-
-Lihat detail lebih lengkap pada aplikasi penukaran kupon.
-Salam,
-Sistem Pawon Sappitoe
-"""
+    Halo Admin,
+    
+    Voucher telah diaktivasi oleh seller.
+    
+    Kode Voucher : {voucher_code}
+    Seller       : {seller_name}
+    Pembeli      : {buyer_name}
+    No HP        : {buyer_phone}
+    
+    Lihat detail lebih lengkap pada aplikasi penukaran kupon.
+    Salam,
+    Sistem Pawon Sappitoe
+    """
 
     msg = MIMEText(body)
     msg["Subject"] = subject
@@ -104,9 +109,7 @@ Sistem Pawon Sappitoe
     except Exception as e:
         print("Email error:", e)
         return False
-
-
-
+        
 # ---------------------------
 # DB helpers
 # ---------------------------
@@ -114,14 +117,27 @@ def find_voucher(code):
     try:
         with engine.connect() as conn:
             row = conn.execute(text("""
-                SELECT code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_aktivasi, akhir_berlaku
-                FROM vouchers WHERE code = :c
-            """), {"c": code}).fetchone()
+                SELECT 
+                    v.code,
+                    v.initial_value,
+                    v.balance,
+                    v.nama,
+                    v.no_hp,
+                    v.status,
+                    v.seller,
+                    v.tanggal_aktivasi,
+                    j.awal_berlaku,
+                    j.akhir_berlaku
+                FROM vouchers v
+                JOIN jenis_db j 
+                ON v.jenis_kupon = j.jenis_kupon
+                WHERE v.code = :code
+                LIMIT 1
+            """), {"code": code}).fetchone()
         return row
     except Exception as e:
         st.error(f"DB error saat cari voucher: {e}")
         return None
-
 
 def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
     try:
@@ -224,7 +240,7 @@ def atomic_redeem(code, amount, branch, items_str):
         return False, f"DB error saat redeem: {e}", None
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
-    q = "SELECT code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_aktivasi, akhir_berlaku FROM vouchers"
+    q = "SELECT code, initial_value, balance, nama, no_hp, status, seller, tanggal_aktivasi, awal_berlaku, akhir_berlaku FROM vouchers"
     clauses = []
     params = {}
     if filter_status == "aktif":
@@ -1499,7 +1515,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                     if not row:
                         st.session_state['redeem_error'] = "❌ Voucher tidak ditemukan."
                     else:
-                        code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_aktivasi, akhir_berlaku = row
+                        code, initial_value, balance, nama, no_hp, status, seller, tanggal_aktivasi, awal_berlaku, akhir_berlaku = row
                         # === VALIDASI PERIODE BERLAKU ===
                         today = date.today()
 
@@ -1551,7 +1567,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
         # STEP 2: Pilih cabang & menu
         elif st.session_state.redeem_step == 2:
             row = st.session_state.voucher_row
-            code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_aktivasi, akhir_berlaku = row
+            code, initial_value, balance, nama, no_hp, status, seller, tanggal_aktivasi, awal_berlaku, akhir_berlaku = row
         
             st.subheader(f"Kupon: {code}")
             st.write(f"- Nilai awal: Rp {int(initial_value):,}")
@@ -1698,7 +1714,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
         # Step 3: Konfirmasi pembayaran
         if st.session_state.redeem_step == 3:
             row = st.session_state.voucher_row
-            code, initial_value, balance, awal_berlaku, nama, no_hp, status, seller, tanggal_aktivasi, akhir_berlaku = row
+            code, initial_value, balance, nama, no_hp, status, seller, tanggal_aktivasi, awal_berlaku, akhir_berlaku = row
             
             st.header("Konfirmasi Pembayaran")
             st.write(f"- Kupon: {code}")
@@ -1831,38 +1847,3 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
