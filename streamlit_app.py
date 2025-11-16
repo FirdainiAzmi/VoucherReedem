@@ -876,7 +876,6 @@ def page_admin():
                             SELECT code, initial_value, balance, status
                             FROM vouchers
                             WHERE seller IS NULL OR TRIM(seller) = ''
-                            ORDER BY awal_berlaku ASC
                         """, conn)
     
                     st.markdown("---")
@@ -1847,4 +1846,5 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
