@@ -1517,7 +1517,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                         code, initial_value, balance, nama, no_hp, status, seller, tanggal_aktivasi, awal_berlaku, akhir_berlaku = row
                         # === VALIDASI PERIODE BERLAKU ===
                         today = date.today()
-                        today = date(2026, 1, 1)
+                        today = date(2024, 1, 1)
 
                         if today < awal_berlaku:
                             st.session_state['redeem_error'] = (
@@ -1847,6 +1847,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
