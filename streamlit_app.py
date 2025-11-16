@@ -240,7 +240,7 @@ def atomic_redeem(code, amount, branch, items_str):
         return False, f"DB error saat redeem: {e}", None
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
-    q = "SELECT code, initial_value, balance, nama, no_hp, status, seller, tanggal_aktivasi, awal_berlaku, akhir_berlaku FROM vouchers"
+    q = "SELECT v.code, v.initial_value, v.balance, v.nama, v.no_hp, v.status, v.seller, v.tanggal_aktivasi, j.awal_berlaku, j.akhir_berlaku FROM vouchers v JOIN jenis_db j ON v.jenis_kupon = j.jenis_kupon"
     clauses = []
     params = {}
     if filter_status == "aktif":
@@ -1847,3 +1847,4 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
