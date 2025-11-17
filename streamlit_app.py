@@ -1739,7 +1739,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                                     cekk = 1
             
             st.write(f"### Total: Rp {total:,}")
-            if cekk == 1
+            if cekk == 1:
                 if shortage > 0:
                     st.write(f"#### Bayar Cash: Rp {shortage:,}")
                     st.error(f"⚠️ Saldo kupon kurang Rp {shortage:,}. Sisa total harus dibayar dengan *cash* oleh pembeli.")
@@ -1857,6 +1857,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
