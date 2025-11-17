@@ -1815,7 +1815,13 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                     st.error(f"⚠️ Saldo kupon kurang Rp {shortage:,}. Sisa total harus dibayar dengan *cash* oleh pembeli.")
                 else:
                     st.success("Saldo kupon mencukupi 🎉")
-        
+
+            if st.session_state.isvoucher == "yes":
+                code = st.session_state.voucher_row[0]
+                st.write(f"##### Saat ini sedang menggunakan kupon {code}")
+            else:
+                st.write(f"##### Saat ini sedang tidak menggunakan kupon")
+            
             cA, cB = st.columns([1,1])
             with cA:
                 if st.button("Ya, Bayar"):
@@ -1943,6 +1949,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
