@@ -887,6 +887,7 @@ def page_admin():
                         "branch":"Cabang","items":"Menu", "tunai":"Tunai", "isvoucher" : "kupon digunakan"
                     })
                     df_tx["Tunai"] = df_tx["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
+                    df_tx["kupon digunakan"] = df_tx["kupon digunakan"].apply(lambda x: "iya" if x == "yes" else "tidak")
         
                     st.dataframe(df_tx[["Tanggal_transaksi", "kupon digunakan", "Kode", "Saldo kupon digunakan", "Tunai", "Cabang", "Menu"]], use_container_width=True)
                     st.download_button(
@@ -1942,6 +1943,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
