@@ -1664,7 +1664,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 st.write(f"- {it} x{q} — Rp {price_map.get(it,0)*q:,}")
 
             entered_code = st.text_input(
-                "Masukkan kode kupon",
+                "Masukkan kode kupon jika memiliki",
                 key="entered_code_input",
                 value=st.session_state.entered_code
             ).strip().upper()
@@ -1732,7 +1732,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                                     st.write(f"- Atas nama: {nama}")
                                     st.write(f"- No HP: {no_hp}")
                                     st.write(f"- Nilai awal: Rp {int(initial_value):,}")
-                                    st.write(f"**- Sisa Saldo Kupon: Rp {int(balance):,}**")
+                                    st.write(f"**Sisa Saldo Kupon: Rp {int(balance):,}**")
 
                                     saldo = int(balance)
                                     shortage = total - saldo if total > saldo else 0
@@ -1857,6 +1857,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
