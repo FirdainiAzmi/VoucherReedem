@@ -79,7 +79,7 @@ def init_db():
         st.error(f"Gagal inisialisasi database: {e}")
         st.stop()
 
-def send_admin_notification(voucher_code, seller_name, buyer_name, buyer_phone):
+def aktivasi_notification(voucher_code, seller_name, buyer_name, buyer_phone):
     subject = f"[INFO] Voucher {voucher_code} Diaktifkan Seller"
     body = f"""
     Halo Admin,
@@ -91,7 +91,7 @@ def send_admin_notification(voucher_code, seller_name, buyer_name, buyer_phone):
     Pembeli      : {buyer_name}
     No HP        : {buyer_phone}
     
-    Lihat detail lebih lengkap pada aplikasi penukaran kupon.
+    Lihat detail lebih lengkap pada aplikasi Pawon Sappitoe.
     Salam,
     Sistem Pawon Sappitoe
     """
@@ -109,7 +109,66 @@ def send_admin_notification(voucher_code, seller_name, buyer_name, buyer_phone):
     except Exception as e:
         print("Email error:", e)
         return False
-        
+
+def transaksi_notification(tanggal_transaksi, branch, total):
+    subject = f"[INFO] Ada Transaksi Baru yang Masuk"
+    body = f"""
+    Halo Admin,
+    
+    Ada transaksi baru yang telah masuk.
+    
+    Tanggal Transaksi : {tanggal_transaksi}
+    Cabang            : {branch}
+    Total pembelian   : {total}
+    
+    Lihat detail lebih lengkap pada aplikasi Pawon Sappitoe.
+    Salam,
+    Sistem Pawon Sappitoe
+    """
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = EMAIL
+    msg["To"] = ADMIN_EMAIL
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(EMAIL, APP_PASSWORD)
+            server.sendmail(EMAIL, ADMIN_EMAIL, msg.as_string())
+        return True
+    except Exception as e:
+        print("Email error:", e)
+        return False
+
+def daftar_notification(nama, nohp):
+    subject = f"[INFO] Ada Seller Baru yang Mendaftar"
+    body = f"""
+    Halo Admin,
+    
+    Ada Seller baru yang baru saja mendaftar.
+    
+    Nama Seller       : {nama}
+    Nomor HP Seller   : {nohp}
+    
+    Seller tersebut bisa diterima pada aplikasi Pawon Sappitoe.
+    Salam,
+    Sistem Pawon Sappitoe
+    """
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = EMAIL
+    msg["To"] = ADMIN_EMAIL
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(EMAIL, APP_PASSWORD)
+            server.sendmail(EMAIL, ADMIN_EMAIL, msg.as_string())
+        return True
+    except Exception as e:
+        print("Email error:", e)
+        return False
+
 # ---------------------------
 # DB helpers
 # ---------------------------
@@ -162,7 +221,7 @@ def atomic_redeem(code, amount, branch, items_str):
                 conn.execute(text("""
                     INSERT INTO transactions 
                     (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher)
-                    VALUES (NULL, NULL, :now, :branch, :items, :tunai, 'no')
+                    VALUES (NULL, 0, :now, :branch, :items, :tunai, 'no')
                 """), {
                     "now": datetime.utcnow(),
                     "branch": branch,
@@ -1481,7 +1540,7 @@ def page_seller_activation():
                 )
 
             st.success(f"✅ Kupon {kode} berhasil diaktivasi untuk pembeli {buyer_name_input}.")
-            send_admin_notification(
+            aktivasi_notification(
                 voucher_code=kode,
                 seller_name=seller_name_input,
                 buyer_name=buyer_name_input,
@@ -1766,6 +1825,12 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                         # TRANSAKSI VOUCHER
                         ok, msg, newbal = atomic_redeem(code, total, branch, items_str)
                         st.session_state.newbal = newbal
+
+                    transaksi_notification(
+                        tanggal_transaksi = today,
+                        branch = branch,
+                        total = total
+                    )
                 
                     if ok:
                         st.session_state.show_success = True
@@ -1815,7 +1880,6 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             submit = st.form_submit_button("Daftar")
         
         if submit:
-        
             # === Validasi basic ===
             if not id_seller:
                 st.error("ID Seller tidak boleh kosong.")
@@ -1869,10 +1933,15 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                     f"⚠️ **PENTING!** Simpan ID ini baik-baik untuk login nanti:\n\n"
                     f"🔐 **ID Seller Anda: {id_seller}**"
                 )
+                daftar_notification(
+                    nama = nama,
+                    nohp = nohp
+                )
         
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
