@@ -1754,7 +1754,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 if st.button("Ya, Bayar"):
                     items_str = ", ".join([f"{k} x{v}" for k,v in ordered_items.items()])
                     branch = st.session_state.selected_branch
-                    if st.session_state.entered_code == "":
+                    if cek == 1:
                         # TRANSAKSI CASH
                         ok, msg, _ = atomic_redeem(None, total, branch, items_str)
                     else:
@@ -1862,6 +1862,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
