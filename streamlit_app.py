@@ -882,11 +882,11 @@ def page_admin():
         
                 # Jika tidak ada kode yang dicari
                 else:
-                    df_tx["Tunai"] = df_tx["tunai"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
                     df_tx = df_tx.rename(columns={
                         "code":"Kode","used_amount":"Saldo kupon digunakan","tanggal_transaksi":"Tanggal_transaksi",
                         "branch":"Cabang","items":"Menu", "tunai":"Tunai", "isvoucher" : "kupon digunakan"
                     })
+                    df_tx["Tunai"] = df_tx["tunai"].apply(lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}")
         
                     st.dataframe(df_tx[["Tanggal_transaksi", "kupon digunakan", "Kode", "Saldo kupon digunakan", "Tunai", "Cabang", "Menu"]], use_container_width=True)
                     st.download_button(
@@ -1942,6 +1942,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
