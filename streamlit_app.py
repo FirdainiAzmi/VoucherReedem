@@ -1671,10 +1671,6 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             ).strip().upper()
     
             st.session_state.entered_code = entered_code
-            if st.session_state.entered_code == "":
-                st.session_state.isvoucher = "no"
-            else:
-                st.session_state.isvoucher = "yes"
 
             total = st.session_state.checkout_total
             shortage = 0
@@ -1682,6 +1678,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             if st.button("Cek Kupon"):
                 code = st.session_state.entered_code
                 st.session_state.pop('redeem_error', None)
+                st.session_state.isvoucher = "no"
                 if not code:
                     st.session_state['redeem_error'] = "⚠️ Kode tidak boleh kosong"
                 else:
@@ -1731,6 +1728,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                                     st.session_state['redeem_error'] = "⛔ Voucher belum bisa digunakan. Penukaran hanya bisa dilakukan H+1 setelah voucher diaktifkan."
                                 else:
                                     st.session_state.voucher_row = row
+                                    st.session_state.isvoucher = "yes"
                                     st.session_state.pop('redeem_error', None)
                                     st.write(f"Kupon: {code}")
                                     st.write(f"- Atas nama: {nama}")
@@ -1740,7 +1738,6 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
 
                                     saldo = int(balance)
                                     shortage = total - saldo if total > saldo else 0
-                                    st.session_state.isvoucher = "yes"
                                     
             if 'redeem_error' in st.session_state:
                 st.error(st.session_state['redeem_error'])
@@ -1866,6 +1863,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
