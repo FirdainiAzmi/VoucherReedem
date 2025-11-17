@@ -1654,6 +1654,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
         if st.session_state.redeem_step == 2:
             st.header("Konfirmasi Pembayaran")
             menu_items = get_menu_from_db(st.session_state.selected_branch)
+            st.session_state.isvoucher = "no"
             price_map = {item['nama']: item['harga'] for item in menu_items}
         
             ordered_items = {k:v for k,v in st.session_state.order_items.items() if v > 0}
@@ -1872,6 +1873,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
