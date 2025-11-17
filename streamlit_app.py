@@ -460,7 +460,7 @@ def ensure_session_state():
 init_db()
 ensure_session_state()
 st.set_page_config(page_title="Voucher Pawon Sappitoe", layout="wide")
-st.title("🎫 Kupon Pawon Sappitoe")
+st.title("🎫 Transaksi Pawon Sappitoe")
 
 # ---------------------------
 # Sidebar / Login UI
@@ -1526,7 +1526,10 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
         # STEP 1: Pilih cabang & menu
         if st.session_state.redeem_step == 1:
             st.header("Pemilihan Menu")
-    
+
+            if 'redeem_error' in st.session_state:
+                del st.session_state['redeem_error']
+            
             branch_options = ["Sedati", "Tawangsari"]
             selected_branch = st.selectbox("Pilih cabang", branch_options, index=0)
             st.session_state.selected_branch = selected_branch
@@ -1767,6 +1770,8 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                         st.session_state.show_success = True
                         st.session_state.redeem_step = 3
                         st.session_state.entered_code = ""
+                        if 'redeem_error' in st.session_state:
+                            del st.session_state['redeem_error']
                         st.rerun()
                     else:
                         st.error(msg)
@@ -1783,14 +1788,20 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
         # Step 3: Konfirmasi berhasil
         if st.session_state.redeem_step == 3:
             if st.session_state.show_success:
-                st.success(
-                    f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(st.session_state.newbal):,}"
-                )
+                if st.session_state.isvoucher == "yes":
+                    st.success(
+                        f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(st.session_state.newbal):,}"
+                    )
+                else:
+                    st.success(
+                        f"🎉 TRANSAKSI BERHASIL 🎉}"
+                    )     
+                    
                 st.write("Tutup pop-up ini untuk kembali ke awal.")
-                if st.button("Tutup"):
-                    reset_redeem_state() 
-                    st.session_state.show_success = False
-                    st.rerun()
+                    if st.button("Tutup"):
+                        reset_redeem_state() 
+                        st.session_state.show_success = False
+                        st.rerun()
     
     with daftar_seller:
         st.header("📋 Daftar Sebagai Seller")
@@ -1863,6 +1874,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
