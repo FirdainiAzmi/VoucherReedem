@@ -1820,13 +1820,12 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 if st.button("Ya, Bayar"):
                     items_str = ", ".join([f"{k} x{v}" for k,v in ordered_items.items()])
                     branch = st.session_state.selected_branch
-                    if st.session_state.isvoucher == "no":
-                        # TRANSAKSI CASH
-                        ok, msg, _ = atomic_redeem(None, total, branch, items_str)
-                    else:
-                        # TRANSAKSI VOUCHER
-                        ok, msg, newbal = atomic_redeem(kupon_digunakan, total, branch, items_str)
+                    if st.session_state.isvoucher == "yes" and "voucher_row" in st.session_state:
+                        code = st.session_state.voucher_row[0]
+                        ok, msg, newbal = atomic_redeem(code, total, branch, items_str)
                         st.session_state.newbal = newbal
+                    else:
+                        ok, msg, _ = atomic_redeem(None, total, branch, items_str)
 
                     transaksi_notification(
                         tanggal_transaksi = date.today(),
@@ -1943,6 +1942,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
