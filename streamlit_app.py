@@ -896,7 +896,7 @@ def page_admin():
                         mime="text/csv"
                     )
         
-            except Exception as e:
+            except NameError as e:
                 st.error("❌ Gagal memuat transaksi")
                 st.code(str(e))
 
@@ -1942,6 +1942,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
