@@ -1633,7 +1633,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             st.session_state.checkout_total = checkout_total
             st.write(f"*Total sementara: Rp {checkout_total:,}*")
         
-            if st.button("Bayar"):
+            if st.button("Cek dan Lanjut"):
                 if checkout_total == 0:
                     st.warning("Pilih minimal 1 menu")
                 else:
@@ -1671,6 +1671,8 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
     
             st.session_state.entered_code = entered_code
 
+            total = st.session_state.checkout_total
+            
             if st.button("Tukar Kupon"):
                 code = st.session_state.entered_code
                 st.session_state.pop('redeem_error', None)
@@ -1730,9 +1732,8 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                                     st.write(f"- Nilai awal: Rp {int(initial_value):,}")
                                     st.write(f"**- Sisa Saldo Kupon: Rp {int(balance):,}**")
 
-            total = st.session_state.checkout_total
-            saldo = int(balance)
-            shortage = total - saldo if total > saldo else 0
+                                    saldo = int(balance)
+                                    shortage = total - saldo if total > saldo else 0
             
             st.write(f"### Total: Rp {total:,}")
             if shortage > 0:
@@ -1852,5 +1853,6 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
