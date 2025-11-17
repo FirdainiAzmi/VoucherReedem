@@ -1672,6 +1672,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             st.session_state.entered_code = entered_code
 
             total = st.session_state.checkout_total
+            shortage = 0
             
             if st.button("Tukar Kupon"):
                 code = st.session_state.entered_code
@@ -1853,6 +1854,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
