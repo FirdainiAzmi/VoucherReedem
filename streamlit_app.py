@@ -1802,6 +1802,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
 
                                     saldo = int(balance)
                                     shortage = total - saldo if total > saldo else 0
+                                    kupon_digunakan = st.session_state.entered_code
                                     
             if 'redeem_error' in st.session_state:
                 st.error(st.session_state['redeem_error'])
@@ -1824,7 +1825,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                         ok, msg, _ = atomic_redeem(None, total, branch, items_str)
                     else:
                         # TRANSAKSI VOUCHER
-                        ok, msg, newbal = atomic_redeem(code, total, branch, items_str)
+                        ok, msg, newbal = atomic_redeem(kupon_digunakan, total, branch, items_str)
                         st.session_state.newbal = newbal
 
                     transaksi_notification(
@@ -1942,6 +1943,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
