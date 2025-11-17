@@ -865,14 +865,14 @@ def page_admin():
                         
                         df_display = df_filtered.copy()
                         df_display = df_display.rename(columns={
-                            "code":"Kode","used_amount":"Jumlah","tanggal_transaksi":"Tanggal_transaksi",
-                            "branch":"Cabang","items":"Menu", "tunai":"Tunai"
+                            "code":"Kode","used_amount":"Saldo kupon digunakan","tanggal_transaksi":"Tanggal_transaksi",
+                            "branch":"Cabang","items":"Menu", "tunai":"Tunai", "isvoucher" : "kupon digunakan"
                         })
                         df_display["Tunai"] = df_display["Tunai"].apply(
                             lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}"
                         )
         
-                        st.dataframe(df_display[["Kode","Tanggal_transaksi","Jumlah","Cabang","Menu", "Tunai"]], use_container_width=True)
+                        st.dataframe(df_display[["Tanggal_transaksi", "kupon digunakan", "Kode", "Saldo kupon digunakan", "Tunai", "Cabang", "Menu"]], use_container_width=True)
                         st.download_button(
                             f"Download CSV {search_code.upper()}",
                             data=df_to_csv_bytes(df_display),
@@ -1942,6 +1942,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
