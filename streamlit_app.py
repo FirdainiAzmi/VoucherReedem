@@ -1793,9 +1793,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                         f"🎉 TRANSAKSI BERHASIL 🎉\nSisa saldo sekarang: Rp {int(st.session_state.newbal):,}"
                     )
                 else:
-                    st.success(
-                        f"🎉 TRANSAKSI BERHASIL 🎉}"
-                    )     
+                    st.success(f"🎉 TRANSAKSI BERHASIL 🎉")     
                     
                 st.write("Tutup pop-up ini untuk kembali ke awal.")
                     if st.button("Tutup"):
@@ -1874,6 +1872,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
