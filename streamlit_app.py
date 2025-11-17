@@ -1796,10 +1796,10 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                     st.success(f"🎉 TRANSAKSI BERHASIL 🎉")     
                     
                 st.write("Tutup pop-up ini untuk kembali ke awal.")
-                    if st.button("Tutup"):
-                        reset_redeem_state() 
-                        st.session_state.show_success = False
-                        st.rerun()
+                if st.button("Tutup"):
+                    reset_redeem_state() 
+                    st.session_state.show_success = False
+                    st.rerun()
     
     with daftar_seller:
         st.header("📋 Daftar Sebagai Seller")
@@ -1872,6 +1872,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
