@@ -410,6 +410,7 @@ def ensure_session_state():
     st.session_state.setdefault("page", "Penukaran Voucher")
     st.session_state.setdefault("redeem_step", 1)
     st.session_state.setdefault("entered_code", "")
+    st.session_state.setdefault("isvoucher", "no")
     st.session_state.setdefault("voucher_row", None)
     st.session_state.setdefault("selected_branch", None)
     st.session_state.setdefault("order_items", {})
@@ -1670,10 +1671,13 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             ).strip().upper()
     
             st.session_state.entered_code = entered_code
+            if st.session_state.entered_code == "":
+                st.session_state.isvoucher = "no"
+            else:
+                st.session_state.isvoucher = "yes"
 
             total = st.session_state.checkout_total
             shortage = 0
-            cekk = 0
             
             if st.button("Cek Kupon"):
                 code = st.session_state.entered_code
@@ -1736,13 +1740,13 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
 
                                     saldo = int(balance)
                                     shortage = total - saldo if total > saldo else 0
-                                    cekk = 1
+                                    st.session_state.isvoucher = "yes"
                                     
             if 'redeem_error' in st.session_state:
                 st.error(st.session_state['redeem_error'])
                 
             st.write(f"### Total: Rp {total:,}")
-            if cekk == 1:
+            if st.session_state.isvoucher == "yes":
                 if shortage > 0:
                     st.write(f"#### Bayar Cash: Rp {shortage:,}")
                     st.error(f"⚠️ Saldo kupon kurang Rp {shortage:,}. Sisa total harus dibayar dengan *cash* oleh pembeli.")
@@ -1754,7 +1758,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                 if st.button("Ya, Bayar"):
                     items_str = ", ".join([f"{k} x{v}" for k,v in ordered_items.items()])
                     branch = st.session_state.selected_branch
-                    if cekk == 1:
+                    if st.session_state.isvoucher == "no":
                         # TRANSAKSI CASH
                         ok, msg, _ = atomic_redeem(None, total, branch, items_str)
                     else:
@@ -1862,6 +1866,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
