@@ -1673,6 +1673,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
 
             total = st.session_state.checkout_total
             shortage = 0
+            cekk = 0
             
             if st.button("Tukar Kupon"):
                 code = st.session_state.entered_code
@@ -1735,13 +1736,15 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
 
                                     saldo = int(balance)
                                     shortage = total - saldo if total > saldo else 0
+                                    cekk = 1
             
             st.write(f"### Total: Rp {total:,}")
-            if shortage > 0:
-                st.write(f"#### Bayar Cash: Rp {shortage:,}")
-                st.error(f"⚠️ Saldo kupon kurang Rp {shortage:,}. Sisa total harus dibayar dengan *cash* oleh pembeli.")
-            else:
-                st.success("Saldo kupon mencukupi 🎉")
+            if cekk == 1
+                if shortage > 0:
+                    st.write(f"#### Bayar Cash: Rp {shortage:,}")
+                    st.error(f"⚠️ Saldo kupon kurang Rp {shortage:,}. Sisa total harus dibayar dengan *cash* oleh pembeli.")
+                else:
+                    st.success("Saldo kupon mencukupi 🎉")
         
             cA, cB = st.columns([1,1])
             with cA:
@@ -1854,6 +1857,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
