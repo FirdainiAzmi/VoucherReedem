@@ -1827,7 +1827,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                         st.session_state.newbal = newbal
 
                     transaksi_notification(
-                        tanggal_transaksi = today,
+                        tanggal_transaksi = date.today(),
                         branch = branch,
                         total = total
                     )
@@ -1941,6 +1941,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
