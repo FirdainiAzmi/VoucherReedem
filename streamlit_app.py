@@ -1675,7 +1675,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             shortage = 0
             cekk = 0
             
-            if st.button("Tukar Kupon"):
+            if st.button("Cek Kupon"):
                 code = st.session_state.entered_code
                 st.session_state.pop('redeem_error', None)
                 if not code:
@@ -1737,7 +1737,10 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
                                     saldo = int(balance)
                                     shortage = total - saldo if total > saldo else 0
                                     cekk = 1
-            
+                                    
+            if 'redeem_error' in st.session_state:
+                st.error(st.session_state['redeem_error'])
+                
             st.write(f"### Total: Rp {total:,}")
             if cekk == 1:
                 if shortage > 0:
@@ -1859,6 +1862,7 @@ if not st.session_state.admin_logged_in and not st.session_state.seller_logged_i
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
