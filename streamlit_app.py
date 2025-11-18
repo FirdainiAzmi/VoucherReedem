@@ -19,6 +19,7 @@ from email.mime.text import MIMEText
 DB_URL = st.secrets["DB_URL"]
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")  
 SELLER_PASSWORD = st.secrets.get("SELLER_PASSWORD")
+KASIR_PASSWORD = st.secrets.get("KASIR_PASSWORD")
 EMAIL = st.secrets["EMAIL"]
 APP_PASSWORD = st.secrets["APP_PASSWORD"]
 ADMIN_EMAIL = st.secrets["ADMIN_EMAIL"]
@@ -1881,6 +1882,7 @@ def daftar_seller():
             except Exception as e:
                 st.error("❌ Terjadi error saat menyimpan data")
                 st.code(str(e))
+
 
 
 
