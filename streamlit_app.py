@@ -389,7 +389,7 @@ def add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                INSERT INTO menu (kategori, nama, keterangan, harga_sedati, harga_twsari)
+                INSERT INTO menu_items (kategori, nama, keterangan, harga_sedati, harga_twsari)
                 VALUES (:kategori, :nama, :keterangan, :harga_sedati, :harga_twsari)
             """), {
                 "kategori": kategori,
@@ -407,7 +407,7 @@ def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_tw
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                UPDATE menu 
+                UPDATE menu_items
                 SET kategori = :kategori,
                     nama = :nama,
                     keterangan = :keterangan,
@@ -431,7 +431,7 @@ def delete_menu_item(menu_id):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                DELETE FROM menu WHERE id = :id
+                DELETE FROM menu_items WHERE id = :id
             """), {"id": menu_id})
         return True
     except Exception as e:
@@ -443,7 +443,7 @@ def list_all_menu():
         with engine.connect() as conn:
             result = conn.execute(text("""
                 SELECT id, kategori, nama, keterangan, harga_sedati, harga_twsari
-                FROM menu
+                FROM menu_items
                 ORDER BY kategori, nama
             """))
 
@@ -2262,6 +2262,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
