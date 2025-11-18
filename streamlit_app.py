@@ -1603,78 +1603,78 @@ def page_admin():
                             legend_title_text="Status"
                         )
                         st.plotly_chart(fig, use_container_width=True) 
-            with tab_menu:
-                st.subheader("Kelola Menu (Tambah & Edit dalam 1 Form)")
-            
-                # Ambil semua menu
-                all_menu = list_all_menu()
-            
-                # Dropdown pilihan: Tambah baru atau edit
-                options = ["➕ Tambah Menu Baru"]
-                menu_dict = {}
-            
-                for m in all_menu:
-                    display_name = f"{m[1]} — {m[2]}"  # kategori — nama
-                    menu_dict[display_name] = m
-                    options.append(display_name)
-            
-                selected = st.selectbox("Pilih Menu", options)
-            
-                st.markdown("---")
-            
-                # ============================
-                # MODE: TAMBAH MENU BARU
-                # ============================
-                if selected == "➕ Tambah Menu Baru":
-                    st.info("Mode: Tambah Menu Baru")
-            
-                    kategori = st.text_input("Kategori menu")
-                    nama = st.text_input("Nama menu")
-                    keterangan = st.text_area("Keterangan (opsional)")
-                    harga_sedati = st.number_input("Harga Cabang Sedati", min_value=0, value=0)
-                    harga_twsari = st.number_input("Harga Cabang Tawangsari", min_value=0, value=0)
-            
-                    if st.button("Simpan Menu Baru"):
-                        if not kategori or not nama:
-                            st.error("Kategori dan Nama wajib diisi!")
-                        else:
-                            add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari)
-                            st.success(f"Menu '{nama}' berhasil ditambahkan!")
-                            st.rerun()
-            
-                # ============================
-                # MODE: EDIT MENU
-                # ============================
+    with tab_menu:
+        st.subheader("Kelola Menu (Tambah & Edit dalam 1 Form)")
+    
+        # Ambil semua menu
+        all_menu = list_all_menu()
+    
+        # Dropdown pilihan: Tambah baru atau edit
+        options = ["➕ Tambah Menu Baru"]
+        menu_dict = {}
+    
+        for m in all_menu:
+            display_name = f"{m[1]} — {m[2]}"  # kategori — nama
+            menu_dict[display_name] = m
+            options.append(display_name)
+    
+        selected = st.selectbox("Pilih Menu", options)
+    
+        st.markdown("---")
+    
+        # ============================
+        # MODE: TAMBAH MENU BARU
+        # ============================
+        if selected == "➕ Tambah Menu Baru":
+            st.info("Mode: Tambah Menu Baru")
+    
+            kategori = st.text_input("Kategori menu")
+            nama = st.text_input("Nama menu")
+            keterangan = st.text_area("Keterangan (opsional)")
+            harga_sedati = st.number_input("Harga Cabang Sedati", min_value=0, value=0)
+            harga_twsari = st.number_input("Harga Cabang Tawangsari", min_value=0, value=0)
+    
+            if st.button("Simpan Menu Baru"):
+                if not kategori or not nama:
+                    st.error("Kategori dan Nama wajib diisi!")
                 else:
-                    st.info("Mode: Edit Menu")
-            
-                    menu = menu_dict[selected]
-                    menu_id = menu[0]
-                    kategori_old = menu[1]
-                    nama_old = menu[2]
-                    ket_old = menu[3]
-                    harga_sedati_old = menu[4]
-                    harga_twsari_old = menu[5]
-            
-                    kategori = st.text_input("Kategori menu", kategori_old)
-                    nama = st.text_input("Nama menu", nama_old)
-                    keterangan = st.text_area("Keterangan", ket_old)
-                    harga_sedati = st.number_input("Harga Cabang Sedati", min_value=0, value=harga_sedati_old)
-                    harga_twsari = st.number_input("Harga Cabang Tawangsari", min_value=0, value=harga_twsari_old)
-            
-                    col1, col2 = st.columns(2)
-            
-                    with col1:
-                        if st.button("Simpan Perubahan"):
-                            update_menu_item(menu_id, kategori, nama, keterangan, harga_sedati, harga_twsari)
-                            st.success("Perubahan menu berhasil disimpan!")
-                            st.rerun()
-            
-                    with col2:
-                        if st.button("❌ Hapus Menu"):
-                            delete_menu_item(menu_id)
-                            st.warning(f"Menu '{nama_old}' berhasil dihapus.")
-                            st.rerun()
+                    add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari)
+                    st.success(f"Menu '{nama}' berhasil ditambahkan!")
+                    st.rerun()
+    
+        # ============================
+        # MODE: EDIT MENU
+        # ============================
+        else:
+            st.info("Mode: Edit Menu")
+    
+            menu = menu_dict[selected]
+            menu_id = menu[0]
+            kategori_old = menu[1]
+            nama_old = menu[2]
+            ket_old = menu[3]
+            harga_sedati_old = menu[4]
+            harga_twsari_old = menu[5]
+    
+            kategori = st.text_input("Kategori menu", kategori_old)
+            nama = st.text_input("Nama menu", nama_old)
+            keterangan = st.text_area("Keterangan", ket_old)
+            harga_sedati = st.number_input("Harga Cabang Sedati", min_value=0, value=harga_sedati_old)
+            harga_twsari = st.number_input("Harga Cabang Tawangsari", min_value=0, value=harga_twsari_old)
+    
+            col1, col2 = st.columns(2)
+    
+            with col1:
+                if st.button("Simpan Perubahan"):
+                    update_menu_item(menu_id, kategori, nama, keterangan, harga_sedati, harga_twsari)
+                    st.success("Perubahan menu berhasil disimpan!")
+                    st.rerun()
+    
+            with col2:
+                if st.button("❌ Hapus Menu"):
+                    delete_menu_item(menu_id)
+                    st.warning(f"Menu '{nama_old}' berhasil dihapus.")
+                    st.rerun()
 
 # ---------------------------
 # Page: Seller Activation (seller-only)
@@ -2218,6 +2218,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
