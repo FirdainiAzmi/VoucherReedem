@@ -403,7 +403,7 @@ def add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari):
         st.error(f"Error saat menambah menu: {e}")
         return False
 
-def update_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari):
+def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_twsari):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
@@ -413,7 +413,7 @@ def update_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari):
                     keterangan = :keterangan,
                     harga_sedati = :harga_sedati,
                     harga_twsari = :harga_twsari
-                WHERE nama_item = :nama
+                WHERE id_menu = :id_menu
             """), {
                 "kategori": kategori,
                 "nama_item": nama,
@@ -426,12 +426,12 @@ def update_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari):
         st.error(f"Error saat mengupdate menu: {e}")
         return False
 
-def delete_menu_item(nama):
+def delete_menu_item(id_menu):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                DELETE FROM menu_items WHERE nama_item = :nama_item
-            """), {"nama_item": nama})
+                DELETE FROM menu_items WHERE id_menu = :id_menu
+            """), {"id_menu": id_menu})
         return True
     except Exception as e:
         st.error(f"Error saat menghapus menu: {e}")
@@ -1691,6 +1691,7 @@ def page_admin():
             st.info("Mode: Edit Menu")
     
             menu = menu_dict[selected]
+            id_menu = menu["id_menu"]
             kategori_old = menu["kategori"]
             nama_old = menu["nama_item"]
             ket_old = menu["keterangan"]
@@ -1707,13 +1708,13 @@ def page_admin():
     
             with col1:
                 if st.button("Simpan Perubahan"):
-                    update_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari)
+                    update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_twsari)
                     st.success("Perubahan menu berhasil disimpan!")
                     st.rerun()
     
             with col2:
                 if st.button("❌ Hapus Menu"):
-                    delete_menu_item(nama)
+                    delete_menu_item(id_menu)
                     st.warning(f"Menu '{nama_old}' berhasil dihapus.")
                     st.rerun()
 
@@ -2259,6 +2260,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
