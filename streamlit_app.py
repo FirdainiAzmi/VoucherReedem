@@ -1691,11 +1691,11 @@ def page_admin():
             st.info("Mode: Edit Menu")
     
             menu = menu_dict[selected]
-            kategori_old = menu[0]
-            nama_old = menu[1]
-            ket_old = menu[2]
-            harga_sedati_old = menu[3]
-            harga_twsari_old = menu[4]
+            kategori_old = menu["kategori"]
+            nama_old = menu["nama_item"]
+            ket_old = menu["keterangan"]
+            harga_sedati_old = menu["harga_sedati"]
+            harga_twsari_old = menu["harga_twsari"]
     
             kategori = st.text_input("Kategori menu", kategori_old)
             nama = st.text_input("Nama menu", nama_old)
@@ -2259,6 +2259,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
