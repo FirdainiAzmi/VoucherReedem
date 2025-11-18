@@ -386,41 +386,85 @@ def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
     return df
 
 def add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari):
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("""
-        INSERT INTO menu (kategori, nama, keterangan, harga_sedati, harga_twsari)
-        VALUES (?, ?, ?, ?, ?)
-    """, (kategori, nama, keterangan, harga_sedati, harga_twsari))
-    conn.commit()
-    conn.close()
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO menu (kategori, nama, keterangan, harga_sedati, harga_twsari)
+                VALUES (:kategori, :nama, :keterangan, :harga_sedati, :harga_twsari)
+            """), {
+                "kategori": kategori,
+                "nama": nama,
+                "keterangan": keterangan,
+                "harga_sedati": harga_sedati,
+                "harga_twsari": harga_twsari
+            })
+        return True
+    except Exception as e:
+        st.error(f"Error saat menambah menu: {e}")
+        return False
 
-def update_menu_item(menu_id, kategori, nama, keterangan, harga_sedati, harga_twsari):
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("""
-        UPDATE menu
-        SET kategori=?, nama=?, keterangan=?, harga_sedati=?, harga_twsari=?
-        WHERE id=?
-    """, (kategori, nama, keterangan, harga_sedati, harga_twsari, menu_id))
-    conn.commit()
-    conn.close()
+def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_twsari):
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                UPDATE menu 
+                SET kategori = :kategori,
+                    nama = :nama,
+                    keterangan = :keterangan,
+                    harga_sedati = :harga_sedati,
+                    harga_twsari = :harga_twsari
+                WHERE id = :id_menu
+            """), {
+                "id_menu": id_menu,
+                "kategori": kategori,
+                "nama": nama,
+                "keterangan": keterangan,
+                "harga_sedati": harga_sedati,
+                "harga_twsari": harga_twsari
+            })
+        return True
+    except Exception as e:
+        st.error(f"Error saat mengupdate menu: {e}")
+        return False
 
 def delete_menu_item(menu_id):
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("DELETE FROM menu WHERE id=?", (menu_id,))
-    conn.commit()
-    conn.close()
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                DELETE FROM menu WHERE id = :id
+            """), {"id": menu_id})
+        return True
+    except Exception as e:
+        st.error(f"Error saat menghapus menu: {e}")
+        return False
 
 def list_all_menu():
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("SELECT id, kategori, nama, keterangan, harga_sedati, harga_twsari FROM menu ORDER BY kategori, nama")
-    rows = c.fetchall()
-    conn.close()
-    return rows
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT id, kategori, nama, keterangan, harga_sedati, harga_twsari
+                FROM menu
+                ORDER BY kategori, nama
+            """))
 
+            rows = result.fetchall()
+
+            menu_list = []
+            for r in rows:
+                menu_list.append({
+                    "id": r[0],
+                    "kategori": r[1],
+                    "nama": r[2],
+                    "keterangan": r[3],
+                    "harga_sedati": r[4],
+                    "harga_twsari": r[5],
+                })
+
+            return menu_list
+
+    except Exception as e:
+        st.error(f"Error saat mengambil menu: {e}")
+        return []
 
 def get_menu_from_db(branch):
     try:
@@ -2218,6 +2262,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
