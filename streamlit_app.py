@@ -1683,6 +1683,81 @@ def reset_redeem_state():
     ]:
         st.session_state.pop(key, None)
 
+def validate_voucher_and_show_info(row, total):
+    """
+    row = hasil query voucher
+    total = total pembayaran
+    Fungsi ini akan mengupdate session_state:
+    - isvoucher
+    - voucher_row
+    - redeem_error
+    """
+    code, initial_value, balance, nama, no_hp, status, seller, tanggal_aktivasi, awal_berlaku, akhir_berlaku = row
+    today = date.today()
+
+    # Cek masa berlaku
+    if today < awal_berlaku:
+        st.session_state["redeem_error"] = (
+            f"⛔ Kupon belum dapat digunakan.\n"
+            f"Berlaku mulai: {awal_berlaku}"
+        )
+        return
+
+    if today > akhir_berlaku:
+        st.session_state["redeem_error"] = (
+            f"⛔ Kupon sudah tidak berlaku.\n"
+            f"Masa berlaku berakhir: {akhir_berlaku}"
+        )
+        return
+
+    # Normalisasi status
+    status_normalized = (status or "").strip().lower()
+
+    if status_normalized == "inactive":
+        st.session_state["redeem_error"] = "⛔ Voucher belum aktif."
+        return
+
+    if status_normalized == "habis" or balance <= 0:
+        st.session_state["redeem_error"] = "⛔ Saldo voucher sudah habis."
+        return
+
+    if status_normalized != "active":
+        st.session_state["redeem_error"] = f"⛔ Status voucher tidak valid: {status}"
+        return
+
+    # Cek apakah H+1
+    if tanggal_aktivasi is None:
+        st.session_state["redeem_error"] = "⛔ Voucher belum diaktifkan."
+        return
+
+    if hasattr(tanggal_aktivasi, "date"):
+        tgl_aktivasi = tanggal_aktivasi.date()
+    else:
+        try:
+            tgl_aktivasi = datetime.strptime(str(tanggal_aktivasi), "%Y-%m-%d").date()
+        except:
+            tgl_aktivasi = None
+
+    if tgl_aktivasi == date.today():
+        st.session_state["redeem_error"] = "⛔ Voucher hanya bisa digunakan H+1 setelah aktivasi."
+        return
+
+    # Jika semua OK → simpan data voucher
+    st.session_state.isvoucher = "yes"
+    st.session_state.voucher_row = row
+
+    # Tampilkan info voucher
+    st.write(f"Kupon: {code}")
+    st.write(f"- Atas nama: {nama}")
+    st.write(f"- No HP: {no_hp}")
+    st.write(f"- Nilai awal: Rp {int(initial_value):,}")
+    st.write(f"**Sisa Saldo Kupon: Rp {int(balance):,}**")
+
+    saldo = int(balance)
+    if total > saldo:
+        st.warning(f"Saldo kupon kurang {total - saldo:,} — sisanya harus bayar cash.")
+
+
 def page_kasir():
     st.header("Halaman Transaksi Kasir")
     show_back_to_login_button("kasir")
@@ -2035,6 +2110,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
