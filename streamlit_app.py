@@ -1656,7 +1656,7 @@ def page_admin():
         menu_dict = {}
     
         for m in all_menu:
-            display_name = f"{m["kategori"]} — {m["nama"]}"  # kategori — nama
+            display_name = f"{m["kategori"]} — {m["nama_item"]}"  # kategori — nama
             menu_dict[display_name] = m
             options.append(display_name)
     
@@ -2259,6 +2259,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
