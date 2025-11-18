@@ -169,6 +169,24 @@ def daftar_notification(nama, nohp):
     except Exception as e:
         print("Email error:", e)
         return False
+        
+def show_back_to_login_button(role=""):
+    st.markdown("---")
+    if st.button("⬅️ Kembali ke Halaman Login"):
+        # Reset semua state login
+        st.session_state.admin_logged_in = False
+        st.session_state.seller_logged_in = False
+        st.session_state.kasir_logged_in = False
+
+        # Reset page/page flags
+        st.session_state.page = None
+
+        # Reset transaksi (jika kasir)
+        if role == "kasir":
+            reset_redeem_state()
+
+        st.rerun()
+
 
 # ---------------------------
 # DB helpers
@@ -673,6 +691,8 @@ if not (
 # Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
 # ---------------------------
 def page_admin():
+    st.header("Halaman Admin")
+    show_back_to_login_button("admin")
     tab_edit, tab_edit_seller, tab_laporan, tab_histori = st.tabs(["Informasi Kupon", "Edit Seller", "Laporan warung", "Histori"])
 
     with tab_edit:
@@ -1539,6 +1559,8 @@ def page_admin():
 # Page: Seller Activation (seller-only)
 # ---------------------------
 def page_seller_activation():
+    st.header("Halaman Seller")
+    show_back_to_login_button("seller")
     st.subheader("Aktivasi Kupon")
 
     st.info(
@@ -1642,6 +1664,8 @@ def page_seller_activation():
 #     tukar_kupon, daftar_seller = st.tabs(["Pemesanan", "Daftar sebagai Seller"])
 
 def page_kasir():
+    st.header("Halaman Transaksi Kasir")
+    show_back_to_login_button("kasir")
     tukar_kupon, daftar_seller = st.tabs(["Pemesanan", "Transaksi"])
 
     with tukar_kupon:
@@ -1882,6 +1906,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
