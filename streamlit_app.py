@@ -389,11 +389,11 @@ def add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                INSERT INTO menu_items (kategori, nama, keterangan, harga_sedati, harga_twsari)
+                INSERT INTO menu_items (kategori, nama_item, keterangan, harga_sedati, harga_twsari)
                 VALUES (:kategori, :nama, :keterangan, :harga_sedati, :harga_twsari)
             """), {
                 "kategori": kategori,
-                "nama": nama,
+                "nama_item": nama,
                 "keterangan": keterangan,
                 "harga_sedati": harga_sedati,
                 "harga_twsari": harga_twsari
@@ -403,21 +403,20 @@ def add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari):
         st.error(f"Error saat menambah menu: {e}")
         return False
 
-def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_twsari):
+def update_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
                 UPDATE menu_items
                 SET kategori = :kategori,
-                    nama = :nama,
+                    nama_item = :nama,
                     keterangan = :keterangan,
                     harga_sedati = :harga_sedati,
                     harga_twsari = :harga_twsari
-                WHERE id = :id_menu
+                WHERE nama_item = :nama
             """), {
-                "id_menu": id_menu,
                 "kategori": kategori,
-                "nama": nama,
+                "nama_item": nama,
                 "keterangan": keterangan,
                 "harga_sedati": harga_sedati,
                 "harga_twsari": harga_twsari
@@ -427,12 +426,12 @@ def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_tw
         st.error(f"Error saat mengupdate menu: {e}")
         return False
 
-def delete_menu_item(menu_id):
+def delete_menu_item(nama):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                DELETE FROM menu_items WHERE id = :id
-            """), {"id": menu_id})
+                DELETE FROM menu_items WHERE nama_item = :nama_item
+            """), {"nama_item": nama})
         return True
     except Exception as e:
         st.error(f"Error saat menghapus menu: {e}")
@@ -442,9 +441,9 @@ def list_all_menu():
     try:
         with engine.connect() as conn:
             result = conn.execute(text("""
-                SELECT id, kategori, nama, keterangan, harga_sedati, harga_twsari
+                SELECT kategori, nama_item, keterangan, harga_sedati, harga_twsari
                 FROM menu_items
-                ORDER BY kategori, nama
+                ORDER BY kategori, nama_item
             """))
 
             rows = result.fetchall()
@@ -452,12 +451,11 @@ def list_all_menu():
             menu_list = []
             for r in rows:
                 menu_list.append({
-                    "id": r[0],
-                    "kategori": r[1],
-                    "nama": r[2],
-                    "keterangan": r[3],
-                    "harga_sedati": r[4],
-                    "harga_twsari": r[5],
+                    "kategori": r[0],
+                    "nama_item": r[1],
+                    "keterangan": r[2],
+                    "harga_sedati": r[3],
+                    "harga_twsari": r[4],
                 })
 
             return menu_list
@@ -1658,7 +1656,7 @@ def page_admin():
         menu_dict = {}
     
         for m in all_menu:
-            display_name = f"{m[1]} — {m[2]}"  # kategori — nama
+            display_name = f"{m["kategori"]} — {m["nama"]}"  # kategori — nama
             menu_dict[display_name] = m
             options.append(display_name)
     
@@ -1693,12 +1691,11 @@ def page_admin():
             st.info("Mode: Edit Menu")
     
             menu = menu_dict[selected]
-            menu_id = menu[0]
-            kategori_old = menu[1]
-            nama_old = menu[2]
-            ket_old = menu[3]
-            harga_sedati_old = menu[4]
-            harga_twsari_old = menu[5]
+            kategori_old = menu[0]
+            nama_old = menu[1]
+            ket_old = menu[2]
+            harga_sedati_old = menu[3]
+            harga_twsari_old = menu[4]
     
             kategori = st.text_input("Kategori menu", kategori_old)
             nama = st.text_input("Nama menu", nama_old)
@@ -1710,13 +1707,13 @@ def page_admin():
     
             with col1:
                 if st.button("Simpan Perubahan"):
-                    update_menu_item(menu_id, kategori, nama, keterangan, harga_sedati, harga_twsari)
+                    update_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari)
                     st.success("Perubahan menu berhasil disimpan!")
                     st.rerun()
     
             with col2:
                 if st.button("❌ Hapus Menu"):
-                    delete_menu_item(menu_id)
+                    delete_menu_item(nama)
                     st.warning(f"Menu '{nama_old}' berhasil dihapus.")
                     st.rerun()
 
@@ -2262,6 +2259,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
