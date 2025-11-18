@@ -441,7 +441,7 @@ def list_all_menu():
     try:
         with engine.connect() as conn:
             result = conn.execute(text("""
-                SELECT kategori, nama_item, keterangan, harga_sedati, harga_twsari
+                SELECT kategori, nama_item, keterangan, harga_sedati, harga_twsari, id_menu
                 FROM menu_items
                 ORDER BY kategori, nama_item
             """))
@@ -456,6 +456,7 @@ def list_all_menu():
                     "keterangan": r[2],
                     "harga_sedati": r[3],
                     "harga_twsari": r[4],
+                    "id_menu": r[5]
                 })
 
             return menu_list
@@ -2260,6 +2261,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
