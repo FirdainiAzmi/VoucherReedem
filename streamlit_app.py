@@ -742,7 +742,7 @@ if not (
 def page_admin():
     st.header("Halaman Admin")
     show_back_to_login_button("admin")
-    tab_edit, tab_edit_seller, tab_laporan, tab_histori = st.tabs(["Informasi Kupon", "Edit Seller", "Laporan warung", "Histori"])
+    tab_edit, tab_edit_seller, tab_laporan, tab_histori, tab_menu= st.tabs(["Informasi Kupon", "Edit Seller", "Laporan warung", "Histori", "Edit Menu])
 
     with tab_edit:
         st.subheader("Informasi Kupon")
@@ -2218,6 +2218,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
