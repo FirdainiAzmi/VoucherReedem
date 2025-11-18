@@ -409,7 +409,7 @@ def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_tw
             conn.execute(text("""
                 UPDATE menu_items
                 SET kategori = :kategori,
-                    nama_item = :nama,
+                    nama_item = :nama_item,
                     keterangan = :keterangan,
                     harga_sedati = :harga_sedati,
                     harga_twsari = :harga_twsari
@@ -2262,6 +2262,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
