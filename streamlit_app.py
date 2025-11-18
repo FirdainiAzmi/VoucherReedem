@@ -574,7 +574,7 @@ def show_login_page():
         if st.button("Login Kasir"):
             if pwd == KASIR_PASSWORD:
                 st.session_state.kasir_logged_in = True
-                st.session_state.page = "page_kasir"
+                st.session_state.page = page_kasir
                 st.success("Login kasir berhasil")
                 st.rerun()
             else:
@@ -1877,6 +1877,7 @@ def page_kasir():
                 reset_redeem_state()
                 st.session_state.show_success = False
                 st.rerun()
+
 
 
 
