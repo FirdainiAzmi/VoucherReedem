@@ -1642,6 +1642,7 @@ def page_seller_activation():
 #     tukar_kupon, daftar_seller = st.tabs(["Pemesanan", "Daftar sebagai Seller"])
 
 def page_kasir():
+    tukar_kupon, daftar_seller = st.tabs(["Pemesanan", "Transaksi"])
     st.header("Pemesanan")
 
     # Inisialisasi state
@@ -1878,6 +1879,7 @@ if st.session_state.kasir_logged_in and not st.session_state.kasir_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
