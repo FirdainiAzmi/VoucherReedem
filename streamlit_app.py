@@ -582,8 +582,79 @@ def show_login_page():
 
     # DAFTAR SELLER
     with tab_daftar:
-        st.write("Isi form berikut untuk mendaftar sebagai seller.")
-        # Form daftar seller akan diambil dari fungsi di Part 4.
+        st.header("📋 Daftar Sebagai Seller")
+        st.write("Silakan isi data berikut untuk mendaftar sebagai seller.")
+        
+        with st.form("form_daftar_seller"):
+            nama = st.text_input("Nama lengkap")
+            nohp = st.text_input("No HP")
+            id_seller = st.text_input("Buat ID unik Anda (3 digit)").upper().strip()
+            st.caption("ID terdiri dari 3 karakter huruf/angka, contoh: A9X, 4TB, B01")
+        
+            submit = st.form_submit_button("Daftar")
+        
+        if submit:
+            # === Validasi basic ===
+            if not id_seller:
+                st.error("ID Seller tidak boleh kosong.")
+                st.stop()
+
+            if len(nohp) < 11 or len(nohp) > 13:
+                st.error("Nomor HP seharusnya 11-13 digit.")
+                st.stop()
+            
+            if len(id_seller) != 3:
+                st.error("ID harus 3 karakter!")
+                st.stop()
+        
+            if not nama.strip():
+                st.error("Nama tidak boleh kosong.")
+                st.stop()
+        
+            if not nohp.strip():
+                st.error("No HP tidak boleh kosong.")
+                st.stop()
+        
+            try:
+                # === Cek ID apakah sudah ada ===
+                with engine.connect() as conn:
+                    exists = conn.execute(
+                        text("SELECT 1 FROM seller WHERE id_seller = :id"),
+                        {"id": id_seller}
+                    ).fetchone()
+        
+                if exists:
+                    st.error("❌ ID sudah digunakan seller lain! Silakan buat ID baru.")
+                    st.stop()
+        
+                # === Simpan ke database ===
+                with engine.begin() as conn:
+                    conn.execute(
+                        text("""
+                            INSERT INTO seller (nama_seller, no_hp, status, id_seller)
+                            VALUES (:nama, :no_hp, :status, :id_seller)
+                        """),
+                        {
+                            "nama": nama.strip(),
+                            "no_hp": nohp.strip(),
+                            "status": "belum diterima",
+                            "id_seller": id_seller,
+                        }
+                    )
+        
+                st.success(f"🎉 Pendaftaran berhasil! Admin akan segera memverifikasi akun Anda.")
+                st.warning(
+                    f"⚠️ **PENTING!** Simpan ID ini baik-baik untuk login nanti:\n\n"
+                    f"🔐 **ID Seller Anda: {id_seller}**"
+                )
+                daftar_notification(
+                    nama = nama,
+                    nohp = nohp
+                )
+        
+            except Exception as e:
+                st.error("❌ Terjadi error saat menyimpan data")
+                st.code(str(e))
 
 
 # ============================================================
@@ -1565,23 +1636,11 @@ def page_seller_activation():
         "Jika perlu koreksi, minta admin untuk ubah data."
     )
         
-# ---------------------------
-# Init app
-# ---------------------------
 
-# Jika admin login → langsung ke halaman admin
-if st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
-    page_admin()
-    st.stop()
 
-# Jika seller login → langsung ke halaman seller
-if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
-    page_seller_activation()
-    st.stop()
-
-# Jika keduanya tidak login → tampil tab publik
-if not st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
-    tukar_kupon, daftar_seller = st.tabs(["Pemesanan", "Daftar sebagai Seller"])
+# # Jika keduanya tidak login → tampil tab publik
+# if not st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
+#     tukar_kupon, daftar_seller = st.tabs(["Pemesanan", "Daftar sebagai Seller"])
 
 def page_kasir():
     st.header("Pemesanan")
@@ -1806,82 +1865,20 @@ def page_kasir():
                 reset_redeem_state()
                 st.session_state.show_success = False
                 st.rerun()
+# Jika admin login → langsung ke halaman admin
+if st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
+    page_admin()
+    st.stop()
 
-    
-def daftar_seller():
-        st.header("📋 Daftar Sebagai Seller")
-        st.write("Silakan isi data berikut untuk mendaftar sebagai seller.")
-        
-        with st.form("form_daftar_seller"):
-            nama = st.text_input("Nama lengkap")
-            nohp = st.text_input("No HP")
-            id_seller = st.text_input("Buat ID unik Anda (3 digit)").upper().strip()
-            st.caption("ID terdiri dari 3 karakter huruf/angka, contoh: A9X, 4TB, B01")
-        
-            submit = st.form_submit_button("Daftar")
-        
-        if submit:
-            # === Validasi basic ===
-            if not id_seller:
-                st.error("ID Seller tidak boleh kosong.")
-                st.stop()
+# Jika seller login → langsung ke halaman seller
+if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
+    page_seller_activation()
+    st.stop()
 
-            if len(nohp) < 11 or len(nohp) > 13:
-                st.error("Nomor HP seharusnya 11-13 digit.")
-                st.stop()
-            
-            if len(id_seller) != 3:
-                st.error("ID harus 3 karakter!")
-                st.stop()
+if st.session_state.kasir_logged_in and not st.session_state.kasir_logged_in:
+    page_kasir()
+    st.stop()
         
-            if not nama.strip():
-                st.error("Nama tidak boleh kosong.")
-                st.stop()
-        
-            if not nohp.strip():
-                st.error("No HP tidak boleh kosong.")
-                st.stop()
-        
-            try:
-                # === Cek ID apakah sudah ada ===
-                with engine.connect() as conn:
-                    exists = conn.execute(
-                        text("SELECT 1 FROM seller WHERE id_seller = :id"),
-                        {"id": id_seller}
-                    ).fetchone()
-        
-                if exists:
-                    st.error("❌ ID sudah digunakan seller lain! Silakan buat ID baru.")
-                    st.stop()
-        
-                # === Simpan ke database ===
-                with engine.begin() as conn:
-                    conn.execute(
-                        text("""
-                            INSERT INTO seller (nama_seller, no_hp, status, id_seller)
-                            VALUES (:nama, :no_hp, :status, :id_seller)
-                        """),
-                        {
-                            "nama": nama.strip(),
-                            "no_hp": nohp.strip(),
-                            "status": "belum diterima",
-                            "id_seller": id_seller,
-                        }
-                    )
-        
-                st.success(f"🎉 Pendaftaran berhasil! Admin akan segera memverifikasi akun Anda.")
-                st.warning(
-                    f"⚠️ **PENTING!** Simpan ID ini baik-baik untuk login nanti:\n\n"
-                    f"🔐 **ID Seller Anda: {id_seller}**"
-                )
-                daftar_notification(
-                    nama = nama,
-                    nohp = nohp
-                )
-        
-            except Exception as e:
-                st.error("❌ Terjadi error saat menyimpan data")
-                st.code(str(e))
 
 
 
