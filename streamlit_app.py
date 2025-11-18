@@ -1669,7 +1669,19 @@ def page_seller_activation():
         "Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). "
         "Jika perlu koreksi, minta admin untuk ubah data."
     )
-        
+
+def reset_redeem_state():
+    for key in [
+        "redeem_step",
+        "entered_code",
+        "order_items",
+        "checkout_total",
+        "isvoucher",
+        "voucher_row",
+        "newbal",
+        "show_success"
+    ]:
+        st.session_state.pop(key, None)
 
 def page_kasir():
     st.header("Halaman Transaksi Kasir")
@@ -2023,6 +2035,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
