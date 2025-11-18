@@ -169,7 +169,20 @@ def daftar_notification(nama, nohp):
     except Exception as e:
         print("Email error:", e)
         return False
-        
+
+def reset_redeem_state():
+    for key in [
+        "redeem_step",
+        "entered_code",
+        "order_items",
+        "checkout_total",
+        "isvoucher",
+        "voucher_row",
+        "newbal",
+        "show_success"
+    ]:
+        st.session_state.pop(key, None)
+
 def show_back_to_login_button(role=""):
     st.markdown("---")
     if st.button("⬅️ Kembali ke Halaman Login"):
@@ -1906,6 +1919,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
