@@ -558,7 +558,7 @@ st.title("🎫 Pawon Sappitoe — Sistem Transaksi")
 def show_login_page():
     st.header("🔐 Masuk ke Sistem Pawon Sappitoe")
 
-    tab_kasir tab_daftar, tab_seller, tab_admin = st.tabs(
+    tab_kasir, tab_daftar, tab_seller, tab_admin = st.tabs(
         ["Kasir", "Daftar Seller", "Seller", "Admin"]
     )
 
@@ -2023,6 +2023,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
