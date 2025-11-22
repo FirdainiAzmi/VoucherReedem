@@ -1913,10 +1913,10 @@ def page_admin():
             created_codes = []
 
             for _ in range(jumlah_kode):
-                new_code = generate_code(8)   # pakai 8 huruf/angka biar keren
+                new_code = generate_code(6)   
 
                 while kode_exists(new_code):
-                    new_code = generate_code(8)
+                    new_code = generate_code(6)
 
                 insert_voucher(
                     new_code,
@@ -2506,6 +2506,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
