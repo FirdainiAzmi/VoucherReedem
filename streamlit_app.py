@@ -67,7 +67,7 @@ def init_db():
                     harga_sedati INTEGER,
                     harga_twsari INTEGER,
                     harga_kesambi INTEGER,
-                    harga_tulangan INTEGER
+                    harga_tulangan
                 )
             """))
             conn.execute(text("""
@@ -431,8 +431,8 @@ def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_tw
                     keterangan = :keterangan,
                     harga_sedati = :harga_sedati,
                     harga_twsari = :harga_twsari,
-                    harga_kesambi =: harga_kesambi,
-                    harga_tulangan =: harga_tulangan
+                    harga_kesambi = :harga_kesambi,
+                    harga_tulangan = :harga_tulangan
                 WHERE id_menu = :id_menu
             """), {
                 "kategori": kategori,
@@ -1685,77 +1685,108 @@ def page_admin():
                         )
                         st.plotly_chart(fig, use_container_width=True) 
     with tab_menu:
-        st.subheader("Kelola Menu (Tambah & Edit dalam 1 Form)")
-    
-        # Ambil semua menu
-        all_menu = list_all_menu()
-    
-        # Dropdown pilihan: Tambah baru atau edit
+        st.subheader("Kelola Menu")
+
+        # ============================
+        # 1. PILIH CABANG DULU
+        # ============================
+        cabang_list = ["Sedati", "Tawangsari", "Kesambi", "Tulangan"]
+        selected_branch = st.selectbox("Pilih Cabang", cabang_list)
+
+        st.markdown("---")
+
+        # ============================
+        # 2. AMBIL MENU BERDASARKAN CABANG
+        # ============================
+        all_menu = list_all_menu()  # kamu filter sendiri jika perlu
+
         options = ["➕ Tambah Menu Baru"]
         menu_dict = {}
-    
+
         for m in all_menu:
-            display_name = f"{m["kategori"]} — {m["nama_item"]}"  # kategori — nama
+            display_name = f"{m['kategori']} — {m['nama_item']}"
             menu_dict[display_name] = m
             options.append(display_name)
-    
-        selected = st.selectbox("Pilih Menu", options)
-    
+
+        selected_menu = st.selectbox("Pilih Menu", options)
+
         st.markdown("---")
-    
+
+        # Pilih kolom harga sesuai cabang
+        harga_col_map = {
+            "Sedati": "harga_sedati",
+            "Tawangsari": "harga_twsari",
+            "Kesambi": "harga_kesambi",
+            "Tulangan": "harga_tulangan"
+        }
+
+        harga_col = harga_col_map[selected_branch]
+
         # ============================
-        # MODE: TAMBAH MENU BARU
+        # 3A. MODE TAMBAH MENU BARU
         # ============================
-        if selected == "➕ Tambah Menu Baru":
-            st.info("Mode: Tambah Menu Baru")
-    
+        if selected_menu == "➕ Tambah Menu Baru":
+            st.info(f"Mode: Tambah Menu Baru ({selected_branch})")
+
             kategori = st.text_input("Kategori menu")
             nama = st.text_input("Nama menu")
             keterangan = st.text_area("Keterangan (opsional)")
-            harga_sedati = st.number_input("Harga Cabang Sedati", min_value=0, value=0)
-            harga_twsari = st.number_input("Harga Cabang Tawangsari", min_value=0, value=0)
-    
+            harga_input = st.number_input(f"Harga Cabang {selected_branch}", min_value=0, value=0)
+
             if st.button("Simpan Menu Baru"):
                 if not kategori or not nama:
                     st.error("Kategori dan Nama wajib diisi!")
                 else:
-                    add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari)
+                    add_menu_item(
+                        kategori,
+                        nama,
+                        keterangan,
+                        selected_branch,
+                        harga_input  # kamu simpan sesuai kolom branch
+                    )
                     st.success(f"Menu '{nama}' berhasil ditambahkan!")
                     st.rerun()
-    
+
         # ============================
-        # MODE: EDIT MENU
+        # 3B. MODE EDIT MENU
         # ============================
         else:
-            st.info("Mode: Edit Menu")
-    
-            menu = menu_dict[selected]
+            st.info(f"Mode: Edit Menu ({selected_branch})")
+
+            menu = menu_dict[selected_menu]
+
             id_menu = menu["id_menu"]
             kategori_old = menu["kategori"]
             nama_old = menu["nama_item"]
             ket_old = menu["keterangan"]
-            harga_sedati_old = menu["harga_sedati"]
-            harga_twsari_old = menu["harga_twsari"]
-    
+            harga_old = menu[harga_col]   # ambil harga sesuai cabang
+
             kategori = st.text_input("Kategori menu", kategori_old)
             nama = st.text_input("Nama menu", nama_old)
             keterangan = st.text_area("Keterangan", ket_old)
-            harga_sedati = st.number_input("Harga Cabang Sedati", min_value=0, value=harga_sedati_old)
-            harga_twsari = st.number_input("Harga Cabang Tawangsari", min_value=0, value=harga_twsari_old)
-    
+            harga_input = st.number_input(f"Harga Cabang {selected_branch}", min_value=0, value=harga_old)
+
             col1, col2 = st.columns(2)
-    
+
             with col1:
                 if st.button("Simpan Perubahan"):
-                    update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_twsari)
+                    update_menu_item(
+                        id_menu,
+                        kategori,
+                        nama,
+                        keterangan,
+                        selected_branch,
+                        harga_input
+                    )
                     st.success("Perubahan menu berhasil disimpan!")
                     st.rerun()
-    
+
             with col2:
                 if st.button("❌ Hapus Menu"):
                     delete_menu_item(id_menu)
                     st.warning(f"Menu '{nama_old}' berhasil dihapus.")
                     st.rerun()
+
 
 # ---------------------------
 # Page: Seller Activation (seller-only)
@@ -2308,19 +2339,6 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
