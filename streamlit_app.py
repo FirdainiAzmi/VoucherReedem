@@ -65,7 +65,9 @@ def init_db():
                     nama_item TEXT,
                     keterangan TEXT,
                     harga_sedati INTEGER,
-                    harga_twsari INTEGER
+                    harga_twsari INTEGER,
+                    harga_kesambi INTEGER,
+                    harga_tulangan
                 )
             """))
             conn.execute(text("""
@@ -269,7 +271,15 @@ def atomic_redeem(code, amount, branch, items_str):
                     nama_item, qty = i.split(" x")
                     qty = int(qty)
 
-                    col = "terjual_twsari" if branch == "Tawangsari" else "terjual_sedati"
+                    # Nama cabang -> nama kolom
+                    mapping = {
+                        "Tawangsari": "terjual_twsari",
+                        "Sedati": "terjual_sedati",
+                        "Kesambi": "terjual_kesambi",
+                        "Tulangan": "terjual_tulangan"
+                    }
+
+                    col = mapping.get(branch.lower(), None)   # None kalau branch tidak ditemukan
 
                     conn.execute(text(f"""
                         UPDATE menu_items
@@ -346,9 +356,15 @@ def atomic_redeem(code, amount, branch, items_str):
                         continue
                     nama_item, qty = i.split(" x")
                     qty = int(qty)
-    
-                    col = "terjual_twsari" if branch == "Tawangsari" else "terjual_sedati"
-    
+                    mapping = {
+                        "Tawangsari": "terjual_twsari",
+                        "Sedati": "terjual_sedati",
+                        "Kesambi": "terjual_kesambi",
+                        "Tulangan": "terjual_tulangan"
+                    }
+
+                    col = mapping.get(branch.lower(), None) 
+                    
                     conn.execute(text(f"""
                         UPDATE menu_items
                         SET {col} = COALESCE({col}, 0) + :qty
@@ -385,25 +401,27 @@ def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
         df["status"] = "inactive"
     return df
 
-def add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari):
+def add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                INSERT INTO menu_items (kategori, nama_item, keterangan, harga_sedati, harga_twsari)
-                VALUES (:kategori, :nama, :keterangan, :harga_sedati, :harga_twsari)
+                INSERT INTO menu_items (kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan)
+                VALUES (:kategori, :nama, :keterangan, :harga_sedati, :harga_twsari, :harga_kesambi, :harga_tulangan)
             """), {
                 "kategori": kategori,
                 "nama_item": nama,
                 "keterangan": keterangan,
                 "harga_sedati": harga_sedati,
-                "harga_twsari": harga_twsari
+                "harga_twsari": harga_twsari,
+                "harga_kesambi" : harga_kesambi,
+                "harga_tulangan" : harga_tulangan
             })
         return True
     except Exception as e:
         st.error(f"Error saat menambah menu: {e}")
         return False
 
-def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_twsari):
+def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
@@ -412,7 +430,9 @@ def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_tw
                     nama_item = :nama_item,
                     keterangan = :keterangan,
                     harga_sedati = :harga_sedati,
-                    harga_twsari = :harga_twsari
+                    harga_twsari = :harga_twsari,
+                    harga_kesambi =: harga_kesambi,
+                    harga_tulangan =: harga_tulangan
                 WHERE id_menu = :id_menu
             """), {
                 "kategori": kategori,
@@ -420,7 +440,9 @@ def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_tw
                 "keterangan": keterangan,
                 "harga_sedati": harga_sedati,
                 "harga_twsari": harga_twsari,
-                "id_menu": id_menu
+                "id_menu": id_menu,
+                "harga_kesambi" : harga_kesambi,
+                "harga_tulangan" : harga_tulangan
             })
         return True
     except Exception as e:
@@ -458,6 +480,8 @@ def list_all_menu():
                     "keterangan": r[2],
                     "harga_sedati": r[3],
                     "harga_twsari": r[4],
+                    "harga_kesambi" : r[8],
+                    "harga_tulangan" : r[10],
                 })
 
             return menu_list
@@ -469,8 +493,14 @@ def list_all_menu():
 def get_menu_from_db(branch):
     try:
         with engine.connect() as conn:
-            df = pd.read_sql(text("SELECT kategori, nama_item, keterangan, harga_sedati, harga_twsari FROM menu_items"), conn)
-        harga_col = "harga_sedati" if branch == "Sedati" else "harga_twsari"
+            df = pd.read_sql(text("SELECT kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan FROM menu_items"), conn)
+        mapping_harga = {
+            "Tawangsari": "harga_twsari",
+            "Sedati": "harga_sedati",
+            "Kesambi": "harga_kesambi",
+            "Tulangan": "harga_tulangan"
+        }
+        harga_col = mapping_harga.get(branch, None)
         menu_list = []
         for _, row in df.iterrows():
             menu_list.append({
@@ -1014,7 +1044,7 @@ def page_admin():
             with col4:
                 filter_cabang = st.selectbox(
                 "Filter Cabang",
-                ["semua", "Sedati", "Tawangsari"]
+                ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"]
             )
         
             # Normalisasi format tanggal transaksi
@@ -1301,7 +1331,7 @@ def page_admin():
                 # Filter cabang
                 branch_filter = colf1.selectbox(
                     "Pilih Cabang",
-                    ["Semua", "Sedati", "Tawangsari"]
+                    ["Semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"]
                 )
         
                 # Filter tanggal
@@ -1343,7 +1373,7 @@ def page_admin():
                 "total_voucher_dijual": len(vouchers),
                 "total_voucher_aktif": len(vouchers[vouchers["status"] == "active"]),
                 "total_voucher_inaktif": len(vouchers[vouchers["status"] == "inactive"]),
-                "total_voucher_habis": len(vouchers[vouchers["balance"] <= 0]),  # 🔴 Tambahan baru
+                "total_voucher_habis": len(vouchers[vouchers["balance"] <= 0]),  
                 "total_voucher_terpakai": len(transactions["code"].unique()),
                 "total_saldo_belum_terpakai": vouchers["balance"].sum(),
                 "total_saldo_sudah_terpakai": vouchers["used_value"].sum(),
@@ -1548,11 +1578,18 @@ def page_admin():
                     if selected_cabang == "Semua":
                         query_menu = """
                             SELECT nama_item,
-                            COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0) AS "Terjual"
+                            COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0), COALESCE(terjual_kesambi,0), COALESCE(terjual_tulangan,0)   AS "Terjual"
                             FROM menu_items
                         """
-                    else:
-                        col = "terjual_twsari" if selected_cabang == "Tawangsari" else "terjual_sedati"
+                    else
+                        mapping = {
+                            "tawangsari": "terjual_twsari",
+                            "sedati": "terjual_sedati",
+                            "kesambi": "terjual_kesambi",
+                            "tulangan": "terjual_tulangan"
+                        }
+                        
+                        col = mapping.get(branch.lower(), None)   
                         query_menu = f"""
                             SELECT nama_item,
                             COALESCE({col},0) AS "Terjual"
@@ -1932,7 +1969,7 @@ def page_kasir():
             if 'redeem_error' in st.session_state:
                 del st.session_state['redeem_error']
     
-            branch_options = ["Sedati", "Tawangsari"]
+            branch_options = ["Sedati", "Tawangsari", "Kesambi", "Tulangan"]
             selected_branch = st.selectbox("Pilih cabang", branch_options)
             st.session_state.selected_branch = selected_branch
     
@@ -1949,10 +1986,19 @@ def page_kasir():
                             keterangan = m[2]
                             harga_sedati = m[3]
                             harga_twsari = m[4]
+                            harga_kesambi = m[8]
+                            harga_tulangan = m[10]
                         except:
                             continue
-    
-                        harga = harga_sedati if selected_branch == "Sedati" else harga_twsari
+                        harga_map = {
+                            "Sedati": harga_sedati,
+                            "Tawangsari": harga_twsari,
+                            "Kesambi": harga_kesambi,
+                            "Tulangan": harga_tulangan
+                        }
+                        
+                        harga = harga_map.get(selected_branch)
+                        
                         if harga is None:
                             continue
     
@@ -2171,7 +2217,7 @@ def page_kasir():
             with col4:
                 filter_cabang = st.selectbox(
                 "Filter Cabang",
-                ["semua", "Sedati", "Tawangsari"]
+                ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"]
             )
         
             # Normalisasi format tanggal transaksi
@@ -2262,6 +2308,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
