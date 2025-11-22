@@ -634,6 +634,14 @@ def count_vouchers(filter_status=None, search=None):
         q += " WHERE " + " AND ".join(clauses)
     with engine.connect() as conn:
         return int(conn.execute(text(q), params).scalar())
+    
+def run_query(query, params=None):
+    with engine.connect() as conn:
+        if params:
+            result = conn.execute(text(query), params)
+        else:
+            result = conn.execute(text(query))
+        return pd.DataFrame(result.fetchall(), columns=result.keys())
 
 
 def list_transactions(limit=5000):
