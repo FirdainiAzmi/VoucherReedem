@@ -243,7 +243,7 @@ def insert_voucher(code, initial_value, jenis, awal, akhir):
             text("""
                 INSERT INTO vouchers
                 (code, initial_value, balance, jenis_kupon, tanggal_penjualan, tanggal_aktivasi, status)
-                VALUES (:c, :iv, :bal, :jenis, :awal, :akhir, 'active')
+                VALUES (:c, :iv, :bal, :jenis, :awal, :akhir, 'inactive')
             """),
             {
                 "c": code,
@@ -2507,6 +2507,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
