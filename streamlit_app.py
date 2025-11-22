@@ -544,6 +544,27 @@ def get_menu_from_db(branch):
         st.error(f"Gagal ambil menu dari DB: {e}")
         return []
 
+def get_full_menu():
+    query = """
+        SELECT 
+            nama_item,
+            keterangan,
+            harga_twsari,
+            harga_sedati,
+            harga_kesambi,
+            harga_tulangan,
+            COALESCE(terjual_twsari, 0) AS terjual_twsari,
+            COALESCE(terjual_sedati, 0) AS terjual_sedati,
+            COALESCE(terjual_kesambi, 0) AS terjual_kesambi,
+            COALESCE(terjual_tulangan, 0) AS terjual_tulangan
+        FROM menu_items
+        ORDER BY nama_item;
+    """
+
+    with engine.connect() as conn:
+        df = pd.read_sql(text(query), conn)
+    return df
+
 
 def count_vouchers(filter_status=None, search=None):
     q = "SELECT count(*) FROM vouchers"
@@ -1724,22 +1745,15 @@ def page_admin():
         # TAB 1 — LIST MENU
         # ============================
         with tab1:
-            st.header("📋 Daftar Menu")
+            st.subheader("📋 Daftar Menu")
 
-            menu_list = list_all_menu()
+            df_menu = get_full_menu()
 
-            if not menu_list:
-                st.info("Belum ada menu.")
-            else:
-                for m in menu_list:
-                    st.write(f"### {m['nama_item']} ({m['kategori']})")
-                    st.write(f"{m['keterangan']}")
-                    st.write(f"- Sedati: {m['harga_sedati']}")
-                    st.write(f"- Tawangsari: {m['harga_twsari']}")
-                    st.write(f"- Kesambi: {m['harga_kesambi']}")
-                    st.write(f"- Tulangan: {m['harga_tulangan']}")
-                    st.write("---")
-
+            st.dataframe(
+                df_menu,
+                use_container_width=True,
+                height=500
+        )
 
         # ============================
         # TAB 2 — ADD MENU
@@ -2404,4 +2418,4 @@ update_menu_item
 
 
 
-
+with tab1
