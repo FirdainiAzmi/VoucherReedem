@@ -203,10 +203,9 @@ def show_back_to_login_button(role=""):
         st.rerun()
 
 
-def generate_code(length=6):
-    """Generate kode kombinasi huruf + angka."""
+def generate_code():
     characters = string.ascii_uppercase + string.digits
-    return ''.join(random.choice(characters) for _ in range(length))
+    return ''.join(random.choices(characters, k=6))
 
 def kode_exists(kode):
     """Cek apakah kode sudah ada di vouchers."""
@@ -2507,6 +2506,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
