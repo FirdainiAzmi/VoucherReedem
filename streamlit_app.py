@@ -202,10 +202,11 @@ def show_back_to_login_button(role=""):
 
         st.rerun()
 
-def generate_code():
-    """Generate kode 6 digit unik."""
-    return str(random.randint(100000, 999999))
 
+def generate_code(length=6):
+    """Generate kode kombinasi huruf + angka."""
+    characters = string.ascii_uppercase + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))
 
 def kode_exists(kode):
     """Cek apakah kode sudah ada di vouchers."""
@@ -1908,16 +1909,15 @@ def page_admin():
                 st.error("Jenis kupon wajib diisi!")
                 st.stop()
 
-            # Masukkan jenis kupon (sekali saja)
             insert_jenis_if_not_exists(jenis_kupon, awal_berlaku, akhir_berlaku)
 
             created_codes = []
 
             for _ in range(jumlah_kode):
-                new_code = generate_code()
+                new_code = generate_code(8)   # pakai 8 huruf/angka biar keren
 
                 while kode_exists(new_code):
-                    new_code = generate_code()
+                    new_code = generate_code(8)
 
                 insert_voucher(
                     new_code,
@@ -1930,8 +1930,30 @@ def page_admin():
                 created_codes.append(new_code)
 
             st.success(f"{len(created_codes)} kupon berhasil dibuat! 🎉")
-            st.write("Kode Kupon:", created_codes)
 
+            # Tampilan kode kupon ala kartu
+            st.markdown("### 🎟️ Kode Kupon Baru")
+
+            for c in created_codes:
+                st.markdown(
+                    f"""
+                    <div style="
+                        padding:10px 18px;
+                        background:#f0f2f6;
+                        border-radius:8px;
+                        border:1px solid #d9d9d9;
+                        width:220px;
+                        margin-bottom:6px;
+                        font-size:20px;
+                        font-weight:600;
+                        letter-spacing:2px;
+                        text-align:center;
+                    ">
+                    {c}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
 
 # ---------------------------
@@ -2485,20 +2507,6 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
