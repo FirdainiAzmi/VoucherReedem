@@ -67,7 +67,7 @@ def init_db():
                     harga_sedati INTEGER,
                     harga_twsari INTEGER,
                     harga_kesambi INTEGER,
-                    harga_tulangan
+                    harga_tulangan INTEGER
                 )
             """))
             conn.execute(text("""
@@ -2364,6 +2364,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     st.stop()
         
 update_menu_item
+
 
 
 
