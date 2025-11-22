@@ -273,13 +273,15 @@ def atomic_redeem(code, amount, branch, items_str):
 
                     # Nama cabang -> nama kolom
                     mapping = {
-                        "Tawangsari": "terjual_twsari",
-                        "Sedati": "terjual_sedati",
-                        "Kesambi": "terjual_kesambi",
-                        "Tulangan": "terjual_tulangan"
+                        "tawangsari": "terjual_twsari",
+                        "sedati": "terjual_sedati",
+                        "kesambi": "terjual_kesambi",
+                        "tulangan": "terjual_tulangan"
                     }
 
                     col = mapping.get(branch.lower(), None)   # None kalau branch tidak ditemukan
+                    if not col:
+                        return False, f"Cabang '{branch}' tidak dikenali.", None
 
                     conn.execute(text(f"""
                         UPDATE menu_items
@@ -357,13 +359,15 @@ def atomic_redeem(code, amount, branch, items_str):
                     nama_item, qty = i.split(" x")
                     qty = int(qty)
                     mapping = {
-                        "Tawangsari": "terjual_twsari",
-                        "Sedati": "terjual_sedati",
-                        "Kesambi": "terjual_kesambi",
-                        "Tulangan": "terjual_tulangan"
+                        "tawangsari": "terjual_twsari",
+                        "sedati": "terjual_sedati",
+                        "kesambi": "terjual_kesambi",
+                        "tulangan": "terjual_tulangan"
                     }
 
                     col = mapping.get(branch.lower(), None) 
+                    if not col:
+                        return False, f"Cabang '{branch}' tidak dikenali.", None
                     
                     conn.execute(text(f"""
                         UPDATE menu_items
@@ -2046,10 +2050,10 @@ def page_kasir():
                         except:
                             continue
                         harga_map = {
-                            "Sedati": harga_sedati,
-                            "Tawangsari": harga_twsari,
-                            "Kesambi": harga_kesambi,
-                            "Tulangan": harga_tulangan
+                            "tawangsari": terjual_twsari,
+                            "sedati": terjual_sedati,
+                            "kesambi": terjual_kesambi,
+                            "tulangan": terjual_tulangan
                         }
                         
                         harga = harga_map.get(selected_branch)
@@ -2364,6 +2368,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     st.stop()
         
 update_menu_item
+
 
 
 
