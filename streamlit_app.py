@@ -1581,7 +1581,7 @@ def page_admin():
                             COALESCE(terjual_twsari,0) + COALESCE(terjual_sedati,0), COALESCE(terjual_kesambi,0), COALESCE(terjual_tulangan,0)   AS "Terjual"
                             FROM menu_items
                         """
-                    else
+                    else:
                         mapping = {
                             "tawangsari": "terjual_twsari",
                             "sedati": "terjual_sedati",
@@ -2308,6 +2308,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
 
