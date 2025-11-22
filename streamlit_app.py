@@ -67,7 +67,7 @@ def init_db():
                     harga_sedati INTEGER,
                     harga_twsari INTEGER,
                     harga_kesambi INTEGER,
-                    harga_tulangan INTEGER
+                    harga_tulangan
                 )
             """))
             conn.execute(text("""
@@ -401,53 +401,80 @@ def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
         df["status"] = "inactive"
     return df
 
-def add_menu_item(kategori, nama, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan):
+def to_int_or_none(value):
+    if value in ("", None):
+        return None
     try:
-        with engine.begin() as conn:
-            conn.execute(text("""
-                INSERT INTO menu_items (kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan)
-                VALUES (:kategori, :nama, :keterangan, :harga_sedati, :harga_twsari, :harga_kesambi, :harga_tulangan)
-            """), {
-                "kategori": kategori,
-                "nama_item": nama,
-                "keterangan": keterangan,
-                "harga_sedati": harga_sedati,
-                "harga_twsari": harga_twsari,
-                "harga_kesambi" : harga_kesambi,
-                "harga_tulangan" : harga_tulangan
-            })
-        return True
-    except Exception as e:
-        st.error(f"Error saat menambah menu: {e}")
-        return False
+        return int(value)
+    except:
+        return None
 
-def update_menu_item(id_menu, kategori, nama, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan):
-    try:
-        with engine.begin() as conn:
-            conn.execute(text("""
-                UPDATE menu_items
-                SET kategori = :kategori,
-                    nama_item = :nama_item,
-                    keterangan = :keterangan,
-                    harga_sedati = :harga_sedati,
-                    harga_twsari = :harga_twsari,
-                    harga_kesambi = :harga_kesambi,
-                    harga_tulangan = :harga_tulangan
-                WHERE id_menu = :id_menu
-            """), {
-                "kategori": kategori,
-                "nama_item": nama,
-                "keterangan": keterangan,
-                "harga_sedati": harga_sedati,
-                "harga_twsari": harga_twsari,
-                "id_menu": id_menu,
-                "harga_kesambi" : harga_kesambi,
-                "harga_tulangan" : harga_tulangan
-            })
-        return True
-    except Exception as e:
-        st.error(f"Error saat mengupdate menu: {e}")
-        return False
+
+def list_all_menu():
+    query = """
+        SELECT * FROM menu_items
+        ORDER BY kategori, nama_item
+    """
+    with engine.begin() as conn:
+        res = conn.execute(text(query)).mappings().all()
+    return res
+
+def add_menu_item(kategori, nama_item, keterangan,
+                  harga_sedati, harga_twsari, harga_kesambi, harga_tulangan):
+
+    query = """
+        INSERT INTO menu_items (
+            kategori, nama_item, keterangan,
+            harga_sedati, harga_twsari, harga_kesambi, harga_tulangan
+        ) VALUES (
+            :kategori, :nama_item, :keterangan,
+            :harga_sedati, :harga_twsari, :harga_kesambi, :harga_tulangan
+        )
+    """
+
+    params = {
+        "kategori": kategori,
+        "nama_item": nama_item,
+        "keterangan": keterangan,
+        "harga_sedati": to_int_or_none(harga_sedati),
+        "harga_twsari": to_int_or_none(harga_twsari),
+        "harga_kesambi": to_int_or_none(harga_kesambi),
+        "harga_tulangan": to_int_or_none(harga_tulangan)
+    }
+
+    with engine.begin() as conn:
+        conn.execute(text(query), params)
+
+
+def update_menu_item(id_menu, kategori, nama_item, keterangan,
+                     harga_sedati, harga_twsari, harga_kesambi, harga_tulangan):
+
+    query = """
+        UPDATE menu_items SET
+            kategori = :kategori,
+            nama_item = :nama_item,
+            keterangan = :keterangan,
+            harga_sedati = :harga_sedati,
+            harga_twsari = :harga_twsari,
+            harga_kesambi = :harga_kesambi,
+            harga_tulangan = :harga_tulangan
+        WHERE id_menu = :id_menu
+    """
+
+    params = {
+        "id_menu": id_menu,
+        "kategori": kategori,
+        "nama_item": nama_item,
+        "keterangan": keterangan,
+        "harga_sedati": to_int_or_none(harga_sedati),
+        "harga_twsari": to_int_or_none(harga_twsari),
+        "harga_kesambi": to_int_or_none(harga_kesambi),
+        "harga_tulangan": to_int_or_none(harga_tulangan)
+    }
+
+    with engine.begin() as conn:
+        conn.execute(text(query), params)
+
 
 def delete_menu_item(id_menu):
     try:
@@ -1686,106 +1713,103 @@ def page_admin():
                         st.plotly_chart(fig, use_container_width=True) 
     with tab_menu:
         st.subheader("Kelola Menu")
+        tab1, tab2, tab3 = st.tabs(["📋 Lihat Menu", "➕ Tambah Menu", "✏️ Edit / Hapus Menu"])
+
 
         # ============================
-        # 1. PILIH CABANG DULU
+        # TAB 1 — LIST MENU
         # ============================
-        cabang_list = ["Sedati", "Tawangsari", "Kesambi", "Tulangan"]
-        selected_branch = st.selectbox("Pilih Cabang", cabang_list)
+        with tab1:
+            st.header("📋 Daftar Menu")
 
-        st.markdown("---")
+            menu_list = list_all_menu()
 
-        # ============================
-        # 2. AMBIL MENU BERDASARKAN CABANG
-        # ============================
-        all_menu = list_all_menu()  # kamu filter sendiri jika perlu
+            if not menu_list:
+                st.info("Belum ada menu.")
+            else:
+                for m in menu_list:
+                    st.write(f"### {m['nama_item']} ({m['kategori']})")
+                    st.write(f"{m['keterangan']}")
+                    st.write(f"- Sedati: {m['harga_sedati']}")
+                    st.write(f"- Tawangsari: {m['harga_twsari']}")
+                    st.write(f"- Kesambi: {m['harga_kesambi']}")
+                    st.write(f"- Tulangan: {m['harga_tulangan']}")
+                    st.write("---")
 
-        options = ["➕ Tambah Menu Baru"]
-        menu_dict = {}
-
-        for m in all_menu:
-            display_name = f"{m['kategori']} — {m['nama_item']}"
-            menu_dict[display_name] = m
-            options.append(display_name)
-
-        selected_menu = st.selectbox("Pilih Menu", options)
-
-        st.markdown("---")
-
-        # Pilih kolom harga sesuai cabang
-        harga_col_map = {
-            "Sedati": "harga_sedati",
-            "Tawangsari": "harga_twsari",
-            "Kesambi": "harga_kesambi",
-            "Tulangan": "harga_tulangan"
-        }
-
-        harga_col = harga_col_map[selected_branch]
 
         # ============================
-        # 3A. MODE TAMBAH MENU BARU
+        # TAB 2 — ADD MENU
         # ============================
-        if selected_menu == "➕ Tambah Menu Baru":
-            st.info(f"Mode: Tambah Menu Baru ({selected_branch})")
+        with tab2:
+            st.header("➕ Tambah Menu Baru")
 
-            kategori = st.text_input("Kategori menu")
-            nama = st.text_input("Nama menu")
-            keterangan = st.text_area("Keterangan (opsional)")
-            harga_input = st.number_input(f"Harga Cabang {selected_branch}", min_value=0, value=0)
+            kategori = st.text_input("Kategori")
+            nama_item = st.text_input("Nama Item")
+            keterangan = st.text_area("Keterangan")
 
-            if st.button("Simpan Menu Baru"):
-                if not kategori or not nama:
-                    st.error("Kategori dan Nama wajib diisi!")
-                else:
-                    add_menu_item(
-                        kategori,
-                        nama,
-                        keterangan,
-                        selected_branch,
-                        harga_input  # kamu simpan sesuai kolom branch
-                    )
-                    st.success(f"Menu '{nama}' berhasil ditambahkan!")
-                    st.rerun()
+            harga_sedati = st.text_input("Harga Sedati (boleh kosong)")
+            harga_twsari = st.text_input("Harga Tawangsari (boleh kosong)")
+            harga_kesambi = st.text_input("Harga Kesambi (boleh kosong)")
+            harga_tulangan = st.text_input("Harga Tulangan (boleh kosong)")
+
+            if st.button("Tambah Menu"):
+                add_menu_item(
+                    kategori, nama_item, keterangan,
+                    harga_sedati, harga_twsari, harga_kesambi, harga_tulangan
+                )
+                st.success("Item berhasil ditambahkan!")
+                st.rerun()
+
 
         # ============================
-        # 3B. MODE EDIT MENU
+        # TAB 3 — EDIT / DELETE MENU
         # ============================
-        else:
-            st.info(f"Mode: Edit Menu ({selected_branch})")
+        with tab3:
+            st.header("✏️ Edit atau Hapus Menu")
 
-            menu = menu_dict[selected_menu]
+            menu_list = list_all_menu()
 
-            id_menu = menu["id_menu"]
-            kategori_old = menu["kategori"]
-            nama_old = menu["nama_item"]
-            ket_old = menu["keterangan"]
-            harga_old = menu[harga_col]   # ambil harga sesuai cabang
+            if not menu_list:
+                st.info("Belum ada menu untuk diedit.")
+            else:
+                # Dropdown pilih item berdasarkan ID + nama
+                pilih = st.selectbox(
+                    "Pilih menu yang akan diedit",
+                    [(m["id_menu"], f"{m['nama_item']} - {m['kategori']}") for m in menu_list],
+                    format_func=lambda x: x[1]
+                )
 
-            kategori = st.text_input("Kategori menu", kategori_old)
-            nama = st.text_input("Nama menu", nama_old)
-            keterangan = st.text_area("Keterangan", ket_old)
-            harga_input = st.number_input(f"Harga Cabang {selected_branch}", min_value=0, value=harga_old)
+                id_menu = pilih[0]
 
-            col1, col2 = st.columns(2)
+                # Ambil data lama
+                selected = next(m for m in menu_list if m["id_menu"] == id_menu)
 
-            with col1:
-                if st.button("Simpan Perubahan"):
-                    update_menu_item(
-                        id_menu,
-                        kategori,
-                        nama,
-                        keterangan,
-                        selected_branch,
-                        harga_input
-                    )
-                    st.success("Perubahan menu berhasil disimpan!")
-                    st.rerun()
+                # FORM EDIT
+                kategori = st.text_input("Kategori", value=selected["kategori"])
+                nama_item = st.text_input("Nama Item", value=selected["nama_item"])
+                keterangan = st.text_area("Keterangan", value=selected["keterangan"])
 
-            with col2:
-                if st.button("❌ Hapus Menu"):
-                    delete_menu_item(id_menu)
-                    st.warning(f"Menu '{nama_old}' berhasil dihapus.")
-                    st.rerun()
+                harga_sedati = st.text_input("Harga Sedati", value=str(selected["harga_sedati"] or ""))
+                harga_twsari = st.text_input("Harga Tawangsari", value=str(selected["harga_twsari"] or ""))
+                harga_kesambi = st.text_input("Harga Kesambi", value=str(selected["harga_kesambi"] or ""))
+                harga_tulangan = st.text_input("Harga Tulangan", value=str(selected["harga_tulangan"] or ""))
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    if st.button("Simpan Perubahan"):
+                        update_menu_item(
+                            id_menu, kategori, nama_item, keterangan,
+                            harga_sedati, harga_twsari, harga_kesambi, harga_tulangan
+                        )
+                        st.success("Menu berhasil diperbarui!")
+                        st.rerun()
+
+                with col2:
+                    if st.button("Hapus Menu 🗑️"):
+                        delete_menu_item(id_menu)
+                        st.warning("Menu berhasil dihapus!")
+                        st.rerun()
 
 
 # ---------------------------
@@ -2339,6 +2363,7 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+update_menu_item
 
 
 
@@ -2388,6 +2413,4 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
 
 
 
-
-
-
+with tab
