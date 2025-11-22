@@ -1178,7 +1178,7 @@ def page_admin():
                 # Tampilkan histori lengkap
                 df_display = df_tx.rename(columns={
                     "code": "Kode",
-                    "used_amount": "Kupon",
+                    "used_amount": "Total",
                     "tanggal_transaksi": "Tanggal_transaksi",
                     "branch": "Cabang",
                     "items": "Menu",
@@ -1191,7 +1191,7 @@ def page_admin():
 
                 st.dataframe(
                     df_display[["Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value", 
-                                "Kupon", "Tunai", "Cabang", "Menu"]],
+                                "Kupon", "Total", "Cabang", "Menu"]],
                     use_container_width=True
                 )
 
@@ -1221,7 +1221,7 @@ def page_admin():
 
                             st.dataframe(
                                 df_filtered[["Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value", 
-                                            "Kupon", "Tunai", "Cabang", "Menu"]],
+                                            "Total", "Tunai", "Cabang", "Menu"]],
                                 use_container_width=True
                             )
 
@@ -2518,5 +2518,6 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
         
+
 
 
