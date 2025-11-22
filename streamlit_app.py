@@ -202,6 +202,58 @@ def show_back_to_login_button(role=""):
 
         st.rerun()
 
+def generate_code():
+    """Generate kode 6 digit unik."""
+    return str(random.randint(100000, 999999))
+
+
+def kode_exists(kode):
+    """Cek apakah kode sudah ada di vouchers."""
+    with engine.connect() as conn:
+        r = conn.execute(
+            text("SELECT 1 FROM vouchers WHERE code = :c"),
+            {"c": kode}
+        ).fetchone()
+    return r is not None
+
+
+def insert_jenis_if_not_exists(jenis, awal, akhir):
+    """Insert data jenis ke jenis_db hanya jika belum ada."""
+    with engine.begin() as conn:
+        exists = conn.execute(
+            text("SELECT 1 FROM jenis_db WHERE jenis_kupon = :j"),
+            {"j": jenis}
+        ).fetchone()
+
+        if not exists:
+            conn.execute(
+                text("""
+                    INSERT INTO jenis_db (jenis_kupon, awal_berlaku, akhir_berlaku)
+                    VALUES (:j, :a, :b)
+                """),
+                {"j": jenis, "a": awal, "b": akhir}
+            )
+
+
+def insert_voucher(code, initial_value, jenis, awal, akhir):
+    """Insert satu voucher baru."""
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+                INSERT INTO vouchers
+                (code, initial_value, balance, jenis_kupon, tanggal_penjualan, tanggal_aktivasi, status)
+                VALUES (:c, :iv, :bal, :jenis, :awal, :akhir, 'active')
+            """),
+            {
+                "c": code,
+                "iv": initial_value,
+                "bal": initial_value,
+                "jenis": jenis,
+                "awal": awal,
+                "akhir": akhir
+            }
+        )
+
 
 # ---------------------------
 # DB helpers
@@ -868,7 +920,7 @@ if not (
 def page_admin():
     st.header("Halaman Admin")
     show_back_to_login_button("admin")
-    tab_edit, tab_edit_seller, tab_laporan, tab_histori, tab_menu= st.tabs(["Informasi Kupon", "Edit Seller", "Laporan warung", "Histori", "Kelola Menu"])
+    tab_edit, tab_edit_seller, tab_laporan, tab_histori, tab_menu, tab_kupon= st.tabs(["Informasi Kupon", "Edit Seller", "Laporan warung", "Histori", "Kelola Menu", "Kelola Kupon"])
 
     with tab_edit:
         st.subheader("Informasi Kupon")
@@ -1828,6 +1880,58 @@ def page_admin():
                         delete_menu_item(id_menu)
                         st.warning("Menu berhasil dihapus!")
                         st.rerun()
+    with tab_kupon:
+        st.subheader("🎫 Buat Kupon Baru")
+
+        jenis_list = []
+        with engine.connect() as conn:
+            df_jenis = pd.read_sql("SELECT jenis_kupon FROM jenis_db", conn)
+            jenis_list = df_jenis['jenis_kupon'].tolist()
+
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            jenis_kupon = st.text_input("Jenis Kupon (contoh: Reguler, Promo, Makanan)")
+            initial_value = st.number_input("Initial Value", min_value=0)
+            jumlah_kode = st.number_input("Jumlah Kupon yang Dibuat", min_value=1, value=1)
+
+        with col2:
+            awal_berlaku = st.date_input("Tanggal Awal Berlaku")
+            akhir_berlaku = st.date_input("Tanggal Akhir Berlaku")
+
+        if st.button("🚀 Generate Kupon"):
+            if akhir_berlaku < awal_berlaku:
+                st.error("Tanggal akhir tidak boleh lebih awal dari tanggal mulai!")
+                st.stop()
+
+            if jenis_kupon.strip() == "":
+                st.error("Jenis kupon wajib diisi!")
+                st.stop()
+
+            # Masukkan jenis kupon (sekali saja)
+            insert_jenis_if_not_exists(jenis_kupon, awal_berlaku, akhir_berlaku)
+
+            created_codes = []
+
+            for _ in range(jumlah_kode):
+                new_code = generate_code()
+
+                while kode_exists(new_code):
+                    new_code = generate_code()
+
+                insert_voucher(
+                    new_code,
+                    initial_value,
+                    jenis_kupon,
+                    awal_berlaku,
+                    akhir_berlaku
+                )
+
+                created_codes.append(new_code)
+
+            st.success(f"{len(created_codes)} kupon berhasil dibuat! 🎉")
+            st.write("Kode Kupon:", created_codes)
+
 
 
 # ---------------------------
@@ -2380,6 +2484,16 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+        
+
+
+
+
+
+
+
+
+
 
 
 
