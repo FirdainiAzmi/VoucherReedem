@@ -1154,7 +1154,7 @@ def page_admin():
             max_date = df_tx["tanggal_transaksi"].max()
 
             # Filter input
-            col1, col2, col3, col4 = st.columns([2, 1.3, 1.3, 1.3])
+            col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
             with col1:
                 search_code = st.text_input("Cari kode kupon untuk detail histori", "").strip()
             with col2:
@@ -1163,6 +1163,8 @@ def page_admin():
                 end_date = st.date_input("Tanggal Akhir", value=max_date, min_value=min_date, max_value=max_date)
             with col4:
                 filter_cabang = st.selectbox("Filter Cabang", ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"])
+            with col5:
+                filter_kupon = st.selectbox("Filter Kupon", ["semua", "Kupon", "Non Kupon"])
 
             # Filter tanggal
             if start_date > end_date:
@@ -1173,6 +1175,13 @@ def page_admin():
             # Filter cabang
             if filter_cabang != "semua":
                 df_tx = df_tx[df_tx["branch"] == filter_cabang]
+
+            if filter_kupon != "semua":
+                if filter_kupon == "Kupon":
+                    filter_kupon = "yes"
+                else:
+                    filter_kupon = "no"
+                df_tx = df_tx[df_tx["isvoucher"] == filter_kupon]
 
             if df_tx.empty:
                 st.warning("Tidak ada transaksi dengan filter tersebut.")
@@ -1192,7 +1201,7 @@ def page_admin():
             # df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
             # df_display["Total"] = df_display["Total"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
             # df_display["Tunai"] = df_display["Initi"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
-            df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "iya" if x == "yes" else "tidak")
+            df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
             df_display.loc[df_display["kupon digunakan"] == "tidak", "Total"] = df_display["Tunai"]
 
             # Tampilkan tabel histori
@@ -2512,5 +2521,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
