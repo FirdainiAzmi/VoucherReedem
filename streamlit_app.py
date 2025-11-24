@@ -1261,7 +1261,7 @@ def page_admin():
                 item = item.strip()
         
                 # Contoh item: "NASI PUTIH x6"
-                match = re.match(r"(.+?) x(\d+)", item)
+                match = re.match(r"(.+?)\s+x(\d+)$", item)
                 if match:
                     nama_menu = match.group(1).strip()
                     jumlah = int(match.group(2))
@@ -2551,6 +2551,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
