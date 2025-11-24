@@ -648,6 +648,7 @@ def run_query(query, params=None):
 def list_transactions(limit=5000):
     query = f"""
         SELECT 
+            t.id,
             t.code,
             t.used_amount,
             t.tanggal_transaksi,
@@ -2521,6 +2522,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
