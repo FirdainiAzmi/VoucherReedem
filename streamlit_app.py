@@ -1191,7 +1191,7 @@ def page_admin():
             })
             df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
             df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "iya" if x == "yes" else "tidak")
-            if df_display["isvoucher"] == "no":
+            if df_display["kupon digunakan"] == "tidak":
                 df_display["Total"] = df_display["Tunai"]
 
             # Tampilkan tabel histori
