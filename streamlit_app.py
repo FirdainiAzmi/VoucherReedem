@@ -1191,8 +1191,7 @@ def page_admin():
             })
             df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
             df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "iya" if x == "yes" else "tidak")
-            if df_display["kupon digunakan"] == "tidak":
-                df_display["Total"] = df_display["Tunai"]
+            df_display.loc[df_display["kupon digunakan"] == "tidak", "Total"] = df_display["Tunai"]
 
             # Tampilkan tabel histori
             st.dataframe(
@@ -2511,3 +2510,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
