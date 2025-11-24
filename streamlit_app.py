@@ -12,6 +12,7 @@ import traceback
 import string, random
 import smtplib
 from email.mime.text import MIMEText
+import re
 
 # ---------------------------
 # Config / Secrets
@@ -1252,7 +1253,34 @@ def page_admin():
                             mime="text/csv"
                         )
 
+        menu_list = []
 
+        for idx, row in df_tx.iterrows():
+            menu_items = str(row["items"]).split(",")  # Pecah per menu
+            for item in menu_items:
+                item = item.strip()
+        
+                # Contoh item: "NASI PUTIH x6"
+                match = re.match(r"(.+?) x(\d+)", item)
+                if match:
+                    nama_menu = match.group(1).strip()
+                    jumlah = int(match.group(2))
+                    menu_list.append({
+                        "Tanggal": row["tanggal_transaksi"],
+                        "Menu": nama_menu,
+                        "Jumlah": jumlah
+                    })
+        
+        # Buat dataframe menu
+        df_menu = pd.DataFrame(menu_list)
+        
+        if df_menu.empty:
+            st.info("Tidak ada menu terjual pada tanggal tersebut.")
+        else:
+            df_pivot = df_menu.groupby("Menu")["Jumlah"].sum().reset_index()
+        
+            st.subheader("📊 Penjualan Per Menu (Berdasarkan Tanggal yang Dipilih)")
+            st.dataframe(df_pivot, use_container_width=True)
         
     with tab_edit_seller:
         st.subheader("Kelola Seller")
@@ -2523,6 +2551,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
