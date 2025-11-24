@@ -1143,7 +1143,7 @@ def page_admin():
     with tab_histori:
         st.subheader("Histori Transaksi")
         df_tx = list_transactions(limit=5000)  # pastikan JOIN ke vouchers untuk ambil initial_value
-        df_tx = df_tx.sort_values(by="id", ascending=True).reset_index(drop=True)
+        df_tx = df_tx.sort_values(by="id", ascending=False).reset_index(drop=True)
 
         if df_tx.empty:
             st.info("Belum ada transaksi")
@@ -2523,6 +2523,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
