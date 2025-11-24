@@ -308,11 +308,12 @@ def atomic_redeem(code, amount, branch, items_str):
                 conn.execute(text("""
                     INSERT INTO transactions 
                     (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher)
-                    VALUES (NULL, 0, :now, :branch, :items, :tunai, 'no')
+                    VALUES (NULL, :tunai, :now, :branch, :items, :tunai, 'no')
                 """), {
                     "now": datetime.utcnow(),
                     "branch": branch,
                     "items": items_str,
+                    "used_amount": amount,
                     "tunai": amount
                 })
 
@@ -1190,6 +1191,8 @@ def page_admin():
             })
             df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
             df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "iya" if x == "yes" else "tidak")
+            if df_display["isvoucher"] == "no":
+                df_display["Total"] = df_display["Tunai"]
 
             # Tampilkan tabel histori
             st.dataframe(
