@@ -2445,8 +2445,9 @@ def page_kasir():
                     st.session_state.show_success = False
                     st.rerun()
     with riwayat_pesan:
-        st.subheader("Riwayat Pemesanan")
-        df_tx = list_transactions(limit=5000)  
+        st.subheader("Riwayat Transaksi")
+        df_tx = list_transactions(limit=5000)  # pastikan JOIN ke vouchers untuk ambil initial_value
+        df_tx = df_tx.sort_values(by="id", ascending=False).reset_index(drop=True)
 
         if df_tx.empty:
             st.info("Belum ada transaksi")
@@ -2459,7 +2460,7 @@ def page_kasir():
             max_date = df_tx["tanggal_transaksi"].max()
 
             # Filter input
-            col1, col2, col3, col4 = st.columns([2, 1.3, 1.3, 1.3])
+            col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
             with col1:
                 search_code = st.text_input("Cari kode kupon untuk detail histori", "").strip()
             with col2:
@@ -2468,6 +2469,8 @@ def page_kasir():
                 end_date = st.date_input("Tanggal Akhir", value=max_date, min_value=min_date, max_value=max_date)
             with col4:
                 filter_cabang = st.selectbox("Filter Cabang", ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"])
+            with col5:
+                filter_kupon = st.selectbox("Filter Kupon", ["semua", "Kupon", "Non Kupon"])
 
             # Filter tanggal
             if start_date > end_date:
@@ -2479,9 +2482,21 @@ def page_kasir():
             if filter_cabang != "semua":
                 df_tx = df_tx[df_tx["branch"] == filter_cabang]
 
+            if filter_kupon != "semua":
+                if filter_kupon == "Kupon":
+                    filter_kupon = "yes"
+                else:
+                    filter_kupon = "no"
+                df_tx = df_tx[df_tx["isvoucher"] == filter_kupon]
+
             if df_tx.empty:
                 st.warning("Tidak ada transaksi dengan filter tersebut.")
                 st.stop()
+
+            # 🔥 Hitung total uang (hanya dari used_amount)
+            total_uang_filtered = df_tx["used_amount"].fillna(0).sum()
+            st.metric("Total Pendapatan", f"Rp {total_uang_filtered:,}")
+
 
             # Normalisasi kolom untuk display, ganti "Saldo kupon digunakan" -> "Total"
             df_display = df_tx.rename(columns={
@@ -2494,12 +2509,15 @@ def page_kasir():
                 "isvoucher": "kupon digunakan",
                 "initial_value": "Initial_value"
             })
-            df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
-            df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "iya" if x == "yes" else "tidak")
+            # df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
+            # df_display["Total"] = df_display["Total"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
+            # df_display["Tunai"] = df_display["Initi"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
+            df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
+            df_display.loc[df_display["kupon digunakan"] == "tidak", "Total"] = df_display["Tunai"]
 
             # Tampilkan tabel histori
             st.dataframe(
-                df_display[["Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value",
+                df_display[["id", "Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value",
                             "Total", "Tunai", "Cabang", "Menu"]],
                 use_container_width=True
             )
@@ -2542,6 +2560,36 @@ def page_kasir():
                             file_name=f"transactions_{search_code.upper()}.csv",
                             mime="text/csv"
                         )
+
+        menu_list = []
+
+        for idx, row in df_tx.iterrows():
+            menu_items = str(row["items"]).split(",")  # Pecah per menu
+            for item in menu_items:
+                item = item.strip()
+        
+                # Contoh item: "NASI PUTIH x6"
+                match = re.match(r"(.+?) x(\d+)", item)
+                if match:
+                    nama_menu = match.group(1).strip()
+                    jumlah = int(match.group(2))
+                    menu_list.append({
+                        "Tanggal": row["tanggal_transaksi"],
+                        "Menu": nama_menu,
+                        "Jumlah": jumlah
+                    })
+        
+        # Buat dataframe menu
+        df_menu = pd.DataFrame(menu_list)
+        
+        if df_menu.empty:
+            st.info("Tidak ada menu terjual pada tanggal tersebut.")
+        else:
+            df_pivot = df_menu.groupby("Menu")["Jumlah"].sum().reset_index()
+        
+            st.subheader("📊 Penjualan Per Menu (Berdasarkan Tanggal yang Dipilih)")
+            st.dataframe(df_pivot, use_container_width=True)
+
 
 # Jika admin login → langsung ke halaman admin
 if st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
