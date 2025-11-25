@@ -1190,6 +1190,11 @@ def page_admin():
                 st.warning("Tidak ada transaksi dengan filter tersebut.")
                 st.stop()
 
+            # 🔥 Hitung total uang (hanya dari used_amount)
+            total_uang_filtered = df_tx["used_amount"].fillna(0).sum()
+            st.metric("Total Pendapatan", f"Rp {total_uang_filtered:,}")
+
+
             # Normalisasi kolom untuk display, ganti "Saldo kupon digunakan" -> "Total"
             df_display = df_tx.rename(columns={
                 "code": "Kode",
@@ -2551,13 +2556,3 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
-
-
-
-
-
-
-
-
