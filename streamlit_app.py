@@ -1192,7 +1192,13 @@ def page_admin():
 
             # 🔥 Hitung total uang (hanya dari used_amount)
             total_uang_filtered = df_tx["used_amount"].fillna(0).sum()
-            st.metric("Total Pendapatan", f"Rp {total_uang_filtered:,}")
+            st.metric("Total Pendapatan Keseluruhan", f"Rp {total_uang_filtered:,}")
+
+            total_cash_filtered = df_tx["used_amount"].fillna(0).sum()
+            st.metric("Total Pendapatan Cash", f"Rp {total_cash_filtered:,}")
+
+            total_kupon_filtered = total_uang_filtered - total_cash_filtered
+            st.metric("Total Pendapatan Dari Kupon", f"Rp {total_kupon_filtered:,}")
 
 
             # Normalisasi kolom untuk display, ganti "Saldo kupon digunakan" -> "Total"
@@ -2604,3 +2610,5 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
+histori
