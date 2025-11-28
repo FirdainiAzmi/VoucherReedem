@@ -2582,7 +2582,7 @@ def page_kasir():
             # df_display["Total"] = df_display["Total"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
             # df_display["Tunai"] = df_display["Initi"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
             df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
-            df_display.loc[df_display["kupon digunakan"] == "tidak", "Total"] = df_display["Tunai"]
+            df_display.loc[df_display["kupon digunakan"] == "0", "Total"] = df_display["Tunai"]
 
             # Tampilkan tabel histori
             st.dataframe(
@@ -2601,7 +2601,7 @@ def page_kasir():
             # Jika ada pencarian kode kupon
             if search_code:
                 # Filter hanya transaksi dengan voucher
-                df_voucher = df_display[df_display["kupon digunakan"] == "iya"]
+                df_voucher = df_display[df_display["kupon digunakan"] == "1"]
                 df_filtered = df_voucher[df_voucher["Kode"].str.contains(search_code.upper(), case=False)]
 
                 if df_filtered.empty:
