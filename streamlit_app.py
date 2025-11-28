@@ -1826,58 +1826,6 @@ def page_admin():
                     st.markdown("---")
         
                     # =======================================================
-                    # 🍽 TOP 5 MENU TERLARIS
-                    # =======================================================
-                    st.subheader("🍽 Top 5 Menu Terlaris")
-        
-                    try:
-                        if selected_cabang == "Semua":
-                            query_menu = """
-                                SELECT 
-                                    nama_item,
-                                    COALESCE(terjual_twsari,0)
-                                  + COALESCE(terjual_sedati,0)
-                                  + COALESCE(terjual_kesambi,0)
-                                  + COALESCE(terjual_tulangan,0) AS Terjual
-                                FROM menu_items
-                            """
-                        else:
-                            mapping = {
-                                "tawangsari": "terjual_twsari",
-                                "sedati": "terjual_sedati",
-                                "kesambi": "terjual_kesambi",
-                                "tulangan": "terjual_tulangan"
-                            }
-        
-                            col = mapping.get(selected_cabang.lower())
-                            if col is None:
-                                raise ValueError(f"Cabang tidak dikenali: {selected_cabang}")
-        
-                            query_menu = f"""
-                                SELECT 
-                                    nama_item,
-                                    COALESCE({col},0) AS Terjual
-                                FROM menu_items
-                            """
-        
-                        df_menu = pd.read_sql(query_menu, engine)
-                        df_menu.rename(columns={"nama_item": "Menu"}, inplace=True)
-        
-                        df_menu = df_menu.sort_values("Terjual", ascending=False).head(5)
-        
-                        chart_menu = alt.Chart(df_menu).mark_bar().encode(
-                            x=alt.X("Menu:N", title="Menu"),
-                            y=alt.Y("Terjual:Q", title="Jumlah Terjual"),
-                            tooltip=["Menu", "Terjual"]
-                        )
-                        st.altair_chart(chart_menu, use_container_width=True)
-        
-                    except Exception as e:
-                        st.error(f"Gagal memuat data menu terlaris: {e}")
-        
-                    st.markdown("---")
-        
-                    # =======================================================
                     # 📥 DOWNLOAD DATA TRANSAKSI TERFILTER
                     # =======================================================
                     st.subheader("📥 Download Data Transaksi")
@@ -2740,6 +2688,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
