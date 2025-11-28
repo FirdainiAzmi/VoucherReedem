@@ -551,6 +551,18 @@ def delete_menu_item(id_menu):
         st.error(f"Error saat menghapus menu: {e}")
         return False
 
+def get_kategori_list():
+    query = text("""
+        SELECT DISTINCT kategori
+        FROM menu_items
+        WHERE kategori IS NOT NULL AND kategori <> ''
+        ORDER BY kategori
+    """)
+    with engine.begin() as conn:
+        rows = conn.execute(query).fetchall()
+    # ambil kolom pertama dari tiap row jadi list
+    return [r[0] for r in rows]
+
 def list_all_menu():
     try:
         with engine.connect() as conn:
@@ -1888,7 +1900,28 @@ def page_admin():
         with tab2:
             st.header("➕ Tambah Menu Baru")
 
-            kategori = st.text_input("Kategori")
+            kategori = get_kategori_list()
+
+            # Tambahkan opsi dummy di awal
+            options = ["-- Pilih Kategori --"] + kategori + ["+ Tambah kategori baru"]
+
+            kategori_selected = st.selectbox(
+                "Kategori",
+                options=options,
+                index=0,
+                key="kategori_tambah_select",
+            )
+
+            kategori_value = None
+
+            if kategori_selected == "+ Tambah kategori baru":
+                kategori_value = st.text_input(
+                    "Kategori baru",
+                    key="kategori_tambah_baru"
+                )
+            elif kategori_selected != "-- Pilih Kategori --":
+                kategori_value = kategori_selected
+
             nama_item = st.text_input("Nama Item")
             keterangan = st.text_area("Keterangan")
 
@@ -1897,13 +1930,22 @@ def page_admin():
             harga_kesambi = st.text_input("Harga Kesambi (boleh kosong)")
             harga_tulangan = st.text_input("Harga Tulangan (boleh kosong)")
 
-            if st.button("Tambah Menu"):
-                add_menu_item(
-                    kategori, nama_item, keterangan,
-                    harga_sedati, harga_twsari, harga_kesambi, harga_tulangan
-                )
-                st.success("Item berhasil ditambahkan!")
-                st.rerun()
+            if st.button("Simpan Menu"):
+            # validasi sederhana
+                if not kategori_value:
+                    st.error("Kategori belum dipilih / diisi.")
+                else:
+                    add_menu_item(
+                        kategori=kategori_value,
+                        nama_item=nama_item,
+                        keterangan=keterangan,
+                        harga_sedati=harga_sedati,
+                        harga_twsari=harga_twsari,
+                        harga_kesambi=harga_kesambi,
+                        harga_tulangan=harga_tulangan,
+                    )
+                    st.success("Menu berhasil ditambahkan!")
+                    st.rerun()
 
 
         # ============================
@@ -2625,6 +2667,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
 
