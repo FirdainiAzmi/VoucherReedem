@@ -468,7 +468,12 @@ def to_int_or_none(value):
     except:
         return None
 
-
+def to_none_if_empty(value: str):
+    if value is None:
+        return None
+    value = value.strip()
+    return value if value != "" else None
+    
 def list_all_menu():
     query = """
         SELECT * FROM menu_items
@@ -494,7 +499,7 @@ def add_menu_item(kategori, nama_item, keterangan,
     params = {
         "kategori": kategori,
         "nama_item": nama_item,
-        "keterangan": keterangan,
+        "keterangan": to_none_if_empty(keterangan),
         "harga_sedati": to_int_or_none(harga_sedati),
         "harga_twsari": to_int_or_none(harga_twsari),
         "harga_kesambi": to_int_or_none(harga_kesambi),
@@ -2620,5 +2625,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
