@@ -1673,10 +1673,11 @@ def page_admin():
             if df_tx.empty:
                 st.info("Belum ada data transaksi.")
             else:
+                # pastikan tipe datetime
                 df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
         
                 # =============================================
-                # 🔍 FILTER AREA — tambah filter kupon
+                # 🔍 FILTER AREA — termasuk filter kupon
                 # =============================================
                 st.markdown("### 🔎 Filter Transaksi")
         
@@ -1701,7 +1702,7 @@ def page_admin():
                     cabang_list = ["Semua"] + sorted(df_tx["branch"].dropna().unique().tolist())
                     selected_cabang = st.selectbox("Cabang", cabang_list)
         
-                # Filter KUpon
+                # Filter KUpon / Non Kupon
                 with f4:
                     filter_kupon = st.selectbox(
                         "Jenis transaksi",
@@ -1709,7 +1710,7 @@ def page_admin():
                     )
         
                 # =============================================
-                # 🔄 APPLY FILTER
+                # 🔄 APPLY FILTER (tanggal + cabang)
                 # =============================================
                 df_filtered = df_tx[
                     (df_tx["tanggal_transaksi"].dt.date >= start_date) &
@@ -1719,7 +1720,14 @@ def page_admin():
                 if selected_cabang != "Semua":
                     df_filtered = df_filtered[df_filtered["branch"] == selected_cabang]
         
-                # 🔹 Filter kupon / non kupon (asumsi kolom: isvoucher = 'yes' / 'no' / NULL)
+                # =============================================
+                # 🔄 FILTER KUpon (Kupon / Non Kupon / Semua)
+                # -> Semua perhitungan di bawah (summary, per cabang, dll)
+                #    akan memakai df_filtered ini, jadi:
+                #    - kalau pilih Kupon    -> hanya kupon
+                #    - kalau pilih Non Kupon -> hanya non-kupon
+                #    - kalau Semua          -> semua transaksi
+                # =============================================
                 if "isvoucher" in df_filtered.columns:
                     df_filtered["isvoucher"] = df_filtered["isvoucher"].fillna("no")
         
@@ -1732,7 +1740,7 @@ def page_admin():
                     st.info("Tidak ada transaksi pada filter yang dipilih.")
                 else:
                     # =============================================
-                    # SUMMARY TRANSAKSI
+                    # SUMMARY TRANSAKSI (sudah mengikuti filter kupon)
                     # =============================================
                     total_tx = len(df_filtered)
                     total_tx_nominal = df_filtered["used_amount"].fillna(0).sum()
@@ -1746,8 +1754,13 @@ def page_admin():
         
                     # =======================================================
                     # 🏪 TRANSAKSI PER CABANG
+                    # -> Karena pakai df_filtered, otomatis:
+                    #    - kalau filter_kupon = Kupon    -> hanya kupon
+                    #    - kalau filter_kupon = Non Kupon -> hanya non-kupon
+                    #    - kalau Semua                  -> semua
                     # =======================================================
                     st.subheader("🏪 Total Transaksi per Cabang")
+        
                     tx_count = (
                         df_filtered
                         .groupby("branch")["code"]
@@ -1770,10 +1783,11 @@ def page_admin():
                     st.markdown("---")
         
                     # =======================================================
-                    # 🏆 TOP 5 KUPON PALING SERING DIPAKAI
+                    # 🏆 TOP 5 KUPOIN PALING SERING DIPAKAI
                     # =======================================================
                     st.subheader("🏆 Top 5 Kupon Paling Sering Digunakan")
         
+                    # Ambil hanya yang voucher dari df_filtered (yang sudah ikut filter tanggal, cabang, dan kupon)
                     df_voucher = df_filtered.copy()
                     if "isvoucher" in df_voucher.columns:
                         df_voucher["isvoucher"] = df_voucher["isvoucher"].fillna("no")
@@ -1802,6 +1816,7 @@ def page_admin():
         
                     # =======================================================
                     # 🍽 TOP 5 MENU TERLARIS
+                    # (ini berdasarkan tabel menu_items, bukan df_filtered)
                     # =======================================================
                     st.subheader("🍽 Top 5 Menu Terlaris")
         
@@ -1867,7 +1882,7 @@ def page_admin():
                         file_name="transaksi_filter.csv",
                         mime="text/csv",
                     )
-    
+
             # ===== TAB Seller =====
             with tab_seller:
                 st.subheader("📊 Analisis Kupon per Seller")
@@ -2717,5 +2732,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
