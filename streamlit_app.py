@@ -1667,41 +1667,54 @@ def page_admin():
         with tab_transaksi:
             st.subheader("📊 Ringkasan Transaksi")
         
+            # Load data transaksi
             df_tx = pd.read_sql("SELECT * FROM transactions", engine)
         
             if df_tx.empty:
                 st.info("Belum ada data transaksi.")
             else:
+                # Pastikan kolom tanggal dalam bentuk datetime
                 df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"])
         
-                # ============ FILTER UI ===============
+                # =============================================
+                # 🔍 FILTER AREA
+                # =============================================
                 st.markdown("### 🔎 Filter Transaksi")
         
+                # 4 kolom: Dari, Sampai, Cabang, Jenis Transaksi
                 f1, f2, f3, f4 = st.columns([1, 1, 1, 1])
         
+                # Filter tanggal "DARI"
                 with f1:
                     start_date = st.date_input(
                         "Dari tanggal",
                         df_tx["tanggal_transaksi"].min().date()
                     )
         
+                # Filter tanggal "SAMPAI"
                 with f2:
                     end_date = st.date_input(
                         "Sampai tanggal",
                         df_tx["tanggal_transaksi"].max().date()
                     )
         
+                # Filter CABANG
                 with f3:
-                    cabang_list = ["Semua"] + sorted(df_tx["branch"].dropna().unique().tolist())
+                    cabang_list = ["Semua"] + sorted(
+                        df_tx["branch"].dropna().unique().tolist()
+                    )
                     selected_cabang = st.selectbox("Cabang", cabang_list)
         
+                # Filter JENIS TRANSAKSI (Kupon / Non Kupon)
                 with f4:
                     filter_kupon = st.selectbox(
                         "Jenis transaksi",
                         ["Semua", "Kupon", "Non Kupon"]
                     )
         
-                # ============ FILTER TANGGAL + CABANG ===============
+                # =============================================
+                # 🔄 APPLY FILTER TANGGAL + CABANG
+                # =============================================
                 df_filtered = df_tx[
                     (df_tx["tanggal_transaksi"].dt.date >= start_date) &
                     (df_tx["tanggal_transaksi"].dt.date <= end_date)
@@ -1710,44 +1723,46 @@ def page_admin():
                 if selected_cabang != "Semua":
                     df_filtered = df_filtered[df_filtered["branch"] == selected_cabang]
         
-                # ============ FILTER KUPON (NORMALISASI isvoucher) ===============
-                # pastikan kolom isvoucher ada
-                if "isvoucher" in df_filtered.columns:
-                    raw = df_filtered["isvoucher"]
-        
-                    is_voucher = (
-                        raw.replace({
-                            True: 1,
-                            False: 0,
-                            "True": 1,
-                            "False": 0,
-                            "1": 1,
-                            "0": 0,
-                            1: 1,
-                            0: 0,
-                            None: 0,
-                        })
+                # =============================================
+                # 🎫 NORMALISASI KUPON (kolom isvoucher: yes/no)
+                # =============================================
+                if not df_filtered.empty and "isvoucher" in df_filtered.columns:
+                    df_filtered["isvoucher_norm"] = (
+                        df_filtered["isvoucher"]
+                        .astype(str)
+                        .str.strip()
+                        .str.lower()
+                        .map({"yes": 1, "no": 0})
                         .fillna(0)
                         .astype(int)
                     )
-        
-                    # simpan versi normalisasinya kalau mau dicek di bawah
-                    df_filtered["isvoucher_norm"] = is_voucher
         
                     if filter_kupon == "Kupon":
                         df_filtered = df_filtered[df_filtered["isvoucher_norm"] == 1]
                     elif filter_kupon == "Non Kupon":
                         df_filtered = df_filtered[df_filtered["isvoucher_norm"] == 0]
                 else:
-                    # kalau nggak ada kolom isvoucher, filter kupon diabaikan
-                    df_filtered["isvoucher_norm"] = 0
+                    # Kalau kolom isvoucher tidak ada, bikin norm = 0
+                    if not df_filtered.empty:
+                        df_filtered["isvoucher_norm"] = 0
         
+                # =============================================
+                # CEK SETELAH SEMUA FILTER
+                # =============================================
                 if df_filtered.empty:
                     st.info("Tidak ada transaksi pada filter yang dipilih.")
                 else:
-                    # ================= Summary =================
+                    # Pastikan used_amount numerik
+                    df_filtered["used_amount"] = pd.to_numeric(
+                        df_filtered["used_amount"],
+                        errors="coerce"
+                    ).fillna(0)
+        
+                    # =============================================
+                    # SUMMARY TRANSAKSI
+                    # =============================================
                     total_tx = len(df_filtered)
-                    total_tx_nominal = df_filtered["used_amount"].fillna(0).sum()
+                    total_tx_nominal = df_filtered["used_amount"].sum()
                     avg_tx = df_filtered["used_amount"].mean() if total_tx > 0 else 0
         
                     st.write(f"- Total transaksi: {total_tx:,}")
@@ -1756,19 +1771,21 @@ def page_admin():
         
                     st.markdown("---")
         
-                    # ================= Transaksi per Cabang =================
+                    # =======================================================
+                    # 🏪 TRANSAKSI PER CABANG
+                    # =======================================================
                     st.subheader("🏪 Total Transaksi per Cabang")
         
+                    # Pakai size() biar nggak tergantung kolom tertentu
                     tx_count = (
-                        df_filtered.groupby("branch")["id"]
-                        .count()
-                        .reset_index()
+                        df_filtered.groupby("branch")
+                        .size()
+                        .reset_index(name="Jumlah Transaksi")
                     )
-                    tx_count.columns = ["Cabang", "Jumlah Transaksi"]
+                    tx_count.rename(columns={"branch": "Cabang"}, inplace=True)
                     st.bar_chart(tx_count, x="Cabang", y="Jumlah Transaksi")
         
                     st.subheader("💰 Total Nominal per Cabang")
-        
                     tx_sum = (
                         df_filtered.groupby("branch")["used_amount"]
                         .sum()
@@ -1779,45 +1796,49 @@ def page_admin():
         
                     st.markdown("---")
         
-                    # ================= Top 5 Kupon =================
+                    # =======================================================
+                    # 🏆 TOP 5 KUPON PALING SERING DIPAKAI
+                    # =======================================================
                     st.subheader("🏆 Top 5 Kupon Paling Sering Digunakan")
         
-                    df_voucher = df_filtered[df_filtered["isvoucher_norm"] == 1]
+                    # Hanya ambil transaksi yang memang kupon
+                    df_voucher = df_filtered[df_filtered["isvoucher_norm"] == 1].copy()
+        
+                    # Buang code kosong / null
+                    df_voucher = df_voucher[
+                        df_voucher["code"].notna() & (df_voucher["code"] != "")
+                    ]
         
                     if df_voucher.empty:
                         st.info("Tidak ada transaksi kupon pada filter ini.")
                     else:
-                        df_voucher = df_voucher[
-                            df_voucher["code"].notna() & (df_voucher["code"] != "")
-                        ]
+                        top_voucher = (
+                            df_voucher.groupby("code")["code"]
+                            .count()
+                            .sort_values(ascending=False)
+                            .head(5)
+                            .reset_index(name="Jumlah Transaksi")
+                        )
         
-                        if df_voucher.empty:
-                            st.info("Tidak ada kode kupon yang valid pada filter ini.")
-                        else:
-                            top_voucher = (
-                                df_voucher.groupby("code")["id"]
-                                .count()
-                                .sort_values(ascending=False)
-                                .head(5)
-                                .reset_index(name="Jumlah Transaksi")
-                            )
-        
-                            st.table(top_voucher)
-                            st.bar_chart(top_voucher, x="code", y="Jumlah Transaksi")
+                        st.table(top_voucher)
+                        st.bar_chart(top_voucher, x="code", y="Jumlah Transaksi")
         
                     st.markdown("---")
         
-                    # ================= Top 5 Menu =================
+                    # =======================================================
+                    # 🍽 TOP 5 MENU TERLARIS
+                    # =======================================================
                     st.subheader("🍽 Top 5 Menu Terlaris")
         
                     try:
                         if selected_cabang == "Semua":
                             query_menu = """
-                                SELECT nama_item,
-                                       COALESCE(terjual_twsari,0) +
-                                       COALESCE(terjual_sedati,0) +
-                                       COALESCE(terjual_kesambi,0) +
-                                       COALESCE(terjual_tulangan,0) AS Terjual
+                                SELECT 
+                                    nama_item,
+                                    COALESCE(terjual_twsari,0)
+                                  + COALESCE(terjual_sedati,0)
+                                  + COALESCE(terjual_kesambi,0)
+                                  + COALESCE(terjual_tulangan,0) AS Terjual
                                 FROM menu_items
                             """
                         else:
@@ -1827,23 +1848,26 @@ def page_admin():
                                 "kesambi": "terjual_kesambi",
                                 "tulangan": "terjual_tulangan"
                             }
+        
                             col = mapping.get(selected_cabang.lower())
                             if col is None:
                                 raise ValueError(f"Cabang tidak dikenali: {selected_cabang}")
         
                             query_menu = f"""
-                                SELECT nama_item,
-                                       COALESCE({col},0) AS Terjual
+                                SELECT 
+                                    nama_item,
+                                    COALESCE({col},0) AS Terjual
                                 FROM menu_items
                             """
         
                         df_menu = pd.read_sql(query_menu, engine)
                         df_menu.rename(columns={"nama_item": "Menu"}, inplace=True)
+        
                         df_menu = df_menu.sort_values("Terjual", ascending=False).head(5)
         
                         chart_menu = alt.Chart(df_menu).mark_bar().encode(
-                            x="Menu:N",
-                            y="Terjual:Q",
+                            x=alt.X("Menu:N", title="Menu"),
+                            y=alt.Y("Terjual:Q", title="Jumlah Terjual"),
                             tooltip=["Menu", "Terjual"]
                         )
                         st.altair_chart(chart_menu, use_container_width=True)
@@ -1853,7 +1877,9 @@ def page_admin():
         
                     st.markdown("---")
         
-                    # ================= Download =================
+                    # =======================================================
+                    # 📥 DOWNLOAD DATA TRANSAKSI TERFILTER
+                    # =======================================================
                     st.subheader("📥 Download Data Transaksi")
         
                     csv_data = df_filtered.to_csv(index=False).encode("utf-8")
@@ -2714,6 +2740,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
