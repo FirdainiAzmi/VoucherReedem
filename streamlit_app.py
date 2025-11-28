@@ -473,6 +473,12 @@ def to_none_if_empty(value: str):
         return None
     value = value.strip()
     return value if value != "" else None
+
+def to_upper_or_none(value: str):
+    if value is None:
+        return None
+    value = value.strip()
+    return value.upper() if value != "" else None
     
 def list_all_menu():
     query = """
@@ -497,8 +503,8 @@ def add_menu_item(kategori, nama_item, keterangan,
     """
 
     params = {
-        "kategori": kategori,
-        "nama_item": nama_item,
+        "kategori": to_upper_or_none(kategori),
+        "nama_item": to_upper_or_none(nama_item),
         "keterangan": to_none_if_empty(keterangan),
         "harga_sedati": to_int_or_none(harga_sedati),
         "harga_twsari": to_int_or_none(harga_twsari),
@@ -527,8 +533,8 @@ def update_menu_item(id_menu, kategori, nama_item, keterangan,
 
     params = {
         "id_menu": id_menu,
-        "kategori": kategori,
-        "nama_item": nama_item,
+        "kategori": to_upper_or_none(kategori),
+        "nama_item": to_upper_or_none(nama_item),
         "keterangan": keterangan,
         "harga_sedati": to_int_or_none(harga_sedati),
         "harga_twsari": to_int_or_none(harga_twsari),
@@ -2668,3 +2674,5 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
 
+
+add_menu_item
