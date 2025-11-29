@@ -1544,14 +1544,15 @@ def page_admin():
                         with col3:
                             if st.button("✅ Aktivasi", key=f"accept_{row['code']}_{idx}"):
                                 try:
+                                    today = date.today()
                                     with engine.begin() as conn2:
                                         conn2.execute(
                                             text("""
                                                 UPDATE vouchers
-                                                SET status = 'active'
+                                                SET status = 'active', tanggal_aktivasi = :tanggal_aktivasi
                                                 WHERE code = :code
                                             """),
-                                            {"code": row["code"]}
+                                            {"code": row["code"], "tanggal_aktivasi": today}
                                         )
                                     st.success(f"Kupon {row['code']} telah diaktivasi ✅")
                                     st.rerun()
@@ -2188,7 +2189,6 @@ def page_seller_activation():
         kode = st.text_input("Kode Kupon").strip().upper()
         buyer_name_input = st.text_input("Nama Pembeli").strip()
         buyer_phone_input = st.text_input("No HP Pembeli").strip()
-        tanggal_aktivasi = st.date_input("Tanggal Aktivasi", value=pd.to_datetime("today"), key="assign_tanggal_aktivasi")
         submit = st.form_submit_button("Simpan dan Aktifkan")
 
     if submit:
@@ -2205,7 +2205,7 @@ def page_seller_activation():
                 # Cek apakah voucher ada dan seller cocok
                 result = conn.execute(
                     text("""
-                        SELECT seller, status, tanggal_penjualan FROM vouchers WHERE code = :code
+                        SELECT seller, status, FROM vouchers WHERE code = :code
                     """),
                     {"code": kode}
                 ).fetchone()
@@ -2214,7 +2214,7 @@ def page_seller_activation():
                     st.error("Kode kupon tidak ditemukan.")
                     return
 
-                db_seller, db_status, tanggal_penjualan = result
+                db_seller, db_status = result
 
                 # Jika voucher belum diassign seller oleh admin
                 if not db_seller or db_seller.strip() == "":
@@ -2226,10 +2226,10 @@ def page_seller_activation():
                     st.error("Voucher bukan milik Anda.")
                     return
 
-                if tanggal_penjualan and tanggal_aktivasi < tanggal_penjualan:
-                    st.error(f"❌ Tanggal Aktivasi tidak boleh sebelum Tanggal Penjualan ({tanggal_penjualan})")
-                    tanggal_aktivasi = None  # opsional: reset nilai agar user pilih ulang
-                    return
+                # if tanggal_penjualan and tanggal_aktivasi < tanggal_penjualan:
+                #     st.error(f"❌ Tanggal Aktivasi tidak boleh sebelum Tanggal Penjualan ({tanggal_penjualan})")
+                #     tanggal_aktivasi = None  # opsional: reset nilai agar user pilih ulang
+                #     return
 
                 # Jika sudah aktif sebelumnya
                 if db_status and db_status.lower() == "active":
@@ -2242,14 +2242,12 @@ def page_seller_activation():
                         UPDATE vouchers
                         SET nama = :nama,
                             no_hp = :no_hp,
-                            tanggal_aktivasi = :tgl,
                             status = 'proses'
                         WHERE code = :code
                     """),
                     {
                         "nama": buyer_name_input,
                         "no_hp": buyer_phone_input,
-                        "tgl": tanggal_aktivasi,
                         "code": kode,
                     }
                 )
@@ -2266,11 +2264,45 @@ def page_seller_activation():
             st.error("❌ Terjadi kesalahan saat mengupdate data kupon.")
             st.code(str(e))
 
-    st.markdown("---")
     st.info(
         "Note: Setelah berhasil diaktivasi oleh Seller, data akan dikunci (seller tidak bisa mengedit lagi). "
         "Jika perlu koreksi, minta admin untuk ubah data."
     )
+
+    st.markdown("---")
+    st.subheader("Lacak kupon")
+    
+    lacak_code = st.text_input("Masukkan kode kupon").strip().upper()
+    if st.button("Cek Kupon"):
+        if not lacak_code:
+            st.error("Tidak bisa dilacak, kode belum diinput.")
+            return
+        else:
+            with engine.connect() as conn:
+                row = conn.execute(text("""
+                    SELECT 
+                        code,
+                        initial_value,
+                        status,
+                        tanggal_aktivasi,
+                    FROM vouchers
+                    WHERE code = :code
+                    LIMIT 1
+                """), {"code": lacak_code}).fetchone()
+
+            if not row:
+                st.error("Tidak ada kupon yang ditemukan.")
+                return
+            else:
+                code, initial_value, status, tanggal_aktivasi = row
+                if status == "active":
+                    st.info(f"Kupon berkode {code} RP. {initial_value}, berstatus {status} dengan tanggal aktivasi: {tanggal_aktivasi}.")
+                elif status ==  "proses":
+                    st.info(f"Kupon berkode {code} RP. {initial_value}, berstatus {status}. Segera bayar kupon agar dapat diaktivasi oleh admin.")
+                elif status == "inavtive" :
+                    st.info(f"Kupon berkode {code} RP. {initial_value}, berstatus {status}. Aktivasi kupon ditolak oleh admin, hubungi admin untuk info lebih lanjut.")
+                else:
+                    st.info(f"Kupon sedang berstatus {status}.")
 
 def reset_redeem_state():
     for key in [
@@ -2316,20 +2348,24 @@ def validate_voucher_and_show_info(row, total):
     status_normalized = (status or "").strip().lower()
 
     if status_normalized == "inactive":
-        st.session_state["redeem_error"] = "⛔ Voucher belum aktif."
+        st.session_state["redeem_error"] = "⛔ Kupon belum aktif."
         return
 
     if status_normalized == "habis" or balance <= 0:
-        st.session_state["redeem_error"] = "⛔ Saldo voucher sudah habis."
+        st.session_state["redeem_error"] = "⛔ Saldo kupon sudah habis."
+        return
+
+    if status_normalized == "proses":
+        st.session_state["redeem_error"] = "⛔ Kupon masih belum diaktivasi admin."
         return
 
     if status_normalized != "active":
-        st.session_state["redeem_error"] = f"⛔ Status voucher tidak valid: {status}"
+        st.session_state["redeem_error"] = f"⛔ Status kupon tidak valid: {status}"
         return
 
     # Cek apakah H+1
     if tanggal_aktivasi is None:
-        st.session_state["redeem_error"] = "⛔ Voucher belum diaktifkan."
+        st.session_state["redeem_error"] = "⛔ kupon belum diaktifkan."
         return
 
     if hasattr(tanggal_aktivasi, "date"):
@@ -2341,7 +2377,7 @@ def validate_voucher_and_show_info(row, total):
             tgl_aktivasi = None
 
     if tgl_aktivasi == date.today():
-        st.session_state["redeem_error"] = "⛔ Voucher hanya bisa digunakan H+1 setelah aktivasi."
+        st.session_state["redeem_error"] = "⛔ Kupon hanya bisa digunakan H+1 setelah aktivasi."
         return
 
     # Jika semua OK → simpan data voucher
@@ -2540,7 +2576,7 @@ def page_kasir():
                 else:
                     row = find_voucher(code)
                     if not row:
-                        st.session_state["redeem_error"] = "❌ Voucher tidak ditemukan."
+                        st.session_state["redeem_error"] = "❌ Kupon tidak ditemukan."
                     else:
                         validate_voucher_and_show_info(row, total)
     
@@ -2597,6 +2633,7 @@ def page_kasir():
                     reset_redeem_state()
                     st.session_state.show_success = False
                     st.rerun()
+                    
     with riwayat_pesan:
         st.subheader("Riwayat Transaksi")
         df_tx = list_transactions(limit=5000)  # pastikan JOIN ke vouchers untuk ambil initial_value
@@ -2765,6 +2802,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
