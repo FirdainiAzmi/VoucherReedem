@@ -2265,7 +2265,7 @@ def page_seller_activation():
             st.code(str(e))
 
     st.warning(
-        "Jika ingin memeriksa status kupon anda, silahkan pakai fitur Lacak Kupon di bawah."
+        "Jika ingin memeriksa status kupon anda, silahkan pakai fitur Lacak Kupon di bawah. "
         "Jika perlu koreksi, minta admin untuk ubah data."
     )
 
@@ -2802,6 +2802,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
