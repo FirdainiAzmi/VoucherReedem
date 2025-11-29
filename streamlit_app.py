@@ -1074,7 +1074,7 @@ def page_admin():
                     elif x == "habis" or x == "sold out":
                         return "🔴 habis" 
                     elif x == "proses":
-                        return "🟡 menunggu persetujuan"
+                        return "🟡 proses"
                     return "⚪ inactive"
         
                 df_voucher["status"] = df_voucher["status"].apply(status_badge)
@@ -2765,6 +2765,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
