@@ -2296,11 +2296,11 @@ def page_seller_activation():
             else:
                 code, initial_value, status, tanggal_aktivasi = row
                 if status == "active":
-                    st.info(f"Kupon berkode {code} RP. {initial_value}, berstatus {status} dengan tanggal aktivasi: {tanggal_aktivasi}.")
+                    st.success(f"Kupon berkode {code} Rp. {initial_value}, berstatus {status} dengan tanggal aktivasi: {tanggal_aktivasi}.")
                 elif status ==  "proses":
-                    st.info(f"Kupon berkode {code} RP. {initial_value}, berstatus {status}. Segera bayar kupon agar dapat diaktivasi oleh admin.")
+                    st.info(f"Kupon berkode {code} Rp. {initial_value}, berstatus {status}. Segera bayar kupon agar dapat diaktivasi oleh admin.")
                 elif status == "inavtive" :
-                    st.info(f"Kupon berkode {code} RP. {initial_value}, berstatus {status}. Aktivasi kupon ditolak oleh admin, hubungi admin untuk info lebih lanjut.")
+                    st.info(f"Kupon berkode {code} Rp. {initial_value}, berstatus {status}. Aktivasi kupon ditolak oleh admin, hubungi admin untuk info lebih lanjut.")
                 else:
                     st.info(f"Kupon sedang berstatus {status}.")
 
@@ -2802,6 +2802,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
