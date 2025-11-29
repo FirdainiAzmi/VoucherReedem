@@ -2284,7 +2284,7 @@ def page_seller_activation():
                         code,
                         initial_value,
                         status,
-                        tanggal_aktivasi,
+                        tanggal_aktivasi
                     FROM vouchers
                     WHERE code = :code
                     LIMIT 1
@@ -2802,6 +2802,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
