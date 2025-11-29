@@ -991,7 +991,7 @@ def page_admin():
         with col3:
             filter_status = st.selectbox(
                 "Filter Status",
-                ["semua", "active", "habis", "inactive"]
+                ["semua", "active", "habis", "proses", "inactive"]
             )
 
         with col4:
@@ -1041,8 +1041,9 @@ def page_admin():
                 CASE 
                     WHEN status = 'active' THEN 1
                     WHEN status = 'habis' THEN 2
-                    WHEN status = 'inactive' THEN 3
-                    ELSE 4
+                    WHEN status = 'proses' THEN 3
+                    WHEN status = 'inactive' THEN 4
+                    ELSE 5
                 END,
                 CASE
                     WHEN initial_value = 50000 THEN 1
@@ -1073,7 +1074,7 @@ def page_admin():
                     elif x == "habis" or x == "sold out":
                         return "🔴 habis" 
                     elif x == "proses":
-                        return "dalam proses"
+                        return "🟡 menunggu persetujuan"
                     return "⚪ inactive"
         
                 df_voucher["status"] = df_voucher["status"].apply(status_badge)
@@ -2764,6 +2765,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
