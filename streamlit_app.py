@@ -2205,7 +2205,8 @@ def page_seller_activation():
                 # Cek apakah voucher ada dan seller cocok
                 result = conn.execute(
                     text("""
-                        SELECT seller, status, FROM vouchers WHERE code = :code
+                        SELECT seller, status 
+                        FROM vouchers WHERE code = :code
                     """),
                     {"code": kode}
                 ).fetchone()
@@ -2802,6 +2803,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
