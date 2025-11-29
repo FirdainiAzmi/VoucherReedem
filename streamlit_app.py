@@ -1071,7 +1071,9 @@ def page_admin():
                     if x == "active" or x == "Active":
                         return "🟢 active"
                     elif x == "habis" or x == "sold out":
-                        return "🔴 habis"
+                        return "🔴 habis" 
+                    elif x == "proses":
+                        return "dalam proses"
                     return "⚪ inactive"
         
                 df_voucher["status"] = df_voucher["status"].apply(status_badge)
@@ -1320,7 +1322,7 @@ def page_admin():
         
     with tab_edit_seller:
         st.subheader("Kelola Seller")
-        tab_kepemilikan, tab_acc = st.tabs(["Kepemilikan Kupon", "Penerimaan Seller"])
+        tab_kepemilikan, tab_acc, tab_aktivasi = st.tabs(["Kepemilikan Kupon", "Penerimaan Seller", "Aktivasi Kupon"])
     
         with tab_kepemilikan:
             st.subheader("🎯 Serahkan Kupon ke Seller")
@@ -1502,7 +1504,81 @@ def page_admin():
             except Exception as e:
                 st.error("❌ Gagal mengambil data seller dari database.")
                 st.code(str(e))
-    
+                
+        with tab_aktivasi:
+            st.subheader("🎟️ Daftar Kupon Berstatus 'Proses'")
+            st.write("Berikut adalah daftar kupon yang masih dalam proses validasi.")
+        
+            try:
+                # Ambil data kupon yang masih proses
+                with engine.connect() as conn:
+                    df_voucher_pending = pd.read_sql("""
+                        SELECT 
+                            code,
+                            initial_value,
+                            status,
+                            seller,
+                            nama
+                        FROM vouchers
+                        WHERE status = 'proses'
+                        ORDER BY code ASC
+                    """, conn)
+        
+                if df_voucher_pending.empty:
+                    st.info("Belum ada kupon yang ingin diaktivasi.")
+                else:
+                    for idx, row in df_voucher_pending.iterrows():
+                        col1, col2, col3, col4 = st.columns([3, 3, 2, 2])
+        
+                        # Kolom informasi
+                        with col1:
+                            st.write(f"**Seller:** {row['seller'] or '-'}")
+                            st.write(f"**Pembeli:** {row['nama'] or '-'}")
+        
+                        with col2:
+                            st.write(f"Kode Kupon: **{row['code']}**")
+                            st.write(f"Initial Value: Rp {int(row['initial_value']):,}")
+        
+                        # Tombol Accept
+                        with col3:
+                            if st.button("✅ Aktivasi", key=f"accept_{row['code']}_{idx}"):
+                                try:
+                                    with engine.begin() as conn2:
+                                        conn2.execute(
+                                            text("""
+                                                UPDATE vouchers
+                                                SET status = 'active'
+                                                WHERE code = :code
+                                            """),
+                                            {"code": row["code"]}
+                                        )
+                                    st.success(f"Kupon {row['code']} telah diaktivasi ✅")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Gagal mengubah status kupon: {e}")
+        
+                        # Tombol Hapus
+                        with col4:
+                            if st.button("🗑️ Tolak", key=f"hapus_{row['code']}_{idx}"):
+                                try:
+                                    with engine.begin() as conn3:
+                                        conn3.execute(
+                                            text("""
+                                                UPDATE vouchers
+                                                SET status = 'inactive', nama = NULL, no_hp = NULL, tanggal_aktivasi = NULL
+                                                WHERE code = :code
+                                            """),
+                                            {"code": row["code"]}
+                                        )
+                                    st.warning(f"Data kupon {row['code']} telah dihapus ❌")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Gagal menghapus data kupon: {e}")
+        
+            except Exception as e:
+                st.error("❌ Gagal mengambil data kupon dari database.")
+                st.code(str(e))
+
     with tab_laporan:
         st.subheader("Laporan Warung")
     
@@ -2166,7 +2242,7 @@ def page_seller_activation():
                         SET nama = :nama,
                             no_hp = :no_hp,
                             tanggal_aktivasi = :tgl,
-                            status = 'active'
+                            status = 'proses'
                         WHERE code = :code
                     """),
                     {
@@ -2688,6 +2764,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
