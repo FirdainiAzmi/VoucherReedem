@@ -2799,7 +2799,7 @@ def page_kasir():
                         )
 
                 st.markdown("---")
-                df_display = df_tx.rename(columns={
+            df_display = df_tx.rename(columns={
                         "code": "Kode",
                         "used_amount": "Total",
                         "tanggal_transaksi": "Tanggal_transaksi",
@@ -2812,8 +2812,8 @@ def page_kasir():
                     # df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
                     # df_display["Total"] = df_display["Total"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
                     # df_display["Tunai"] = df_display["Initi"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
-                df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
-                df_display.loc[df_display["kupon digunakan"] == "0", "Total"] = df_display["Tunai"]
+            df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
+            df_display.loc[df_display["kupon digunakan"] == "0", "Total"] = df_display["Tunai"]
 
             # Tampilkan tabel histori
             st.dataframe(
