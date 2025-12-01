@@ -2612,9 +2612,9 @@ def page_kasir():
             # Hitung total setelah diskon
             total_setelah_diskon = total - diskon
             if total_setelah_diskon < 0:
-                st.write(f"### Total setelah diskon: Rp {total_setelah_diskon:,}")
-            elif total_setelah_diskon==0:
-                st.write(f"### Total Akhir: Rp {total_setelah_diskon:,}")
+                total_setelah_diskon = 0
+
+            st.write(f"### Total setelah diskon: Rp {total_setelah_diskon:,}")
 
             # Simpan ke session_state
             st.session_state.total_setelah_diskon = total_setelah_diskon
@@ -2857,3 +2857,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
