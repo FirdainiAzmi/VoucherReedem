@@ -2596,29 +2596,30 @@ def page_kasir():
             if "diskon_persen" not in st.session_state:
                 st.session_state.diskon_persen = 0
 
+            # Input diskon, tapi hanya jika total >= 50000
             if total >= 50000:
-                st.write("### Diskon (opsional)")
-
                 diskon = st.number_input(
-                    "Masukkan diskon (%)",
+                    "Masukkan diskon (nominal)",
                     min_value=0,
-                    max_value=100,
-                    value=st.session_state.diskon_persen,
-                    step=1
+                    max_value=total,
+                    value=0,
+                    step=1000,
+                    key="diskon_input"
                 )
-
-                st.session_state.diskon_persen = diskon
-
-                total_setelah_diskon = int(total - (total * diskon / 100))
-
-                st.subheader(f"Total setelah diskon: Rp {total_setelah_diskon:,}")
-
             else:
-                st.info("Diskon hanya bisa digunakan jika total belanja minimal Rp 50.000")
-                st.session_state.diskon_persen = 0
-                total_setelah_diskon = total
+                diskon = 0
+                st.info("Diskon hanya bisa diberikan jika total ≥ Rp 50.000")
 
+            # Hitung total setelah diskon
+            total_setelah_diskon = total - diskon
+            if total_setelah_diskon < 0:
+                total_setelah_diskon = 0
 
+            st.write(f"### Total setelah diskon: Rp {total_setelah_diskon:,}")
+
+            # Simpan ke session_state
+            st.session_state.total_setelah_diskon = total_setelah_diskon
+            st.session_state.diskon = diskon
     
             cA, cB = st.columns(2)
             with cA:
@@ -2857,21 +2858,3 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
