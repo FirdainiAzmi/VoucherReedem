@@ -2633,7 +2633,7 @@ def page_kasir():
                     if st.session_state.isvoucher == "yes" and "voucher_row" in st.session_state:
                         code = st.session_state.voucher_row[0]
 
-                        ok, msg, newbal = atomic_redeem(code, final_total, branch, items_str)
+                        ok, msg, newbal = atomic_redeem(code, final_total, branch, items_str, diskon)
                         st.session_state.newbal = newbal
 
                         # =============== UPDATE DISKON KE TABLE VOUCHERS ==================
@@ -2652,7 +2652,7 @@ def page_kasir():
                         # ==================================================================
 
                     else:
-                        ok, msg, _ = atomic_redeem(None, final_total, branch, items_str)
+                        ok, msg, _ = atomic_redeem(None, final_total, branch, items_str, diskon)
 
                     transaksi_notification(date.today(), branch, final_total)
 
@@ -2858,5 +2858,3 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
