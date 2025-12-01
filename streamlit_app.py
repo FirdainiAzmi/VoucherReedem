@@ -46,7 +46,6 @@ def init_db():
                     tanggal_aktivasi DATE,
                     tunai INTEGER,
                     jenis_kupon TEXT NOT NULL,
-                    diskon INTEGER
                     FOREIGN KEY(jenis_kupon) REFERENCES jenis_db(jenis_kupon)
                 )
             """))
@@ -2858,6 +2857,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
