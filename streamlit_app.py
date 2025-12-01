@@ -2611,8 +2611,8 @@ def page_kasir():
             if "diskon_persen" not in st.session_state:
                 st.session_state.diskon_persen = 0
 
-            # Input diskon, tapi hanya jika total >= 50000
-            if total >= 50000:
+            # Input diskon, tapi hanya jika total >= 25000
+            if total >= 25000:
                 diskon = st.number_input(
                     "Masukkan diskon (nominal)",
                     min_value=0,
