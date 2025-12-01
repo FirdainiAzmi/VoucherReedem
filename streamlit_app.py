@@ -46,6 +46,7 @@ def init_db():
                     tanggal_aktivasi DATE,
                     tunai INTEGER,
                     jenis_kupon TEXT NOT NULL,
+                    diskon INTEGER
                     FOREIGN KEY(jenis_kupon) REFERENCES jenis_db(jenis_kupon)
                 )
             """))
@@ -56,7 +57,8 @@ def init_db():
                     used_amount INTEGER NOT NULL,
                     tanggal_transaksi TIMESTAMP NOT NULL,
                     branch TEXT,
-                    items TEXT
+                    items TEXT,
+                    diskon INTEGER
                 )
             """))
             conn.execute(text("""
@@ -84,11 +86,11 @@ def init_db():
         st.stop()
 
 def aktivasi_notification(voucher_code, seller_name, buyer_name, buyer_phone):
-    subject = f"[INFO] Voucher {voucher_code} Diaktifkan Seller"
+    subject = f"[INFO] Voucher {voucher_code} Ingin Diaktivasi oleh Seller"
     body = f"""
     Halo Admin,
     
-    Voucher telah diaktivasi oleh seller.
+    Voucher ingin diaktivasi seller.
     
     Kode Voucher : {voucher_code}
     Seller       : {seller_name}
@@ -302,20 +304,21 @@ def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
         st.error(f"Gagal update voucher: {e}")
         return False
 
-def atomic_redeem(code, amount, branch, items_str):
+def atomic_redeem(code, amount, branch, items_str, diskon):
     try:
         if code is None:
             with engine.begin() as conn:
                 conn.execute(text("""
                     INSERT INTO transactions 
-                    (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher)
-                    VALUES (NULL, :tunai, :now, :branch, :items, :tunai, 'no')
+                    (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
+                    VALUES (NULL, :tunai, :now, :branch, :items, :tunai, 'no', :diskon)
                 """), {
                     "now": datetime.utcnow(),
                     "branch": branch,
                     "items": items_str,
                     "used_amount": amount,
-                    "tunai": amount
+                    "tunai": amount,
+                    "diskon": diskon
                 })
 
                 # Update terjual untuk menu
@@ -395,15 +398,16 @@ def atomic_redeem(code, amount, branch, items_str):
                 # Simpan transaksi ke database
                 conn.execute(text("""
                     INSERT INTO transactions 
-                    (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher)
-                    VALUES (:c, :amt, :now, :branch, :items, :tunai, 'yes')
+                    (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
+                    VALUES (:c, :amt, :now, :branch, :items, :tunai, 'yes', :diskon)
                 """), {
                     "c": code,
                     "amt": amount,
                     "now": datetime.utcnow(),
                     "branch": branch,
                     "items": items_str,
-                    "tunai": shortage
+                    "tunai": shortage,
+                    "diskon": diskon
                 })
     
                 # Update penjualan menu
@@ -2586,22 +2590,72 @@ def page_kasir():
                 st.error(st.session_state["redeem_error"])
     
             st.write(f"### Total: Rp {total:,}")
+            # ========================
+            # INPUT DISKON
+            # ========================
+
+            if "diskon_persen" not in st.session_state:
+                st.session_state.diskon_persen = 0
+
+            if total >= 50000:
+                st.write("### Diskon (opsional)")
+
+                diskon = st.number_input(
+                    "Masukkan diskon (%)",
+                    min_value=0,
+                    max_value=100,
+                    value=st.session_state.diskon_persen,
+                    step=1
+                )
+
+                st.session_state.diskon_persen = diskon
+
+                total_setelah_diskon = int(total - (total * diskon / 100))
+
+                st.subheader(f"Total setelah diskon: Rp {total_setelah_diskon:,}")
+
+            else:
+                st.info("Diskon hanya bisa digunakan jika total belanja minimal Rp 50.000")
+                st.session_state.diskon_persen = 0
+                total_setelah_diskon = total
+
+
     
             cA, cB = st.columns(2)
             with cA:
                 if st.button("Ya, Bayar"):
                     items_str = ", ".join([f"{k} x{v}" for k, v in ordered_items.items()])
                     branch = st.session_state.selected_branch
-    
+                    final_total = total_setelah_diskon  # total akhir
+
+                    diskon_persen = st.session_state.diskon_persen
+
                     if st.session_state.isvoucher == "yes" and "voucher_row" in st.session_state:
                         code = st.session_state.voucher_row[0]
-                        ok, msg, newbal = atomic_redeem(code, total, branch, items_str)
+
+                        ok, msg, newbal = atomic_redeem(code, final_total, branch, items_str)
                         st.session_state.newbal = newbal
+
+                        # =============== UPDATE DISKON KE TABLE VOUCHERS ==================
+                        try:
+                            with engine.begin() as conn:
+                                conn.execute(
+                                    text("""
+                                        UPDATE vouchers
+                                        SET diskon = :disc
+                                        WHERE kode = :kode
+                                    """),
+                                    {"disc": diskon_persen, "kode": code}
+                                )
+                        except Exception as e:
+                            st.error(f"Gagal menyimpan diskon: {e}")
+                        # ==================================================================
+
                     else:
-                        ok, msg, _ = atomic_redeem(None, total, branch, items_str)
-    
-                    transaksi_notification(date.today(), branch, total)
-    
+                        ok, msg, _ = atomic_redeem(None, final_total, branch, items_str)
+
+                    transaksi_notification(date.today(), branch, final_total)
+
                     if ok:
                         st.session_state.show_success = True
                         st.session_state.redeem_step = 3
@@ -2804,7 +2858,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
 
 
 
