@@ -309,7 +309,7 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
             with engine.begin() as conn:
                 conn.execute(text("""
                     INSERT INTO transactions 
-                    (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon=0)
+                    (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
                     VALUES (NULL, :tunai, :now, :branch, :items, :tunai, 'no', :diskon)
                 """), {
                     "now": datetime.utcnow(),
@@ -2858,3 +2858,5 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
+
