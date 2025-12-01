@@ -1183,7 +1183,7 @@ def page_admin():
             df_tx["code"] = df_tx["code"].fillna("")
             df_tx["isvoucher"] = df_tx["isvoucher"].fillna("no")
             min_date = df_tx["tanggal_transaksi"].min()
-            max_date = df_tx["tanggal_transaksi"].max(
+            max_date = df_tx["tanggal_transaksi"].max()
             # Filter input
             col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
             with col1:
@@ -2856,3 +2856,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
