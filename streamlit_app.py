@@ -2588,7 +2588,7 @@ def page_kasir():
             if "redeem_error" in st.session_state:
                 st.error(st.session_state["redeem_error"])
     
-            st.write(f"### Total: Rp {total:,}")
+            st.write(f"### Total Sementara: Rp {total:,}")
             # ========================
             # INPUT DISKON
             # ========================
@@ -2614,7 +2614,7 @@ def page_kasir():
             if total_setelah_diskon < 0:
                 total_setelah_diskon = 0
 
-            st.write(f"### Total setelah diskon: Rp {total_setelah_diskon:,}")
+            st.write(f"### Total Akhir: Rp {total_setelah_diskon:,}")
 
             # Simpan ke session_state
             st.session_state.total_setelah_diskon = total_setelah_diskon
@@ -2857,4 +2857,3 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
