@@ -1171,159 +1171,174 @@ def page_admin():
             st.code(str(e))
         
     with tab_histori:
-        st.subheader("Histori Transaksi")
-        df_tx = list_transactions(limit=5000)  # pastikan JOIN ke vouchers untuk ambil initial_value
-        df_tx = df_tx.sort_values(by="id", ascending=False).reset_index(drop=True)
-
-        if df_tx.empty:
-            st.info("Belum ada transaksi")
-        else:
-            # Normalisasi kolom
-            df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
-            df_tx["code"] = df_tx["code"].fillna("")
-            df_tx["isvoucher"] = df_tx["isvoucher"].fillna("no")
-            min_date = df_tx["tanggal_transaksi"].min()
-            max_date = df_tx["tanggal_transaksi"].max()
-
-            # Filter input
-            col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
-            with col1:
-                search_code = st.text_input("Cari kode kupon untuk detail histori", "").strip()
-            with col2:
-                start_date = st.date_input("Tanggal Mulai", value=min_date, min_value=min_date, max_value=max_date)
-            with col3:
-                end_date = st.date_input("Tanggal Akhir", value=max_date, min_value=min_date, max_value=max_date)
-            with col4:
-                filter_cabang = st.selectbox("Filter Cabang", ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"])
-            with col5:
-                filter_kupon = st.selectbox("Filter Kupon", ["semua", "Kupon", "Non Kupon"])
-
-            # Filter tanggal
-            if start_date > end_date:
-                st.error("❌ Tanggal Mulai tidak boleh setelah Tanggal Akhir")
-                st.stop()
-            df_tx = df_tx[(df_tx["tanggal_transaksi"] >= start_date) & (df_tx["tanggal_transaksi"] <= end_date)]
-
-            # Filter cabang
-            if filter_cabang != "semua":
-                df_tx = df_tx[df_tx["branch"] == filter_cabang]
-
-            if filter_kupon != "semua":
-                if filter_kupon == "Kupon":
-                    filter_kupon = "yes"
-                else:
-                    filter_kupon = "no"
-                df_tx = df_tx[df_tx["isvoucher"] == filter_kupon]
+            st.subheader("Histori Transaksi")
+            df_tx = list_transactions(limit=5000)  # pastikan JOIN ke vouchers untuk ambil initial_value
+            df_tx = df_tx.sort_values(by="id", ascending=False).reset_index(drop=True)
 
             if df_tx.empty:
-                st.warning("Tidak ada transaksi dengan filter tersebut.")
-                st.stop()
+                st.info("Belum ada transaksi")
+            else:
+                # Normalisasi kolom
+                df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
+                df_tx["code"] = df_tx["code"].fillna("")
+                df_tx["isvoucher"] = df_tx["isvoucher"].fillna("no")
+                min_date = df_tx["tanggal_transaksi"].min()
+                max_date = df_tx["tanggal_transaksi"].max()
 
-            # 🔥 Hitung total uang (hanya dari used_amount)
-            total_uang_filtered = df_tx["used_amount"].fillna(0).sum()
-            total_cash_filtered = df_tx["tunai"].fillna(0).sum()
-            total_kupon_filtered = total_uang_filtered - total_cash_filtered
+                # Filter input
+                col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
+                with col1:
+                    search_code = st.text_input("Cari kode kupon untuk detail histori", "").strip()
+                with col2:
+                    start_date = st.date_input("Tanggal Mulai", value=min_date, min_value=min_date, max_value=max_date)
+                with col3:
+                    end_date = st.date_input("Tanggal Akhir", value=max_date, min_value=min_date, max_value=max_date)
+                with col4:
+                    filter_cabang = st.selectbox("Filter Cabang", ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"])
+                with col5:
+                    filter_kupon = st.selectbox("Filter Kupon", ["semua", "Kupon", "Non Kupon"])
 
-            cola, colb, colc = st.columns(3)
-            with cola:
-                st.metric("Total Pendapatan", f"Rp {total_uang_filtered:,}")
-            with colb:
-                st.metric("Total Pendapatan Cash", f"Rp {total_cash_filtered:,}")
-            with colc:
-                st.metric("Total Pendapatan Dari Kupon", f"Rp {total_kupon_filtered:,}")
-            
-                        # Jika ada pencarian kode kupon
-            if search_code:
-                # Filter hanya transaksi dengan voucher
-                df_voucher = df_display[df_display["kupon digunakan"] == "1"]
-                df_filtered = df_voucher[df_voucher["Kode"].str.contains(search_code.upper(), case=False)]
+                # Filter tanggal
+                if start_date > end_date:
+                    st.error("❌ Tanggal Mulai tidak boleh setelah Tanggal Akhir")
+                    st.stop()
+                df_tx = df_tx[(df_tx["tanggal_transaksi"] >= start_date) & (df_tx["tanggal_transaksi"] <= end_date)]
 
-                # Normalisasi kolom untuk display, ganti "Saldo kupon digunakan" -> "Total"
+                # Filter cabang
+                if filter_cabang != "semua":
+                    df_tx = df_tx[df_tx["branch"] == filter_cabang]
+
+                if filter_kupon != "semua":
+                    if filter_kupon == "Kupon":
+                        filter_kupon = "yes"
+                    else:
+                        filter_kupon = "no"
+                    df_tx = df_tx[df_tx["isvoucher"] == filter_kupon]
+
+                if df_tx.empty:
+                    st.warning("Tidak ada transaksi dengan filter tersebut.")
+                    st.stop()
+
+                # 🔥 Hitung total uang (hanya dari used_amount)
+                total_uang_filtered = df_tx["used_amount"].fillna(0).sum()
+                total_cash_filtered = df_tx["tunai"].fillna(0).sum()
+                total_kupon_filtered = total_uang_filtered - total_cash_filtered
+
+                cola, colb, colc = st.columns(3)
+                with cola:
+                    st.metric("Total Pendapatan", f"Rp {total_uang_filtered:,}")
+                with colb:
+                    st.metric("Total Pendapatan Cash", f"Rp {total_cash_filtered:,}")
+                with colc:
+                    st.metric("Total Pendapatan Dari Kupon", f"Rp {total_kupon_filtered:,}")
+                
+
+                # =============================
+                # 🔍 PENCARIAN DETAIL KUPON (DITARUH DI PALING ATAS)
+                # =============================
+                if search_code:
+                    # Filter hanya transaksi yang menggunakan voucher
+                    df_voucher_top = df_tx[df_tx["isvoucher"] == "yes"]
+                    df_filtered_top = df_voucher_top[df_voucher_top["code"].str.contains(search_code.upper(), case=False, na=False)]
+
+                    st.subheader(f"Detail Kupon: {search_code.upper()}")
+
+                    if df_filtered_top.empty:
+                        st.warning(f"Tidak ada transaksi voucher untuk kupon {search_code}")
+                    else:
+                        with st.expander("ℹ️ Informasi Lengkap Kupon", expanded=True):
+                            total_transaksi = len(df_filtered_top)
+
+                            total_nominal = df_filtered_top["used_amount"].sum()
+                            initial_val = df_filtered_top["initial_value"].iloc[0]
+
+                            st.write(f"- Initial Value: Rp {initial_val:,}")
+                            st.write(f"- Jumlah transaksi: {total_transaksi}")
+                            st.write(f"- Total nominal terpakai: Rp {total_nominal:,}")
+
+                            df_tmp_display = df_filtered_top.rename(columns={
+                                "tanggal_transaksi": "Tanggal_transaksi",
+                                "initial_value": "Initial_value",
+                                "used_amount": "Total",
+                                "tunai": "Tunai",
+                                "branch": "Cabang",
+                                "items": "Menu",
+                                "code": "Kode"
+                            })
+
+                            st.dataframe(
+                                df_tmp_display[["Tanggal_transaksi", "Kode", "Initial_value",
+                                                "Total", "Tunai", "Cabang", "Menu"]],
+                                use_container_width=True
+                            )
+
+                            st.download_button(
+                                f"Download CSV {search_code.upper()}",
+                                data=df_to_csv_bytes(df_tmp_display),
+                                file_name=f"transactions_{search_code.upper()}.csv",
+                                mime="text/csv"
+                            )
+
+                    st.markdown("---")
                 df_display = df_tx.rename(columns={
-                    "code": "Kode",
-                    "used_amount": "Total",
-                    "tanggal_transaksi": "Tanggal_transaksi",
-                    "branch": "Cabang",
-                    "items": "Menu",
-                    "tunai": "Tunai",
-                    "isvoucher": "kupon digunakan",
-                    "initial_value": "Initial_value"
-                })
-                # df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
-                # df_display["Total"] = df_display["Total"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
-                # df_display["Tunai"] = df_display["Initi"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
+                            "code": "Kode",
+                            "used_amount": "Total",
+                            "tanggal_transaksi": "Tanggal_transaksi",
+                            "branch": "Cabang",
+                            "items": "Menu",
+                            "tunai": "Tunai",
+                            "isvoucher": "kupon digunakan",
+                            "initial_value": "Initial_value"
+                        })
+                        # df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
+                        # df_display["Total"] = df_display["Total"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
+                        # df_display["Tunai"] = df_display["Initi"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
                 df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
                 df_display.loc[df_display["kupon digunakan"] == "0", "Total"] = df_display["Tunai"]
 
-                if df_filtered.empty:
-                    st.warning(f"Tidak ada transaksi voucher untuk kupon {search_code}")
-                else:
-                    st.subheader(f"Detail Kupon: {search_code.upper()}")
-                    with st.expander("ℹ️ Informasi Lengkap Kupon"):
-                        total_transaksi = len(df_filtered)
-                        total_nominal = df_filtered["Total"].sum()
-                        initial_val = df_filtered["Initial_value"].iloc[0]
+                # Tampilkan tabel histori
+                st.dataframe(
+                    df_display[["id", "Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value",
+                                "Total", "Tunai", "Cabang", "Menu"]],
+                    use_container_width=True
+                )
 
-                        st.write(f"- Initial Value: Rp {initial_val:,}")
-                        st.write(f"- Jumlah transaksi: {total_transaksi}")
-                        st.write(f"- Total nominal terpakai: Rp {total_nominal:,}")
+                st.download_button(
+                    "Download CSV Transaksi",
+                    data=df_to_csv_bytes(df_display),
+                    file_name="transactions.csv",
+                    mime="text/csv"
+                )
 
-                        st.dataframe(
-                            df_filtered[["Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value",
-                                        "Total", "Tunai", "Cabang", "Menu"]],
-                            use_container_width=True
-                        )
+            menu_list = []
 
-                        st.download_button(
-                            f"Download CSV {search_code.upper()}",
-                            data=df_to_csv_bytes(df_filtered),
-                            file_name=f"transactions_{search_code.upper()}.csv",
-                            mime="text/csv"
-                        )
+            for idx, row in df_tx.iterrows():
+                menu_items = str(row["items"]).split(",")  # Pecah per menu
+                for item in menu_items:
+                    item = item.strip()
+            
+                    # Contoh item: "NASI PUTIH x6"
+                    match = re.match(r"(.+?) x(\d+)", item)
+                    if match:
+                        nama_menu = match.group(1).strip()
+                        jumlah = int(match.group(2))
+                        menu_list.append({
+                            "Tanggal": row["tanggal_transaksi"],
+                            "Menu": nama_menu,
+                            "Jumlah": jumlah
+                        })
+            
+            # Buat dataframe menu
+            df_menu = pd.DataFrame(menu_list)
+            
+            if df_menu.empty:
+                st.info("Tidak ada menu terjual pada tanggal tersebut.")
+            else:
+                df_pivot = df_menu.groupby("Menu")["Jumlah"].sum().reset_index()
+            
+                st.subheader("📊 Penjualan Per Menu")
+                st.dataframe(df_pivot, use_container_width=True)
 
-            # Tampilkan tabel histori
-            st.dataframe(
-                df_display[["id", "Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value",
-                            "Total", "Tunai", "Cabang", "Menu"]],
-                use_container_width=True
-            )
-
-            st.download_button(
-                "Download CSV Transaksi",
-                data=df_to_csv_bytes(df_display),
-                file_name="transactions.csv",
-                mime="text/csv"
-            )
-
-        menu_list = []
-
-        for idx, row in df_tx.iterrows():
-            menu_items = str(row["items"]).split(",")  # Pecah per menu
-            for item in menu_items:
-                item = item.strip()
-        
-                # Contoh item: "NASI PUTIH x6"
-                match = re.match(r"(.+?) x(\d+)", item)
-                if match:
-                    nama_menu = match.group(1).strip()
-                    jumlah = int(match.group(2))
-                    menu_list.append({
-                        "Tanggal": row["tanggal_transaksi"],
-                        "Menu": nama_menu,
-                        "Jumlah": jumlah
-                    })
-        
-        # Buat dataframe menu
-        df_menu = pd.DataFrame(menu_list)
-        
-        if df_menu.empty:
-            st.info("Tidak ada menu terjual pada tanggal tersebut.")
-        else:
-            df_pivot = df_menu.groupby("Menu")["Jumlah"].sum().reset_index()
-        
-            st.subheader("📊 Penjualan Per Menu (Berdasarkan Tanggal yang Dipilih)")
-            st.dataframe(df_pivot, use_container_width=True)
-        
     with tab_edit_seller:
         st.subheader("Kelola Seller")
         tab_kepemilikan, tab_acc, tab_aktivasi = st.tabs(["Kepemilikan Kupon", "Penerimaan Seller", "Aktivasi Kupon"])
@@ -2855,7 +2870,7 @@ def page_kasir():
         else:
             df_pivot = df_menu.groupby("Menu")["Jumlah"].sum().reset_index()
         
-            st.subheader("📊 Penjualan Per Menu (Berdasarkan Tanggal yang Dipilih)")
+            st.subheader("📊 Penjualan Per Menu")
             st.dataframe(df_pivot, use_container_width=True)
 
 
