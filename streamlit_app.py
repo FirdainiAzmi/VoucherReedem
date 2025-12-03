@@ -1232,9 +1232,9 @@ def page_admin():
                 with colb:
                     st.metric("Total Pendapatan Cash", f"Rp {total_cash_filtered:,}")
                 with colc:
-                    st.metric("Total Pendapatan Dari Kupon", f"Rp {total_kupon_filtered:,}")
+                    st.metric("Total Pemakaian Kupon", f"Rp {total_kupon_filtered:,}")
                 with cold:
-                    st.metric("Total Pendapatan Dari Diskon", f"Rp {total_uang_diskon:,}")
+                    st.metric("Total Pemakaian Diskon", f"Rp {total_uang_diskon:,}")
                 
 
                 # =============================
