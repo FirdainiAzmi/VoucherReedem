@@ -1294,10 +1294,12 @@ def page_admin():
                             "diskon": "Diskon"
                         })
                         # df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
-                        # df_display["Total"] = df_display["Total"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
-                        # df_display["Tunai"] = df_display["Initi"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
+                # df_display["Tunai"] = df_display["Initi"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
+                # df_display["Total"] = df_display["Total"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
                 df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
                 df_display.loc[df_display["kupon digunakan"] == "0", "Total"] = df_display["Tunai"]
+                df_display["Diskon"] = pd.to_numeric(df_display["Diskon"], errors="coerce").fillna(0)
+                df_display.loc[df_display["Diskon"] > 0, "Total"] = df_display["Total"] + df_display["Diskon"]
 
                 # Tampilkan tabel histori
                 st.dataframe(
@@ -2890,4 +2892,5 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
