@@ -683,7 +683,8 @@ def list_transactions(limit=5000):
             t.items,
             t.tunai,
             t.isvoucher,
-            v.initial_value   -- ← AMBIL DARI TABLE vouchers
+            t.diskon,
+            v.initial_value
         FROM transactions t
         LEFT JOIN vouchers v ON t.code = v.code
         ORDER BY t.tanggal_transaksi DESC
@@ -2889,3 +2890,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
