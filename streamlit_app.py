@@ -1263,12 +1263,13 @@ def page_admin():
                                 "tunai": "Tunai",
                                 "branch": "Cabang",
                                 "items": "Menu",
-                                "code": "Kode"
+                                "code": "Kode",
+                                "diskon": "Diskon"
                             })
 
                             st.dataframe(
                                 df_tmp_display[["Tanggal_transaksi", "Kode", "Initial_value",
-                                                "Total", "Tunai", "Cabang", "Menu"]],
+                                                "Total", "Tunai", "Diskon", "Cabang", "Menu"]],
                                 use_container_width=True
                             )
 
@@ -1288,7 +1289,8 @@ def page_admin():
                             "items": "Menu",
                             "tunai": "Tunai",
                             "isvoucher": "kupon digunakan",
-                            "initial_value": "Initial_value"
+                            "initial_value": "Initial_value",
+                            "diskon": "Diskon"
                         })
                         # df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
                         # df_display["Total"] = df_display["Total"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
@@ -1299,7 +1301,7 @@ def page_admin():
                 # Tampilkan tabel histori
                 st.dataframe(
                     df_display[["id", "Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value",
-                                "Total", "Tunai", "Cabang", "Menu"]],
+                                "Total", "Tunai", "Diskon", "Cabang", "Menu"]],
                     use_container_width=True
                 )
 
