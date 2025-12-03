@@ -1224,14 +1224,17 @@ def page_admin():
                 total_uang_filtered = df_tx["used_amount"].fillna(0).sum()
                 total_cash_filtered = df_tx["tunai"].fillna(0).sum()
                 total_kupon_filtered = total_uang_filtered - total_cash_filtered
+                total_uang_diskon = df_tx["diskon"].fillna(0).sum()
 
-                cola, colb, colc = st.columns(3)
+                cola, colb, colc, cold = st.columns(4)
                 with cola:
                     st.metric("Total Pendapatan", f"Rp {total_uang_filtered:,}")
                 with colb:
                     st.metric("Total Pendapatan Cash", f"Rp {total_cash_filtered:,}")
                 with colc:
                     st.metric("Total Pendapatan Dari Kupon", f"Rp {total_kupon_filtered:,}")
+                with cold:
+                    st.metric("Total Pendapatan Dari Diskon", f"Rp {total_uang_diskon:,}")
                 
 
                 # =============================
@@ -2892,5 +2895,3 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
