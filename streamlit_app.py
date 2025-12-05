@@ -2742,16 +2742,16 @@ def page_kasir():
             max_date = df_tx["tanggal_transaksi"].max()
 
             # Filter input
-            col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
+            col1, col2, col3, col4 = st.columns([2, 1.3, 1.3, 1.3])
             with col1:
                 search_code = st.text_input("Cari kode kupon untuk detail histori", "").strip()
             with col2:
                 start_date = st.date_input("Tanggal Mulai", value=min_date, min_value=min_date, max_value=max_date)
             with col3:
                 end_date = st.date_input("Tanggal Akhir", value=max_date, min_value=min_date, max_value=max_date)
+            # with col4:
+            #     filter_cabang = st.selectbox("Filter Cabang", ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"])
             with col4:
-                filter_cabang = st.selectbox("Filter Cabang", ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"])
-            with col5:
                 filter_kupon = st.selectbox("Filter Kupon", ["semua", "Kupon", "Non Kupon"])
 
             # Filter tanggal
@@ -2761,6 +2761,7 @@ def page_kasir():
             df_tx = df_tx[(df_tx["tanggal_transaksi"] >= start_date) & (df_tx["tanggal_transaksi"] <= end_date)]
 
             # Filter cabang
+            filter_cabang = st.session_state.cabang
             if filter_cabang != "semua":
                 df_tx = df_tx[df_tx["branch"] == filter_cabang]
 
@@ -2909,5 +2910,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
