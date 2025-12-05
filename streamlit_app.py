@@ -20,7 +20,12 @@ import re
 DB_URL = st.secrets["DB_URL"]
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")  
 SELLER_PASSWORD = st.secrets.get("SELLER_PASSWORD")
-KASIR_PASSWORD = st.secrets.get("KASIR_PASSWORD")
+KASIR_PASSWORDS = {
+    "sedati": "sedati",
+    "tawangsari": "tawangsari",
+    "kesambi": "kesambi",
+    "tulangan": "tulangan"
+}
 EMAIL = st.secrets["EMAIL"]
 APP_PASSWORD = st.secrets["APP_PASSWORD"]
 ADMIN_EMAIL = st.secrets["ADMIN_EMAIL"]
@@ -769,6 +774,7 @@ def ensure_session_state():
         "nama_seller": None,
 
         "page": None,
+        "cabang": None,
 
         # REDEEM STATE
         "redeem_step": 1,
@@ -807,6 +813,7 @@ def seller_logout():
 def kasir_logout():
     st.session_state.kasir_logged_in = False
     st.session_state.page = None
+    st.session_state.cabang = None
 
 
 # ============================================================
@@ -869,13 +876,17 @@ def show_login_page():
     # KASIR LOGIN
     with tab_kasir:
         pwd = st.text_input("Password Kasir", type="password")
+
         if st.button("Login Kasir"):
-            if pwd == KASIR_PASSWORD:
+            if pwd in KASIR_PASSWORDS:
                 st.session_state.kasir_logged_in = True
-                st.success("Login kasir berhasil")
+                st.session_state.cabang = KASIR_PASSWORDS[pwd]  # ✅ SET CABANG OTOMATIS
+                
+                st.success(f"Login kasir berhasil — Cabang: {st.session_state.cabang.upper()}")
                 st.rerun()
             else:
                 st.error("Password kasir salah")
+
 
     # DAFTAR SELLER
     with tab_daftar:
@@ -2446,9 +2457,11 @@ def page_kasir():
             if 'redeem_error' in st.session_state:
                 del st.session_state['redeem_error']
     
-            branch_options = ["Sedati", "Tawangsari", "Kesambi", "Tulangan"]
-            selected_branch = st.selectbox("Pilih cabang", branch_options)
+            selected_branch = st.session_state.cabang
             st.session_state.selected_branch = selected_branch
+
+            st.info(f"🏪 Cabang aktif: {selected_branch}")
+
     
             menu_items = get_menu_from_db(selected_branch)
             normalized = []
