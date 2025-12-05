@@ -2762,8 +2762,8 @@ def page_kasir():
 
             # Filter cabang
             filter_cabang = st.session_state.cabang
-            if filter_cabang != "semua":
-                df_tx = df_tx[df_tx["branch"] == filter_cabang]
+            # if filter_cabang != "semua":
+            df_tx = df_tx[df_tx["branch"] == filter_cabang]
 
             if filter_kupon != "semua":
                 if filter_kupon == "Kupon":
@@ -2910,6 +2910,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
