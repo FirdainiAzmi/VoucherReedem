@@ -21,10 +21,10 @@ DB_URL = st.secrets["DB_URL"]
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")  
 SELLER_PASSWORD = st.secrets.get("SELLER_PASSWORD")
 KASIR_PASSWORDS = {
-    "sedati": "sedati",
-    "tawangsari": "tawangsari",
-    "kesambi": "kesambi",
-    "tulangan": "tulangan"
+    "Sedati": "sedati",
+    "Tawangsari": "tawangsari",
+    "Kesambi": "kesambi",
+    "Tulangan": "tulangan"
 }
 EMAIL = st.secrets["EMAIL"]
 APP_PASSWORD = st.secrets["APP_PASSWORD"]
