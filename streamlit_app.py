@@ -880,6 +880,7 @@ def show_login_page():
         if st.button("Login Kasir"):
             if pwd in KASIR_PASSWORDS:
                 st.session_state.kasir_logged_in = True
+                st.session_state.page = "kasir"
                 st.session_state.cabang = KASIR_PASSWORDS[pwd]  # ✅ SET CABANG OTOMATIS
                 
                 st.success(f"Login kasir berhasil — Cabang: {st.session_state.cabang.upper()}")
@@ -2908,3 +2909,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
