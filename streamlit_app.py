@@ -2481,10 +2481,10 @@ def page_kasir():
                         except:
                             continue
                         harga_map = {
-                            "tawangsari": terjual_twsari,
-                            "sedati": terjual_sedati,
-                            "kesambi": terjual_kesambi,
-                            "tulangan": terjual_tulangan
+                            "tawangsari": harga_twsari,
+                            "sedati": harga_sedati,
+                            "kesambi": harga_kesambi,
+                            "tulangan": harga_tulangan
                         }
                         
                         harga = harga_map.get(selected_branch)
