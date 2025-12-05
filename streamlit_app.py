@@ -21,10 +21,10 @@ DB_URL = st.secrets["DB_URL"]
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")  
 SELLER_PASSWORD = st.secrets.get("SELLER_PASSWORD")
 KASIR_PASSWORDS = {
-    "Sedati": "sedati",
-    "Tawangsari": "tawangsari",
-    "Kesambi": "kesambi",
-    "Tulangan": "tulangan"
+    "pwsed": "Sedati",
+    "pwtaw": "Tawangsari",
+    "pwkes": "Kesambi",
+    "pwtul": "Tulangan"
 }
 EMAIL = st.secrets["EMAIL"]
 APP_PASSWORD = st.secrets["APP_PASSWORD"]
@@ -2909,4 +2909,5 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
