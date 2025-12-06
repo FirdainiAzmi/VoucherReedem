@@ -2629,7 +2629,7 @@ def page_kasir():
                 st.session_state.diskon_persen = 0
 
             # Input diskon, tapi hanya jika total >= 25000
-            if total >= 25000:
+            if total >= 1000:
                 diskon = st.number_input(
                     "Masukkan diskon (nominal)",
                     min_value=0,
@@ -2905,6 +2905,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
