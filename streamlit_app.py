@@ -80,6 +80,12 @@ def init_db():
                     akhir_berlaku DATE NOT NULL
                 )
             """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS kategori_menu (
+                    id_kategori SERIAL PRIMARY KEY,
+                    nama_kategori TEXT,
+                    status_kategori TEXT
+            """))
 
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
@@ -2948,3 +2954,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
