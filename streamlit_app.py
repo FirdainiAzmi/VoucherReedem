@@ -2552,7 +2552,7 @@ def page_kasir():
             # =========================
             # HITUNG TOTAL
             # =========================
-            price_by_id_menu = {m["id_menu"]: m["harga"] for m in menu_items}
+            price_by_id_menu = {item["id_menu"]: item["harga"] for item in menu_items}
 
             checkout_total = sum(
                 price_by_id_menu.get(id_menu, 0) * qty
@@ -2916,5 +2916,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
 
