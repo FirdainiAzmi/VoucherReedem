@@ -2790,6 +2790,7 @@ def page_kasir():
                     items_str = ", ".join([
                         f"{name_by_id_menu[id_menu]} x{qty}"
                         for id_menu, qty in st.session_state.order_items.items()
+                        if qty > 0 and id_menu in name_by_id_menu
                     ])
                     branch = st.session_state.selected_branch
                     final_total = total_setelah_diskon  # total akhir
@@ -3040,6 +3041,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
