@@ -2133,7 +2133,7 @@ def page_admin():
                 kategori = st.text_input("Kategori", value=selected["kategori"])
                 nama_item = st.text_input("Nama Item", value=selected["nama_item"])
                 keterangan = st.text_area("Keterangan", value=selected["keterangan"])
-                status_options = ["Aktif", "Nonaktif"]
+                status_options = ["aktif", "inaktif"]
                 default_status = (selected.get("status") or "").strip().lower()
                 status = st.selectbox(
                     "Status",
