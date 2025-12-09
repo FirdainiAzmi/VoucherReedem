@@ -2201,7 +2201,6 @@ def page_admin():
                 if not kategori_list:
                     st.info("Belum ada kategori untuk diedit.")
                 else:
-            
                     # Mapping aman (id → label)
                     options = {
                         m["id_kategori"]: f"{m['nama_kategori']} - {m['status_kategori']}"
@@ -2213,7 +2212,8 @@ def page_admin():
                         options.keys(),
                         format_func=lambda k: options[k]
                     )
-            
+
+                    selected_id = next(m["id_kategori"] for m in kategori_list if m["id_kategori"] == pilih_id)
                     selected_kategori = next(m for m in kategori_list if m["id_kategori"] == pilih_id)
             
                     kategori_options = ["aktif", "inaktif"]
@@ -2223,7 +2223,7 @@ def page_admin():
                         "Status",
                         kategori_options,
                         index=kategori_options.index(default_kategori),
-                        key=f"edit_status_{id_kategori}"
+                        key=f"edit_status_{selected_id}"
                     )
             
                     if st.button("Simpan Perubahan"):
@@ -3019,6 +3019,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
