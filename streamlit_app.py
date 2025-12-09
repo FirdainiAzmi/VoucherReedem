@@ -605,7 +605,7 @@ def list_all_menu():
 def get_menu_from_db(branch):
     try:
         with engine.connect() as conn:
-            df = pd.read_sql(text("SELECT kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan FROM menu_items"), conn)
+            df = pd.read_sql(text("SELECT kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, id_menu FROM menu_items"), conn)
         mapping_harga = {
             "Tawangsari": "harga_twsari",
             "Sedati": "harga_sedati",
@@ -2474,6 +2474,7 @@ def page_kasir():
                             harga_twsari = m[4]
                             harga_kesambi = m[8]
                             harga_tulangan = m[10]
+                            id_menu = m[7]
                         except:
                             continue
                         harga_map = {
@@ -2526,7 +2527,7 @@ def page_kasir():
                 if not filtered:
                     st.info("Menu tidak ditemukan")
                 for item in filtered:
-                    key = f"{selected_branch}_{item['nama']}"
+                    key = f"menu_{item['id_menu']}"
                     old_qty = st.session_state.order_items.get(item['nama'], 0)
                     qty = st.number_input(
                         f"{item['nama']} (Rp {item['harga']:,})",
@@ -2535,7 +2536,7 @@ def page_kasir():
                         step=1,
                         key=key
                     )
-                    st.session_state.order_items[item['nama']] = qty
+                    st.session_state.order_items[item["id_menu"]] = qty
     
             else:
                 tabs = st.tabs(categories)
@@ -2905,6 +2906,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
