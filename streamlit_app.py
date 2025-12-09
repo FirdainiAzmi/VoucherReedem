@@ -605,7 +605,7 @@ def list_all_menu():
 def get_menu_from_db(branch):
     try:
         with engine.connect() as conn:
-            df = pd.read_sql(text("SELECT id, kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan FROM menu_items"), conn)
+            df = pd.read_sql(text("SELECT id_menu, kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan FROM menu_items"), conn)
         mapping_harga = {
             "Tawangsari": "harga_twsari",
             "Sedati": "harga_sedati",
@@ -616,7 +616,7 @@ def get_menu_from_db(branch):
         menu_list = []
         for _, row in df.iterrows():
             menu_list.append({
-                "id": int(row["id"]),
+                "id_menu": int(row["id_menu"]),
                 "nama": row["nama_item"],
                 "harga": row[harga_col],
                 "kategori": row["kategori"]
@@ -2480,7 +2480,7 @@ def page_kasir():
             normalized = []
             for it in menu_items:
                 try:
-                    menu_id = it.get("id")
+                    menu_id = it.get("id_menu")
                     nama = it.get("nama")
                     kategori = it.get("kategori")
                     harga = it.get("harga")
@@ -2496,7 +2496,7 @@ def page_kasir():
                         kategori = "Lainnya"
 
                     normalized.append({
-                        "id": int(menu_id),
+                        "id_menu": int(menu_id),
                         "nama": str(nama),
                         "kategori": str(kategori),
                         "keterangan": "" if keterangan is None else str(keterangan),
@@ -2517,7 +2517,7 @@ def page_kasir():
             st.write("*Pilih menu:*")
 
             def render_item_number_input(item: dict):
-                item_id = item["id"]
+                item_id = item["id_menu"]
                 key = f"qty_{selected_branch}_{item_id}"
 
                 old_qty = st.session_state.order_items.get(item_id, 0)
@@ -2551,7 +2551,8 @@ def page_kasir():
             # =========================
             # HITUNG TOTAL
             # =========================
-            price_by_id = {m["id"]: m["harga"] for m in menu_items}
+            price_by_id = {m["id_menu
+            "]: m["harga"] for m in menu_items}
 
             checkout_total = sum(
                 price_by_id.get(menu_id, 0) * qty
@@ -2907,3 +2908,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
