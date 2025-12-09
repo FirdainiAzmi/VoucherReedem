@@ -605,26 +605,67 @@ def list_all_menu():
 def get_menu_from_db(branch):
     try:
         with engine.connect() as conn:
-            df = pd.read_sql(text("SELECT id_menu, kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan FROM menu_items"), conn)
+            df = pd.read_sql(text("""
+                SELECT id_menu, kategori, nama_item, keterangan,
+                       harga_sedati, harga_twsari, harga_kesambi, harga_tulangan
+                FROM menu_items
+            """), conn)
+
         mapping_harga = {
             "Tawangsari": "harga_twsari",
             "Sedati": "harga_sedati",
             "Kesambi": "harga_kesambi",
             "Tulangan": "harga_tulangan"
         }
-        harga_col = mapping_harga.get(branch, None)
+        harga_col = mapping_harga.get(branch)
+        if not harga_col:
+            return []
+
         menu_list = []
         for _, row in df.iterrows():
+            id_menu = row["id_menu"]
+            harga = row[harga_col]
+
+            # ✅ hindari cannot convert nan to int
+            if pd.isna(id_menu) or pd.isna(harga):
+                continue
+
             menu_list.append({
-                "id_menu": int(row["id_menu"]),
-                "nama": row["nama_item"],
-                "harga": row[harga_col],
-                "kategori": row["kategori"]
+                "id_menu": int(id_menu),
+                "nama": str(row["nama_item"]),
+                "harga": int(harga),
+                "kategori": str(row["kategori"]) if row["kategori"] is not None else "Lainnya",
+                "keterangan": "" if row["keterangan"] is None else str(row["keterangan"]),
             })
+
         return menu_list
+
     except Exception as e:
         st.error(f"Gagal ambil menu dari DB: {e}")
         return []
+
+    # try:
+    #     with engine.connect() as conn:
+    #         df = pd.read_sql(text("SELECT id_menu, kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan FROM menu_items"), conn)
+    #     mapping_harga = {
+    #         "Tawangsari": "harga_twsari",
+    #         "Sedati": "harga_sedati",
+    #         "Kesambi": "harga_kesambi",
+    #         "Tulangan": "harga_tulangan"
+    #     }
+    #     harga_col = mapping_harga.get(branch, None)
+    #     menu_list = []
+    #     for _, row in df.iterrows():
+    #         menu_list.append({
+    #             "id_menu": int(row["id_menu"]),
+    #             "nama": row["nama_item"],
+    #             "harga": row[harga_col],
+    #             "kategori": row["kategori"]
+    #         })
+    #     return menu_list
+    # except Exception as e:
+    #     st.error(f"Gagal ambil menu dari DB: {e}")
+    #     return []
 
 def get_full_menu():
     query = """
@@ -2916,4 +2957,3 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
