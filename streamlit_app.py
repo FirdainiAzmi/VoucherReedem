@@ -69,7 +69,8 @@ def init_db():
                     harga_sedati INTEGER,
                     harga_twsari INTEGER,
                     harga_kesambi INTEGER,
-                    harga_tulangan INTEGER
+                    harga_tulangan INTEGER,
+                    status TEXT
                 )
             """))
             conn.execute(text("""
@@ -520,7 +521,7 @@ def add_menu_item(kategori, nama_item, keterangan,
 
 
 def update_menu_item(id_menu, kategori, nama_item, keterangan,
-                     harga_sedati, harga_twsari, harga_kesambi, harga_tulangan):
+                     harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status):
 
     query = """
         UPDATE menu_items SET
@@ -530,7 +531,8 @@ def update_menu_item(id_menu, kategori, nama_item, keterangan,
             harga_sedati = :harga_sedati,
             harga_twsari = :harga_twsari,
             harga_kesambi = :harga_kesambi,
-            harga_tulangan = :harga_tulangan
+            harga_tulangan = :harga_tulangan,
+            status = :status
         WHERE id_menu = :id_menu
     """
 
@@ -542,7 +544,8 @@ def update_menu_item(id_menu, kategori, nama_item, keterangan,
         "harga_sedati": to_int_or_none(harga_sedati),
         "harga_twsari": to_int_or_none(harga_twsari),
         "harga_kesambi": to_int_or_none(harga_kesambi),
-        "harga_tulangan": to_int_or_none(harga_tulangan)
+        "harga_tulangan": to_int_or_none(harga_tulangan),
+        "status": status
     }
 
     with engine.begin() as conn:
@@ -594,6 +597,7 @@ def list_all_menu():
                     "harga_twsari": r[4],
                     "harga_kesambi" : r[8],
                     "harga_tulangan" : r[10],
+                    "status" : r[12]
                 })
 
             return menu_list
@@ -607,7 +611,7 @@ def get_menu_from_db(branch):
         with engine.connect() as conn:
             df = pd.read_sql(text("""
                 SELECT id_menu, kategori, nama_item, keterangan,
-                       harga_sedati, harga_twsari, harga_kesambi, harga_tulangan
+                       harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status
                 FROM menu_items
             """), conn)
 
@@ -636,6 +640,7 @@ def get_menu_from_db(branch):
                 "harga": int(harga),
                 "kategori": str(row["kategori"]) if row["kategori"] is not None else "Lainnya",
                 "keterangan": "" if row["keterangan"] is None else str(row["keterangan"]),
+                "status": str(row["status"])
             })
 
         return menu_list
@@ -644,44 +649,23 @@ def get_menu_from_db(branch):
         st.error(f"Gagal ambil menu dari DB: {e}")
         return []
 
-    # try:
-    #     with engine.connect() as conn:
-    #         df = pd.read_sql(text("SELECT id_menu, kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan FROM menu_items"), conn)
-    #     mapping_harga = {
-    #         "Tawangsari": "harga_twsari",
-    #         "Sedati": "harga_sedati",
-    #         "Kesambi": "harga_kesambi",
-    #         "Tulangan": "harga_tulangan"
-    #     }
-    #     harga_col = mapping_harga.get(branch, None)
-    #     menu_list = []
-    #     for _, row in df.iterrows():
-    #         menu_list.append({
-    #             "id_menu": int(row["id_menu"]),
-    #             "nama": row["nama_item"],
-    #             "harga": row[harga_col],
-    #             "kategori": row["kategori"]
-    #         })
-    #     return menu_list
-    # except Exception as e:
-    #     st.error(f"Gagal ambil menu dari DB: {e}")
-    #     return []
-
 def get_full_menu():
     query = """
         SELECT 
+            id_menu,
             nama_item,
             keterangan,
             harga_twsari,
             harga_sedati,
             harga_kesambi,
             harga_tulangan,
+            status,
             COALESCE(terjual_twsari, 0) AS terjual_twsari,
             COALESCE(terjual_sedati, 0) AS terjual_sedati,
             COALESCE(terjual_kesambi, 0) AS terjual_kesambi,
             COALESCE(terjual_tulangan, 0) AS terjual_tulangan
         FROM menu_items
-        ORDER BY nama_item;
+        ORDER BY id_menu;
     """
 
     with engine.connect() as conn:
@@ -2149,6 +2133,13 @@ def page_admin():
                 kategori = st.text_input("Kategori", value=selected["kategori"])
                 nama_item = st.text_input("Nama Item", value=selected["nama_item"])
                 keterangan = st.text_area("Keterangan", value=selected["keterangan"])
+                status_options = ["Aktif", "Nonaktif"]
+                default_status = (selected.get("status") or "").strip().lower()
+                status = st.selectbox(
+                    "Status",
+                    status_options,
+                    index=status_options.index(default_status)
+                )
 
                 harga_sedati = st.text_input("Harga Sedati", value=str(selected["harga_sedati"] or ""))
                 harga_twsari = st.text_input("Harga Tawangsari", value=str(selected["harga_twsari"] or ""))
@@ -2161,7 +2152,7 @@ def page_admin():
                     if st.button("Simpan Perubahan"):
                         update_menu_item(
                             id_menu, kategori, nama_item, keterangan,
-                            harga_sedati, harga_twsari, harga_kesambi, harga_tulangan
+                            harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status
                         )
                         st.success("Menu berhasil diperbarui!")
                         st.rerun()
