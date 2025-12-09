@@ -2208,19 +2208,19 @@ def page_admin():
                     )
 
                     id_kategori = pilih2[0]
-                    selected2 = next(m for m in kategori_list if m["id_kategori"] == id_kategori)
+                    selected_kategori = next(m for m in kategori_list if m["id_kategori"] == id_kategori)
 
-                    status_options2 = ["aktif", "inaktif"]
-                    default_status2 = (selected.get("status_kategori") or "").strip().lower()
-                    status2 = st.selectbox(
+                    kategori_options = ["aktif", "inaktif"]
+                    default_kategori = (selected_kategori.get("status_kategori") or "").strip().lower()
+                    status_kategori_new = st.selectbox(
                         "Status",
-                        status_options2,
-                        index=status_options2.index(default_status2)
+                        kategori_options,
+                        index=kategori_options.index(default_kategori)
                     )
 
                     if st.button("Simpan Perubahan"):
                         update_kategori_menu(
-                            id_kategori, status2
+                            id_kategori, status_kategori_new
                         )
                         st.success("Kategori berhasil diperbarui!")
                         st.rerun()
@@ -3011,6 +3011,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
