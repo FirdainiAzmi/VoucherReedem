@@ -605,7 +605,7 @@ def list_all_menu():
 def get_menu_from_db(branch):
     try:
         with engine.connect() as conn:
-            df = pd.read_sql(text("SELECT kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, id_menu FROM menu_items"), conn)
+            df = pd.read_sql(text("SELECT id, kategori, nama_item, keterangan, harga_sedati, harga_twsari, harga_kesambi, harga_tulangan FROM menu_items"), conn)
         mapping_harga = {
             "Tawangsari": "harga_twsari",
             "Sedati": "harga_sedati",
@@ -616,6 +616,7 @@ def get_menu_from_db(branch):
         menu_list = []
         for _, row in df.iterrows():
             menu_list.append({
+                "id": int(row["id"]),
                 "nama": row["nama_item"],
                 "harga": row[harga_col],
                 "kategori": row["kategori"]
@@ -2439,133 +2440,131 @@ def page_kasir():
     with tukar_kupon:
         st.header("Pemesanan")
     
-        # Inisialisasi state
-        if "redeem_step" not in st.session_state:
-            st.session_state.redeem_step = 1
-        if "entered_code" not in st.session_state:
-            st.session_state.entered_code = ""
+        # # Inisialisasi state
+        # if "redeem_step" not in st.session_state:
+        #     st.session_state.redeem_step = 1
+        # if "entered_code" not in st.session_state:
+        #     st.session_state.entered_code = ""
     
         # ---------------------------
         # STEP 1 — PILIH MENU
         # ---------------------------
+        if "redeem_step" not in st.session_state:
+            st.session_state.redeem_step = 1
+
+        if "order_items" not in st.session_state:
+            # key: menu_id (int/str), value: qty (int)
+            st.session_state.order_items = {}
+
+        # =========================
+        # STEP 1 — PILIH MENU
+        # =========================
         if st.session_state.redeem_step == 1:
-    
-            if 'redeem_error' in st.session_state:
-                del st.session_state['redeem_error']
-    
+
+            if "redeem_error" in st.session_state:
+                del st.session_state["redeem_error"]
+
             selected_branch = st.session_state.cabang
             st.session_state.selected_branch = selected_branch
-
             st.info(f"🏪 Cabang aktif: {selected_branch}")
 
-    
+            # Ambil menu dari DB (WAJIB ada id)
             menu_items = get_menu_from_db(selected_branch)
+
+            # Validasi menu
+            if not menu_items:
+                st.info("Tidak ada menu tersedia untuk cabang ini.")
+                st.stop()
+
+            # Filter harga valid + pastikan tipe benar
             normalized = []
-    
-            # Normalisasi menu
-            if menu_items:
-                if isinstance(menu_items[0], tuple):
-                    for m in menu_items:
-                        try:
-                            kategori = m[0]
-                            nama_item = m[1]
-                            keterangan = m[2]
-                            harga_sedati = m[3]
-                            harga_twsari = m[4]
-                            harga_kesambi = m[8]
-                            harga_tulangan = m[10]
-                            id_menu = m[7]
-                        except:
-                            continue
-                        harga_map = {
-                            "tawangsari": harga_twsari,
-                            "sedati": harga_sedati,
-                            "kesambi": harga_kesambi,
-                            "tulangan": harga_tulangan
-                        }
-                        
-                        harga = harga_map.get(selected_branch)
-                        
-                        if harga is None:
-                            continue
-    
-                        normalized.append({
-                            "id_menu": id_menu,
-                            "kategori": kategori,
-                            "nama": nama_item,
-                            "keterangan": keterangan,
-                            "harga": int(harga)
-                        })
-    
-                elif isinstance(menu_items[0], dict):
-                    for it in menu_items:
-                        harga = it.get("harga")
-                        if harga is None or pd.isna(harga):
-                            continue
-                        normalized.append({
-                            "id_menu": it.get("id_menu"),
-                            "kategori": it.get("kategori"),
-                            "nama": it.get("nama"),
-                            "keterangan": it.get("keterangan", ""),
-                            "harga": int(harga)
-                        })
-    
+            for it in menu_items:
+                try:
+                    menu_id = it.get("id")
+                    nama = it.get("nama")
+                    kategori = it.get("kategori")
+                    harga = it.get("harga")
+                    keterangan = it.get("keterangan", "")
+
+                    if menu_id is None or pd.isna(menu_id):
+                        continue
+                    if harga is None or pd.isna(harga):
+                        continue
+                    if not nama or pd.isna(nama):
+                        continue
+                    if not kategori or pd.isna(kategori):
+                        kategori = "Lainnya"
+
+                    normalized.append({
+                        "id": int(menu_id),
+                        "nama": str(nama),
+                        "kategori": str(kategori),
+                        "keterangan": "" if keterangan is None else str(keterangan),
+                        "harga": int(harga),
+                    })
+                except Exception:
+                    continue
+
             if not normalized:
                 st.info("Tidak ada menu tersedia untuk cabang ini.")
                 st.stop()
-    
+
             menu_items = normalized
+
             categories = sorted({item["kategori"] for item in menu_items})
-    
             search_query = st.text_input("🔍 Cari menu").strip().lower()
-    
-            if "order_items" not in st.session_state:
-                st.session_state.order_items = {}
-    
+
             st.write("*Pilih menu:*")
-    
+
+            def render_item_number_input(item: dict):
+                item_id = item["id"]
+                key = f"qty_{selected_branch}_{item_id}"
+
+                old_qty = st.session_state.order_items.get(item_id, 0)
+                qty = st.number_input(
+                    f"{item['nama']} (Rp {item['harga']:,})",
+                    min_value=0,
+                    value=int(old_qty),
+                    step=1,
+                    key=key
+                )
+                st.session_state.order_items[item_id] = int(qty)
+
+            # =========================
+            # RENDER MENU (SEARCH / TABS)
+            # =========================
             if search_query:
-                filtered = [item for item in menu_items if search_query in item['nama'].lower()]
+                filtered = [item for item in menu_items if search_query in item["nama"].lower()]
                 if not filtered:
                     st.info("Menu tidak ditemukan")
-                for item in filtered:
-                    key = f"menu_{item['id_menu']}"
-                    old_qty = st.session_state.order_items.get(item['nama'], 0)
-                    qty = st.number_input(
-                        f"{item['nama']} (Rp {item['harga']:,})",
-                        min_value=0,
-                        value=old_qty,
-                        step=1,
-                        key=key
-                    )
-                    st.session_state.order_items[item["id_menu"]] = qty
-    
+                else:
+                    for item in filtered:
+                        render_item_number_input(item)
             else:
-                tabs = st.tabs(categories)
+                cat_tabs = st.tabs(categories)
                 for i, cat in enumerate(categories):
-                    with tabs[i]:
+                    with cat_tabs[i]:
                         cat_items = [item for item in menu_items if item["kategori"] == cat]
                         for item in cat_items:
-                            key = f"menu_{item['id_menu']}"
-                            old_qty = st.session_state.order_items.get(item['nama'], 0)
-                            qty = st.number_input(
-                                f"{item['nama']} (Rp {item['harga']:,})",
-                                min_value=0,
-                                value=old_qty,
-                                step=1,
-                                key=key
-                            )
-                            st.session_state.order_items[item["id_menu"]] = qty
-    
-            checkout_total = 0
-            for it, q in st.session_state.order_items.items():
-                if q > 0:
-                    price = next((m['harga'] for m in menu_items if m['nama'] == it), 0)
-                    checkout_total += price * q
-    
-            st.session_state.checkout_total = checkout_total
+                            render_item_number_input(item)
+
+            # =========================
+            # HITUNG TOTAL
+            # =========================
+            price_by_id = {m["id"]: m["harga"] for m in menu_items}
+
+            checkout_total = sum(
+                price_by_id.get(menu_id, 0) * qty
+                for menu_id, qty in st.session_state.order_items.items()
+                if qty > 0
+            )
+
+            st.session_state.checkout_total = int(checkout_total)
             st.write(f"**Total sementara: Rp {checkout_total:,}**")
-    
+
+            # =========================
+            # LANJUT
+            # =========================
             if st.button("Cek dan Lanjut"):
                 if checkout_total == 0:
                     st.warning("Pilih minimal 1 menu!")
@@ -2908,12 +2907,3 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
-
-
-
-
-
-
-
