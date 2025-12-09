@@ -567,6 +567,20 @@ def update_menu_item(id_menu, kategori, nama_item, keterangan,
     with engine.begin() as conn:
         conn.execute(text(query), params)
 
+def update_kategori_menu(id_kategori, status_kategori):
+    query = """
+        UPDATE kategori_menu 
+        SET status_kategori = :status_kategori
+        WHERE id_kategori = :id_kategori
+    """
+
+    params = {
+        "id_kategori": id_kategori,
+        "status_kategori": status_kategori
+    }
+
+    with engine.begin() as conn:
+        conn.execute(text(query), params)
 
 def delete_menu_item(id_menu):
     try:
@@ -2192,6 +2206,24 @@ def page_admin():
                         [(m["id_kategori"], f"{m['nama_kategori']} - {m['status_kategori']}") for m in kategori_list],
                         format_func=lambda x: x[1]
                     )
+
+                    id_kategori = pilih2[0]
+                    selected2 = next(m for m in kategori_list if m["id_kategori"] == id_kategori)
+
+                    status_options2 = ["aktif", "inaktif"]
+                    default_status2 = (selected.get("status") or "").strip().lower()
+                    status2 = st.selectbox(
+                        "Status",
+                        status_options2,
+                        index=status_options2.index(default_status2)
+                    )
+
+                    if st.button("Simpan Perubahan"):
+                        update_kategori_menu(
+                            id_kategori, status2
+                        )
+                        st.success("Kategori berhasil diperbarui!")
+                        st.rerun()
                  
     with tab_kupon:
         st.subheader("🎫 Buat Kupon Baru")
@@ -2979,6 +3011,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
