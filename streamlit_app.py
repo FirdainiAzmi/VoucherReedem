@@ -2449,11 +2449,14 @@ def page_kasir():
         # ---------------------------
         # STEP 1 — PILIH MENU
         # ---------------------------
+        # =========================
+        # INIT STATE
+        # =========================
         if "redeem_step" not in st.session_state:
             st.session_state.redeem_step = 1
 
         if "order_items" not in st.session_state:
-            # key: menu_id (int/str), value: qty (int)
+            # key: id_menu (int), value: qty (int)
             st.session_state.order_items = {}
 
         # =========================
@@ -2468,25 +2471,24 @@ def page_kasir():
             st.session_state.selected_branch = selected_branch
             st.info(f"🏪 Cabang aktif: {selected_branch}")
 
-            # Ambil menu dari DB (WAJIB ada id)
+            # Ambil menu dari DB (WAJIB ada id_menu)
             menu_items = get_menu_from_db(selected_branch)
 
-            # Validasi menu
             if not menu_items:
                 st.info("Tidak ada menu tersedia untuk cabang ini.")
                 st.stop()
 
-            # Filter harga valid + pastikan tipe benar
+            # Normalisasi + validasi
             normalized = []
             for it in menu_items:
                 try:
-                    menu_id = it.get("id_menu")
+                    id_menu = it.get("id_menu")
                     nama = it.get("nama")
                     kategori = it.get("kategori")
                     harga = it.get("harga")
                     keterangan = it.get("keterangan", "")
 
-                    if menu_id is None or pd.isna(menu_id):
+                    if id_menu is None or pd.isna(id_menu):
                         continue
                     if harga is None or pd.isna(harga):
                         continue
@@ -2496,7 +2498,7 @@ def page_kasir():
                         kategori = "Lainnya"
 
                     normalized.append({
-                        "id_menu": int(menu_id),
+                        "id_menu": int(id_menu),
                         "nama": str(nama),
                         "kategori": str(kategori),
                         "keterangan": "" if keterangan is None else str(keterangan),
@@ -2513,14 +2515,13 @@ def page_kasir():
 
             categories = sorted({item["kategori"] for item in menu_items})
             search_query = st.text_input("🔍 Cari menu").strip().lower()
-
             st.write("*Pilih menu:*")
 
             def render_item_number_input(item: dict):
-                item_id = item["id_menu"]
-                key = f"qty_{selected_branch}_{item_id}"
+                id_menu = item["id_menu"]
+                key = f"qty_{selected_branch}_{id_menu}"  # key unik
 
-                old_qty = st.session_state.order_items.get(item_id, 0)
+                old_qty = st.session_state.order_items.get(id_menu, 0)
                 qty = st.number_input(
                     f"{item['nama']} (Rp {item['harga']:,})",
                     min_value=0,
@@ -2528,7 +2529,7 @@ def page_kasir():
                     step=1,
                     key=key
                 )
-                st.session_state.order_items[item_id] = int(qty)
+                st.session_state.order_items[id_menu] = int(qty)
 
             # =========================
             # RENDER MENU (SEARCH / TABS)
@@ -2551,12 +2552,11 @@ def page_kasir():
             # =========================
             # HITUNG TOTAL
             # =========================
-            price_by_id = {m["id_menu
-            "]: m["harga"] for m in menu_items}
+            price_by_id_menu = {m["id_menu"]: m["harga"] for m in menu_items}
 
             checkout_total = sum(
-                price_by_id.get(menu_id, 0) * qty
-                for menu_id, qty in st.session_state.order_items.items()
+                price_by_id_menu.get(id_menu, 0) * qty
+                for id_menu, qty in st.session_state.order_items.items()
                 if qty > 0
             )
 
@@ -2572,6 +2572,7 @@ def page_kasir():
                 else:
                     st.session_state.redeem_step = 2
                     st.rerun()
+
     
         # ---------------------------
         # STEP 2 — KONFIRMASI PEMBAYARAN
