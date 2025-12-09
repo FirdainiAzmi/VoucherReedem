@@ -2578,27 +2578,34 @@ def page_kasir():
         # STEP 2 — KONFIRMASI PEMBAYARAN
         # ---------------------------
         if st.session_state.redeem_step == 2:
-    
             st.header("Konfirmasi Pembayaran")
-    
+        
             if "isvoucher" not in st.session_state:
                 st.session_state.isvoucher = "no"
-    
+        
             menu_items = get_menu_from_db(st.session_state.selected_branch)
-            price_map = {item['nama']: item['harga'] for item in menu_items}
-    
-            ordered_items = {k: v for k, v in st.session_state.order_items.items() if v > 0}
-    
+        
+            # MAP BERDASARKAN id_menu (bukan nama)
+            price_by_id_menu = {item["id_menu"]: int(item["harga"]) for item in menu_items}
+            name_by_id_menu  = {item["id_menu"]: item["nama"] for item in menu_items}
+        
+            ordered_items = {id_menu: qty for id_menu, qty in st.session_state.order_items.items() if qty > 0}
+        
             if not ordered_items:
                 st.warning("Tidak ada menu yang dipilih.")
                 st.stop()
-    
+        
             st.write("## Detail Pesanan")
             st.write(f"- Cabang: {st.session_state.selected_branch}")
-            total = st.session_state.checkout_total
-            for it, q in ordered_items.items():
-                st.write(f"- {it} x{q} — Rp {price_map[it]*q:,}")
-    
+        
+            total = int(st.session_state.checkout_total)
+        
+            for id_menu, qty in ordered_items.items():
+                nama = name_by_id_menu.get(id_menu, f"Menu ID {id_menu}")
+                harga = price_by_id_menu.get(id_menu, 0)
+                st.write(f"- {nama} x{qty} — Rp {harga * qty:,}")
+        
+            st.write(f"### Total: Rp {total:,}")
             entered_code = st.text_input(
                 "Masukkan kode kupon (opsional)",
                 value=st.session_state.entered_code
@@ -2909,4 +2916,5 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
