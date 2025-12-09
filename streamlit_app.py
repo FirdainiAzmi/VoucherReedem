@@ -2222,7 +2222,8 @@ def page_admin():
                     status_kategori_new = st.selectbox(
                         "Status",
                         kategori_options,
-                        index=kategori_options.index(default_kategori)
+                        index=kategori_options.index(default_kategori),
+                        key=f"edit_status_{id_kategori}"
                     )
             
                     if st.button("Simpan Perubahan"):
@@ -3018,6 +3019,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
