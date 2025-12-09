@@ -2201,26 +2201,33 @@ def page_admin():
                 if not kategori_list:
                     st.info("Belum ada kategori untuk diedit.")
                 else:
-                    pilih2 = st.selectbox(
-                        "Pilih kateogri yang akan diedit",
-                        [(m["id_kategori"], f"{m['nama_kategori']} - {m['status_kategori']}") for m in kategori_list],
-                        format_func=lambda x: x[1]
+            
+                    # Mapping aman (id → label)
+                    options = {
+                        m["id_kategori"]: f"{m['nama_kategori']} - {m['status_kategori']}"
+                        for m in kategori_list
+                    }
+            
+                    pilih_id = st.selectbox(
+                        "Pilih kategori yang akan diedit",
+                        options.keys(),
+                        format_func=lambda k: options[k]
                     )
-
-                    id_kategori = pilih2[0]
-                    selected_kategori = next(m for m in kategori_list if m["id_kategori"] == id_kategori)
-
+            
+                    selected_kategori = next(m for m in kategori_list if m["id_kategori"] == pilih_id)
+            
                     kategori_options = ["aktif", "inaktif"]
                     default_kategori = (selected_kategori.get("status_kategori") or "").strip().lower()
+            
                     status_kategori_new = st.selectbox(
                         "Status",
                         kategori_options,
                         index=kategori_options.index(default_kategori)
                     )
-
+            
                     if st.button("Simpan Perubahan"):
                         update_kategori_menu(
-                            id_kategori, status_kategori_new
+                            pilih_id, status_kategori_new
                         )
                         st.success("Kategori berhasil diperbarui!")
                         st.rerun()
@@ -3011,6 +3018,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
