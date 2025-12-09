@@ -2211,7 +2211,7 @@ def page_admin():
                     selected2 = next(m for m in kategori_list if m["id_kategori"] == id_kategori)
 
                     status_options2 = ["aktif", "inaktif"]
-                    default_status2 = (selected.get("status") or "").strip().lower()
+                    default_status2 = (selected.get("status_kategori") or "").strip().lower()
                     status2 = st.selectbox(
                         "Status",
                         status_options2,
@@ -3011,6 +3011,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
