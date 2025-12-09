@@ -2490,6 +2490,7 @@ def page_kasir():
                             continue
     
                         normalized.append({
+                            "id_menu": id_menu,
                             "kategori": kategori,
                             "nama": nama_item,
                             "keterangan": keterangan,
@@ -2502,6 +2503,7 @@ def page_kasir():
                         if harga is None or pd.isna(harga):
                             continue
                         normalized.append({
+                            "id_menu": it.get("id_menu"),
                             "kategori": it.get("kategori"),
                             "nama": it.get("nama"),
                             "keterangan": it.get("keterangan", ""),
@@ -2906,6 +2908,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
