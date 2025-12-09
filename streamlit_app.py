@@ -2180,8 +2180,8 @@ def page_admin():
                             delete_menu_item(id_menu)
                             st.warning("Menu berhasil dihapus!")
                             st.rerun()
-                            
-             with tab22:
+
+            with tab22:
                 kategori_list = list_all_kategori()
                  
                 if not kategori_list:
@@ -2979,6 +2979,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
