@@ -640,10 +640,26 @@ def get_menu_from_db(branch):
     try:
         with engine.connect() as conn:
             df = pd.read_sql(text("""
-                SELECT id_menu, kategori, nama_item, keterangan,
-                       harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status
-                FROM menu_items
+                SELECT 
+                    m.id_menu,
+                    m.kategori,
+                    m.nama_item,
+                    m.keterangan,
+                    m.harga_sedati,
+                    m.harga_twsari,
+                    m.harga_kesambi,
+                    m.harga_tulangan,
+                    m.status,
+                    k.status_kategori
+                FROM menu_items AS m
+                LEFT JOIN kategori_menu AS k 
+                    ON m.kategori = k.nama_kategori
             """), conn)
+
+        df = df[
+            (df["status_kategori"].isna()) |
+            (df["status_kategori"].str.lower() == "aktif")
+        ]
 
         mapping_harga = {
             "Tawangsari": "harga_twsari",
@@ -660,7 +676,7 @@ def get_menu_from_db(branch):
             id_menu = row["id_menu"]
             harga = row[harga_col]
 
-            # ✅ hindari cannot convert nan to int
+            # Hindari error cannot convert nan to int
             if pd.isna(id_menu) or pd.isna(harga):
                 continue
 
@@ -670,13 +686,14 @@ def get_menu_from_db(branch):
                 "harga": int(harga),
                 "kategori": str(row["kategori"]) if row["kategori"] is not None else "Lainnya",
                 "keterangan": "" if row["keterangan"] is None else str(row["keterangan"]),
-                "status": str(row["status"])
+                "status": str(row["status"]),
+                "status_kategori": row["status_kategori"]
             })
 
         return menu_list
 
     except Exception as e:
-        st.error(f"Gagal ambil menu dari DB: {e}")
+        print("DB error:", e)
         return []
 
 def get_full_menu():
@@ -3019,6 +3036,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
