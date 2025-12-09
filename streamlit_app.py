@@ -2226,7 +2226,7 @@ def page_admin():
                         key=f"edit_status_{selected_id}"
                     )
             
-                    if st.button("Simpan Perubahan"):
+                    if st.button("Simpan Perubahan", key=f"simpan_kategori_{selected_id}"):
                         update_kategori_menu(
                             pilih_id, status_kategori_new
                         )
@@ -3019,6 +3019,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
