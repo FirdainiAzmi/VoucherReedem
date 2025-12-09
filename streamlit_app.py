@@ -2543,7 +2543,7 @@ def page_kasir():
                     with tabs[i]:
                         cat_items = [item for item in menu_items if item["kategori"] == cat]
                         for item in cat_items:
-                            key = f"{selected_branch}_{item['nama']}"
+                            key = f"menu_{item['id_menu']}"
                             old_qty = st.session_state.order_items.get(item['nama'], 0)
                             qty = st.number_input(
                                 f"{item['nama']} (Rp {item['harga']:,})",
@@ -2552,7 +2552,7 @@ def page_kasir():
                                 step=1,
                                 key=key
                             )
-                            st.session_state.order_items[item['nama']] = qty
+                            st.session_state.order_items[item["id_menu"]] = qty
     
             checkout_total = 0
             for it, q in st.session_state.order_items.items():
@@ -2905,6 +2905,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
