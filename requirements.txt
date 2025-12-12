@@ -6,3 +6,4 @@ streamlit-aggrid
 streamlit-javascript
 matplotlib
 plotly
+unicodedata
