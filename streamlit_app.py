@@ -3021,56 +3021,56 @@ def page_kasir():
                 mime="text/csv"
             )
             def normalize_name(s: str) -> str:
-    if not isinstance(s, str):
-        return ""
-    s = s.strip().lower()
-    s = " ".join(s.split())  # collapse multiple spaces
-    s = unicodedata.normalize("NFKD", s)
-    s = "".join(ch for ch in s if not unicodedata.combining(ch))
-    return s
-
-    menu_list = []
+                if not isinstance(s, str):
+                    return ""
+                s = s.strip().lower()
+                s = " ".join(s.split())  # collapse multiple spaces
+                s = unicodedata.normalize("NFKD", s)
+                s = "".join(ch for ch in s if not unicodedata.combining(ch))
+                return s
+            
+                menu_list = []
     
-    for idx, row in df_tx.iterrows():
-        menu_items = str(row.get("items", "")).split(",")  # Pecah per menu
-        for item in menu_items:
-            raw = item.strip()
-            if not raw:
-                continue
-    
-            # regex menangani ' x6' atau ' X6' atau 'x 6'
-            match = re.match(r"(.+?)\s*[xX]\s*(\d+)\s*$", raw)
-            if match:
-                nama_menu = match.group(1).strip()
-                jumlah = int(match.group(2))
-            else:
-                # jika tidak ada 'xN', coba ambil angka terakhir, kalau tidak ada -> 1
-                parts = raw.rsplit(" ", 1)
-                if len(parts) == 2 and parts[1].isdigit():
-                    nama_menu = parts[0]
-                    jumlah = int(parts[1])
+                for idx, row in df_tx.iterrows():
+                    menu_items = str(row.get("items", "")).split(",")  # Pecah per menu
+                    for item in menu_items:
+                        raw = item.strip()
+                        if not raw:
+                            continue
+                
+                        # regex menangani ' x6' atau ' X6' atau 'x 6'
+                        match = re.match(r"(.+?)\s*[xX]\s*(\d+)\s*$", raw)
+                        if match:
+                            nama_menu = match.group(1).strip()
+                            jumlah = int(match.group(2))
+                        else:
+                            # jika tidak ada 'xN', coba ambil angka terakhir, kalau tidak ada -> 1
+                            parts = raw.rsplit(" ", 1)
+                            if len(parts) == 2 and parts[1].isdigit():
+                                nama_menu = parts[0]
+                                jumlah = int(parts[1])
+                            else:
+                                nama_menu = raw
+                                jumlah = 1
+                
+                        nama_menu_norm = normalize_name(nama_menu)
+                
+                        menu_list.append({
+                            "Tanggal": row["tanggal_transaksi"],
+                            "Menu": nama_menu_norm,
+                            "Jumlah": jumlah
+                        })
+                
+                # Buat dataframe menu dan aggregate
+                df_menu = pd.DataFrame(menu_list)
+                if df_menu.empty:
+                    st.info("Tidak ada menu terjual pada tanggal tersebut.")
                 else:
-                    nama_menu = raw
-                    jumlah = 1
-    
-            nama_menu_norm = normalize_name(nama_menu)
-    
-            menu_list.append({
-                "Tanggal": row["tanggal_transaksi"],
-                "Menu": nama_menu_norm,
-                "Jumlah": jumlah
-            })
-    
-    # Buat dataframe menu dan aggregate
-    df_menu = pd.DataFrame(menu_list)
-    if df_menu.empty:
-        st.info("Tidak ada menu terjual pada tanggal tersebut.")
-    else:
-        df_pivot = df_menu.groupby("Menu")["Jumlah"].sum().reset_index()
-        # kembalikan tampilan nama dengan kapitalisasi kata untuk rapi
-        df_pivot["Menu"] = df_pivot["Menu"].apply(lambda x: x.title())
-        st.subheader("📊 Penjualan Per Menu")
-        st.dataframe(df_pivot, use_container_width=True)
+                    df_pivot = df_menu.groupby("Menu")["Jumlah"].sum().reset_index()
+                    # kembalikan tampilan nama dengan kapitalisasi kata untuk rapi
+                    df_pivot["Menu"] = df_pivot["Menu"].apply(lambda x: x.title())
+                    st.subheader("📊 Penjualan Per Menu")
+                    st.dataframe(df_pivot, use_container_width=True)
     
 # Jika admin login → langsung ke halaman admin
 if st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
@@ -3085,6 +3085,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
