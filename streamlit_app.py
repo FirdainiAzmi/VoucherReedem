@@ -1375,7 +1375,7 @@ def page_admin():
                             "tunai": "Tunai",
                             "isvoucher": "kupon digunakan",
                             "initial_value": "Initial_value",
-                            "Sisa saldo": "Balance",
+                            "Sisa_saldo": "Balance",
                             "diskon": "Diskon"
                         })
                 # df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
@@ -1388,7 +1388,7 @@ def page_admin():
 
                 # Tampilkan tabel histori
                 st.dataframe(
-                    df_display[["id", "Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value", "Sisa saldo",
+                    df_display[["id", "Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value", "Sisa_saldo",
                                 "Total", "Tunai", "Diskon", "Cabang", "Menu"]],
                     use_container_width=True
                 )
@@ -3096,6 +3096,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
