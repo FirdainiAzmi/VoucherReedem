@@ -1386,16 +1386,17 @@ def page_admin():
                 df_display["Total"] = pd.to_numeric(df_display["Total"], errors="coerce").fillna(0)
                 df_display["Saldo awal"] = pd.to_numeric(df_display["Saldo awal"], errors="coerce").fillna(0)
 
-                # df_display = df_display.sort_values("id").reset_index(drop=True)
-                df_display["Sisa saldo"] = None
+                df_display["_orig_order"] = df_display.index
+                df_calc = df_display.sort_values("Tanggal transaksi").reset_index(drop=True)
+                df_calc["Sisa saldo"] = None
                 voucher_balance = {}
 
-                for idx, row in df_display.iterrows():
+                for idx, row in df_calc.iterrows():
                     isvoucher = str(row["kupon digunakan"]) == "1"
                     kode = row["Kode"]
                 
                     if not isvoucher or pd.isna(kode):
-                        df_display.at[idx, "Sisa saldo"] = None
+                        df_calc.at[idx, "Sisa saldo"] = None
                         continue
                 
                     total = row["Total"]
@@ -1413,8 +1414,16 @@ def page_admin():
                     voucher_balance[kode] = saldo_sekarang
                 
                     # Simpan ke dataframe
-                    df_display.at[idx, "Sisa saldo"] = saldo_sekarang
+                    df_calc.at[idx, "Sisa saldo"] = saldo_sekarang
 
+                df_display["Sisa saldo"] = (
+                    df_calc
+                    .sort_values("_orig_order")
+                    ["Sisa saldo"]
+                    .values
+                )
+                df_display.drop(columns="_orig_order", inplace=True)
+                
                 # Tampilkan tabel histori
                 st.dataframe(
                     df_display[["id", "Tanggal transaksi", "kupon digunakan", "Kode", "Saldo awal", "Sisa saldo",
@@ -3125,6 +3134,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
