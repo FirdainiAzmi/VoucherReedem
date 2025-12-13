@@ -2725,6 +2725,9 @@ def page_kasir():
         
             if "isvoucher" not in st.session_state:
                 st.session_state.isvoucher = "no"
+            
+            if "diskon" not in st.session_state:
+                st.session_state.diskon = 0
         
             menu_items = get_menu_from_db(st.session_state.selected_branch)
         
@@ -2758,45 +2761,47 @@ def page_kasir():
             shortage = 0
     
             if st.button("Cek Kupon"):
-                code = st.session_state.entered_code
-                st.session_state.pop("redeem_error", None)
-                st.session_state.isvoucher = "no"
-    
-                if not code:
-                    st.session_state["redeem_error"] = "⚠️ Kode tidak boleh kosong"
+                if st.session_state.diskon > 0:
+                    st.session_state["redeem_error"] = "❌ Diskon dan kupon tidak bisa digunakan bersamaan."
                 else:
-                    row = find_voucher(code)
-                    if not row:
-                        st.session_state["redeem_error"] = "❌ Kupon tidak ditemukan."
+                    code = st.session_state.entered_code
+                    st.session_state.pop("redeem_error", None)
+                    st.session_state.isvoucher = "no"
+        
+                    if not code:
+                        st.session_state["redeem_error"] = "⚠️ Kode tidak boleh kosong"
                     else:
-                        validate_voucher_and_show_info(row, total)
+                        row = find_voucher(code)
+                        if not row:
+                            st.session_state["redeem_error"] = "❌ Kupon tidak ditemukan."
+                        else:
+                            validate_voucher_and_show_info(row, total)
+                            st.session_state.isvoucher = "yes"
+                            st.session_state.diskon = 0
     
             if "redeem_error" in st.session_state:
                 st.error(st.session_state["redeem_error"])
     
-            st.write(f"### Total Sementara: Rp {total:,}")
+            # st.write(f"### Total Sementara: Rp {total:,}")
             # ========================
             # INPUT DISKON
             # ========================
-
-            if "diskon_persen" not in st.session_state:
-                st.session_state.diskon_persen = 0
-
             # Input diskon, tapi hanya jika total >= 25000
             if total >= 1000:
                 diskon = st.number_input(
                     "Masukkan diskon (nominal)",
                     min_value=0,
                     max_value=total,
-                    value=0,
+                    value=st.session_state.diskon if not diskon_disabled else 0,
                     step=1000,
+                    disabled=diskon_disabled,
                     key="diskon_input"
                 )
             else:
                 diskon = 0
 
             # Hitung total setelah diskon
-            total_setelah_diskon = total - diskon
+            total_setelah_diskon = total - st.session_state.diskon
             if total_setelah_diskon < 0:
                 total_setelah_diskon = 0
 
@@ -3084,6 +3089,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
