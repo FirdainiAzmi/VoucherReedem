@@ -2792,7 +2792,7 @@ def page_kasir():
                     branch = st.session_state.selected_branch
                     final_total = total_setelah_diskon  # total akhir
 
-                    diskon_persen = st.session_state.diskon_persen
+                    diskon_persen = st.session_state.diskon
 
                     if st.session_state.isvoucher == "yes" and "voucher_row" in st.session_state:
                         code = st.session_state.voucher_row[0]
@@ -3058,6 +3058,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
