@@ -2752,6 +2752,8 @@ def page_kasir():
                 st.write(f"- {nama} x{qty} — Rp {harga * qty:,}")
         
             st.write(f"### Total: Rp {total:,}")
+
+            st.markdown("---")
             entered_code = st.text_input(
                 "Masukkan kode kupon (opsional)",
                 value=st.session_state.entered_code
@@ -2806,6 +2808,7 @@ def page_kasir():
             if total_setelah_diskon < 0:
                 total_setelah_diskon = 0
 
+            st.markdown("---")
             st.write(f"### Total Akhir: Rp {total_setelah_diskon:,}")
 
             # Simpan ke session_state
@@ -3090,6 +3093,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
