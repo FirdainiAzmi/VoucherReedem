@@ -1383,7 +1383,6 @@ def page_admin():
                 df_display["Diskon"] = pd.to_numeric(df_display["Diskon"], errors="coerce").fillna(0)
                 df_display.loc[df_display["Diskon"] > 0, "Total"] = df_display["Total"] + df_display["Diskon"]
 
-                df_display["Tanggal transaksi"] = pd.to_datetime(df_display["Tanggal transaksi"])
                 df_display["Total"] = pd.to_numeric(df_display["Total"], errors="coerce").fillna(0)
                 df_display["Saldo awal"] = pd.to_numeric(df_display["Saldo awal"], errors="coerce").fillna(0)
 
@@ -1407,6 +1406,8 @@ def page_admin():
                         saldo_sekarang = initial - total
                     else:
                         saldo_sekarang = voucher_balance[kode] - total
+
+                    saldo_sekarang = max(saldo_sekarang, 0)
                 
                     # Simpan ke memory
                     voucher_balance[kode] = saldo_sekarang
@@ -3124,6 +3125,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
