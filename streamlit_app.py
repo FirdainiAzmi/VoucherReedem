@@ -1705,7 +1705,7 @@ def page_admin():
         
                 # Filter tanggal
                 tanggal_awal = colf1.date_input("Tanggal Awal", value=date.today().replace(day=1))
-                tanggal_akhir = colf2.date_input("Tanggal Akhir", value=date.today())
+                tanggal_akhir = colf2.date_input("Tanggal Akhir", value=date.today(), key="tanggal_akhir_laporan")
         
             # ============================
             # 📥 LOAD DATA
@@ -3058,6 +3058,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
