@@ -1255,6 +1255,9 @@ def page_admin():
     with tab_histori:
         st.subheader("Histori Transaksi")
 
+        # =============================
+        # LOAD DATA
+        # =============================
         df_tx = list_transactions(limit=5000)
         df_tx = df_tx.sort_values(by="id", ascending=False).reset_index(drop=True)
 
@@ -1276,27 +1279,30 @@ def page_admin():
         # =============================
         # FILTER INPUT
         # =============================
-        col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
-        with col1:
-            search_code = st.text_input("Cari kode kupon", "").strip()
-        with col2:
-            start_date = st.date_input("Tanggal Mulai", min_date, min_value=min_date, max_value=max_date)
-        with col3:
-            end_date = st.date_input("Tanggal Akhir", max_date, min_value=min_date, max_value=max_date)
-        with col4:
+        c1, c2, c3, c4, c5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
+
+        with c1:
+            search_code = st.text_input("Cari kode kupon", "").strip().upper()
+        with c2:
+            start_date = st.date_input("Tanggal Mulai", min_date)
+        with c3:
+            end_date = st.date_input("Tanggal Akhir", max_date)
+        with c4:
             filter_cabang = st.selectbox("Cabang", ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"])
-        with col5:
+        with c5:
             filter_kupon = st.selectbox("Kupon", ["semua", "Kupon", "Non Kupon"])
 
+        # =============================
+        # APPLY FILTER
+        # =============================
         if start_date > end_date:
             st.error("Tanggal tidak valid")
             st.stop()
 
-        # =============================
-        # FILTER DATA
-        # =============================
-        df_tx = df_tx[(df_tx["tanggal_transaksi"] >= start_date) &
-                    (df_tx["tanggal_transaksi"] <= end_date)]
+        df_tx = df_tx[
+            (df_tx["tanggal_transaksi"] >= start_date) &
+            (df_tx["tanggal_transaksi"] <= end_date)
+        ]
 
         if filter_cabang != "semua":
             df_tx = df_tx[df_tx["branch"] == filter_cabang]
@@ -1305,53 +1311,77 @@ def page_admin():
             df_tx = df_tx[df_tx["isvoucher"] == ("yes" if filter_kupon == "Kupon" else "no")]
 
         if df_tx.empty:
-            st.warning("Tidak ada data")
+            st.warning("Tidak ada data sesuai filter")
             st.stop()
+
+        # =============================
+        # SOURCE DATA (KUNCI FLOW)
+        # =============================
+        if search_code:
+            source_df = df_tx[
+                (df_tx["isvoucher"] == "yes") &
+                (df_tx["code"].str.contains(search_code, case=False, na=False))
+            ]
+        else:
+            source_df = df_tx
 
         # =============================
         # METRIC
         # =============================
-        total_all = df_tx["used_amount"].fillna(0).sum()
-        total_cash = df_tx["tunai"].fillna(0).sum()
-        total_kupon = total_all - total_cash
-        total_diskon = df_tx["diskon"].sum()
+        colA, colB, colC, colD = st.columns(4)
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Total Pendapatan", f"Rp {total_all:,}")
-        c2.metric("Cash", f"Rp {total_cash:,}")
-        c3.metric("Kupon", f"Rp {total_kupon:,}")
-        c4.metric("Diskon", f"Rp {total_diskon:,}")
+        with colA:
+            st.metric("Total Pendapatan", f"Rp {df_tx['used_amount'].sum():,}")
+        with colB:
+            st.metric("Cash", f"Rp {df_tx['tunai'].sum():,}")
+        with colC:
+            st.metric("Kupon", f"Rp {(df_tx['used_amount'] - df_tx['tunai']).sum():,}")
+        with colD:
+            st.metric("Diskon", f"Rp {df_tx['diskon'].sum():,}")
 
         # =============================
-        # 🔍 DETAIL KUPON (JIKA SEARCH)
+        # DETAIL KUPON (PALING ATAS)
         # =============================
-        df_filtered_voucher = None
-
         if search_code:
-            df_voucher = df_tx[df_tx["isvoucher"] == "yes"]
-            df_filtered_voucher = df_voucher[
-                df_voucher["code"].str.contains(search_code.upper(), case=False, na=False)
-            ]
+            st.subheader(f"🎟️ Detail Kupon: {search_code}")
 
-            st.subheader(f"Detail Kupon: {search_code.upper()}")
-
-            if df_filtered_voucher.empty:
+            if source_df.empty:
                 st.warning("Kupon tidak ditemukan")
                 st.stop()
 
             with st.expander("ℹ️ Informasi Kupon", expanded=True):
-                st.write(f"- Initial Value: Rp {df_filtered_voucher['initial_value'].iloc[0]:,}")
-                st.write(f"- Jumlah Transaksi: {len(df_filtered_voucher)}")
-                st.write(f"- Total Terpakai: Rp {df_filtered_voucher['used_amount'].sum():,}")
+                st.write(f"- Initial Value: Rp {source_df['initial_value'].iloc[0]:,}")
+                st.write(f"- Jumlah Transaksi: {len(source_df)}")
+                st.write(f"- Total Terpakai: Rp {source_df['used_amount'].sum():,}")
+
+            st.markdown("---")
 
         # =============================
-        # 📊 MENU TERJUAL
+        # TABEL HISTORI (PAKAI source_df)
         # =============================
-        source_df = df_filtered_voucher if search_code else df_tx
+        st.subheader("📋 Histori Transaksi")
 
-        def normalize_name(s):
-            return unicodedata.normalize("NFKD", s.lower().strip())
+        df_display = source_df.rename(columns={
+            "tanggal_transaksi": "Tanggal",
+            "used_amount": "Total",
+            "tunai": "Tunai",
+            "diskon": "Diskon",
+            "branch": "Cabang",
+            "items": "Menu",
+            "code": "Kode"
+        })
 
+        df_display.loc[df_display["isvoucher"] == "no", "Total"] = df_display["Tunai"]
+        df_display.loc[df_display["Diskon"] > 0, "Total"] += df_display["Diskon"]
+
+        st.dataframe(
+            df_display[["Tanggal", "Kode", "Total", "Tunai", "Diskon", "Cabang", "Menu"]],
+            use_container_width=True
+        )
+
+        # =============================
+        # MENU TERJUAL (PAKAI source_df)
+        # =============================
         menu_list = []
 
         for _, row in source_df.iterrows():
@@ -1359,44 +1389,26 @@ def page_admin():
                 m = re.match(r"(.+?)\s*[xX]\s*(\d+)", item.strip())
                 if m:
                     menu_list.append({
-                        "Menu": normalize_name(m.group(1)),
+                        "Menu": m.group(1).strip().title(),
                         "Jumlah": int(m.group(2))
                     })
 
         if menu_list:
             df_menu = pd.DataFrame(menu_list)
             df_menu = df_menu.groupby("Menu")["Jumlah"].sum().reset_index()
-            df_menu["Menu"] = df_menu["Menu"].str.title()
 
-            st.subheader("📊 Menu Terjual (Kupon)" if search_code else "📊 Menu Terjual")
+            st.subheader("📊 Menu Terjual")
             st.dataframe(df_menu, use_container_width=True)
 
         # =============================
-        # 📋 TABEL HISTORI (HANYA JIKA TIDAK SEARCH)
+        # DOWNLOAD
         # =============================
-        if not search_code:
-            df_display = df_tx.rename(columns={
-                "tanggal_transaksi": "Tanggal",
-                "used_amount": "Total",
-                "tunai": "Tunai",
-                "diskon": "Diskon",
-                "branch": "Cabang",
-                "items": "Menu",
-                "code": "Kode"
-            })
-
-            st.subheader("📋 Histori Transaksi")
-            st.dataframe(
-                df_display[["Tanggal", "Kode", "Total", "Tunai", "Diskon", "Cabang", "Menu"]],
-                use_container_width=True
-            )
-
-            st.download_button(
-                "Download CSV",
-                df_to_csv_bytes(df_display),
-                "transactions.csv",
-                "text/csv"
-            )
+        st.download_button(
+            "Download CSV",
+            data=df_to_csv_bytes(df_display),
+            file_name="transactions.csv",
+            mime="text/csv"
+        )
 
     
     with tab_edit_seller:
@@ -3042,6 +3054,24 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
