@@ -1416,7 +1416,7 @@ def page_admin():
 
                 # Tampilkan tabel histori
                 st.dataframe(
-                    df_display[["id", "Tanggal transaksi", "kupon digunakan", "Kode", "Initial_value", "Sisa saldo",
+                    df_display[["id", "Tanggal transaksi", "kupon digunakan", "Kode", "Saldo awal", "Sisa saldo",
                                 "Total", "Tunai", "Diskon", "Cabang", "Menu"]],
                     use_container_width=True
                 )
@@ -3124,6 +3124,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
