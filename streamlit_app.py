@@ -1386,13 +1386,13 @@ def page_admin():
                 df_display["Total"] = pd.to_numeric(df_display["Total"], errors="coerce").fillna(0)
                 df_display["Saldo awal"] = pd.to_numeric(df_display["Saldo awal"], errors="coerce").fillna(0)
 
-                df_display["_orig_order"] = df_display.index
-                df_calc = df_display.sort_values("Tanggal transaksi").reset_index(drop=True)
+                df_calc = df_display.copy()
+                df_calc = df_calc.sort_values("id")
                 df_calc["Sisa saldo"] = None
                 voucher_balance = {}
-
+                
                 for idx, row in df_calc.iterrows():
-                    isvoucher = str(row["kupon digunakan"]) == "1"
+                    isvoucher = row["kupon digunakan"] == "1"
                     kode = row["Kode"]
                 
                     if not isvoucher or pd.isna(kode):
@@ -1402,27 +1402,20 @@ def page_admin():
                     total = row["Total"]
                     initial = row["Saldo awal"]
                 
-                    # Jika pertama kali kupon muncul
                     if kode not in voucher_balance:
-                        saldo_sekarang = initial - total
+                        saldo = initial - total
                     else:
-                        saldo_sekarang = voucher_balance[kode] - total
-
-                    saldo_sekarang = max(saldo_sekarang, 0)
+                        saldo = voucher_balance[kode] - total
                 
-                    # Simpan ke memory
-                    voucher_balance[kode] = saldo_sekarang
+                    saldo = max(saldo, 0)
+                    voucher_balance[kode] = saldo
+                    df_calc.at[idx, "Sisa saldo"] = saldo
                 
-                    # Simpan ke dataframe
-                    df_calc.at[idx, "Sisa saldo"] = saldo_sekarang
-
                 df_display["Sisa saldo"] = (
                     df_calc
-                    .sort_values("_orig_order")
-                    ["Sisa saldo"]
+                    .sort_values("id", ascending=False)["Sisa saldo"]
                     .values
                 )
-                df_display.drop(columns="_orig_order", inplace=True)
                 
                 # Tampilkan tabel histori
                 st.dataframe(
@@ -3134,6 +3127,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
