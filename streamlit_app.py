@@ -2787,6 +2787,7 @@ def page_kasir():
             # INPUT DISKON
             # ========================
             # Input diskon, tapi hanya jika total >= 25000
+            diskon_disabled = (st.session_state.isvoucher == "yes")
             if total >= 1000:
                 diskon = st.number_input(
                     "Masukkan diskon (nominal)",
@@ -3089,6 +3090,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
