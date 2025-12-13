@@ -1386,7 +1386,7 @@ def page_admin():
                 df_display["Total"] = pd.to_numeric(df_display["Total"], errors="coerce").fillna(0)
                 df_display["Saldo awal"] = pd.to_numeric(df_display["Saldo awal"], errors="coerce").fillna(0)
 
-                df_display = df_display.sort_values("id").reset_index(drop=True)
+                # df_display = df_display.sort_values("id").reset_index(drop=True)
                 df_display["Sisa saldo"] = None
                 voucher_balance = {}
 
@@ -3125,6 +3125,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
