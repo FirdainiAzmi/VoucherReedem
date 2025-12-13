@@ -1263,11 +1263,12 @@ def page_admin():
             st.stop()
 
         # =============================
-        # NORMALISASI DATA
+        # NORMALISASI DASAR
         # =============================
         df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
         df_tx["code"] = df_tx["code"].fillna("")
         df_tx["isvoucher"] = df_tx["isvoucher"].fillna("no")
+        df_tx["diskon"] = pd.to_numeric(df_tx["diskon"], errors="coerce").fillna(0)
 
         min_date = df_tx["tanggal_transaksi"].min()
         max_date = df_tx["tanggal_transaksi"].max()
@@ -1276,7 +1277,6 @@ def page_admin():
         # FILTER INPUT
         # =============================
         col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
-
         with col1:
             search_code = st.text_input("Cari kode kupon", "").strip()
         with col2:
@@ -1288,35 +1288,37 @@ def page_admin():
         with col5:
             filter_kupon = st.selectbox("Filter Kupon", ["semua", "Kupon", "Non Kupon"])
 
-        if start_date > end_date:
-            st.error("Tanggal tidak valid")
-            st.stop()
-
         # =============================
         # FILTER DATA
         # =============================
-        df_tx = df_tx[
+        df_filt = df_tx[
             (df_tx["tanggal_transaksi"] >= start_date) &
             (df_tx["tanggal_transaksi"] <= end_date)
         ]
 
         if filter_cabang != "semua":
-            df_tx = df_tx[df_tx["branch"] == filter_cabang]
+            df_filt = df_filt[df_filt["branch"] == filter_cabang]
 
         if filter_kupon != "semua":
-            df_tx = df_tx[df_tx["isvoucher"] == ("yes" if filter_kupon == "Kupon" else "no")]
+            df_filt = df_filt[df_filt["isvoucher"] == ("yes" if filter_kupon == "Kupon" else "no")]
 
-        if df_tx.empty:
-            st.warning("Tidak ada transaksi")
+        if search_code:
+            df_filt = df_filt[
+                (df_filt["isvoucher"] == "yes") &
+                (df_filt["code"].str.contains(search_code.upper(), case=False, na=False))
+            ]
+
+        if df_filt.empty:
+            st.warning("Tidak ada data sesuai filter.")
             st.stop()
 
         # =============================
-        # METRIC
+        # METRIK
         # =============================
-        total_uang = df_tx["used_amount"].fillna(0).sum()
-        total_cash = df_tx["tunai"].fillna(0).sum()
+        total_uang = df_filt["used_amount"].sum()
+        total_cash = df_filt["tunai"].sum()
         total_kupon = total_uang - total_cash
-        total_diskon = df_tx["diskon"].fillna(0).sum()
+        total_diskon = df_filt["diskon"].sum()
 
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Total Pendapatan", f"Rp {total_uang:,}")
@@ -1325,108 +1327,93 @@ def page_admin():
         c4.metric("Diskon", f"Rp {total_diskon:,}")
 
         # =============================
-        # FUNGSI BENTUK TABEL HISTORI
-        # =============================
-        def build_histori(df_src):
-            df = df_src.rename(columns={
-                "code": "Kode",
-                "used_amount": "Total",
-                "tanggal_transaksi": "Tanggal transaksi",
-                "branch": "Cabang",
-                "items": "Menu",
-                "tunai": "Tunai",
-                "isvoucher": "kupon digunakan",
-                "initial_value": "Saldo awal",
-                "diskon": "Diskon"
-            })
-
-            df["kupon digunakan"] = df["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
-            df.loc[df["kupon digunakan"] == "0", "Total"] = df["Tunai"]
-
-            df["Diskon"] = pd.to_numeric(df["Diskon"], errors="coerce").fillna(0)
-            df.loc[df["Diskon"] > 0, "Total"] += df["Diskon"]
-
-            df["Saldo awal"] = pd.to_numeric(df["Saldo awal"], errors="coerce").fillna(0)
-            df["Total"] = pd.to_numeric(df["Total"], errors="coerce").fillna(0)
-
-            # Hitung sisa saldo
-            df_calc = df.sort_values("id")
-            saldo_map = {}
-            df_calc["Sisa saldo"] = None
-
-            for idx, row in df_calc.iterrows():
-                if row["kupon digunakan"] != "1":
-                    continue
-
-                kode = row["Kode"]
-                saldo = row["Saldo awal"] if kode not in saldo_map else saldo_map[kode]
-                saldo = max(saldo - row["Total"], 0)
-                saldo_map[kode] = saldo
-                df_calc.at[idx, "Sisa saldo"] = saldo
-
-            df["Sisa saldo"] = df_calc.sort_values("id", ascending=False)["Sisa saldo"].values
-            return df
-
-        # =============================
-        # 🔍 DETAIL KUPON (JIKA SEARCH)
+        # DETAIL KUPON (JIKA SEARCH)
         # =============================
         if search_code:
-            df_kode = df_tx[
-                (df_tx["isvoucher"] == "yes") &
-                (df_tx["code"].str.contains(search_code.upper(), case=False, na=False))
-            ]
-
             st.subheader(f"Detail Kupon: {search_code.upper()}")
 
-            if df_kode.empty:
-                st.warning("Kupon tidak ditemukan")
-            else:
-                with st.expander("ℹ️ Informasi Lengkap Kupon", expanded=True):
-                    st.write(f"- Initial Value: Rp {df_kode['initial_value'].iloc[0]:,}")
-                    st.write(f"- Jumlah transaksi: {len(df_kode)}")
-                    st.write(f"- Total terpakai: Rp {df_kode['used_amount'].sum():,}")
+            initial_val = df_filt["initial_value"].iloc[0]
+            st.write(f"- Saldo awal: Rp {initial_val:,}")
+            st.write(f"- Jumlah transaksi: {len(df_filt)}")
+            st.write(f"- Total terpakai: Rp {df_filt['used_amount'].sum():,}")
 
-                    df_histori = build_histori(df_kode)
-
-                    st.dataframe(
-                        df_histori[[
-                            "id",
-                            "Tanggal transaksi",
-                            "kupon digunakan",
-                            "Kode",
-                            "Saldo awal",
-                            "Sisa saldo",
-                            "Total",
-                            "Tunai",
-                            "Diskon",
-                            "Cabang",
-                            "Menu"
-                        ]],
-                        use_container_width=True
-                    )
+            st.markdown("---")
 
         # =============================
-        # TABEL HISTORI GLOBAL (JIKA TIDAK SEARCH)
+        # TABEL HISTORI (WAJIB MENU)
         # =============================
-        if not search_code:
-            df_histori_all = build_histori(df_tx)
+        df_hist = df_filt.rename(columns={
+            "tanggal_transaksi": "Tanggal transaksi",
+            "code": "Kode",
+            "used_amount": "Total",
+            "initial_value": "Saldo awal",
+            "branch": "Cabang",
+            "items": "Menu",
+            "tunai": "Tunai",
+            "isvoucher": "kupon digunakan",
+            "diskon": "Diskon"
+        })
 
+        df_hist["kupon digunakan"] = df_hist["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
+        df_hist.loc[df_hist["kupon digunakan"] == "0", "Total"] = df_hist["Tunai"]
+        df_hist.loc[df_hist["Diskon"] > 0, "Total"] += df_hist["Diskon"]
+
+        # Hitung sisa saldo
+        df_calc = df_hist.sort_values("id")
+        saldo_map = {}
+        df_calc["Sisa saldo"] = None
+
+        for i, r in df_calc.iterrows():
+            if r["kupon digunakan"] != "1":
+                continue
+            kode = r["Kode"]
+            saldo = r["Saldo awal"] if kode not in saldo_map else saldo_map[kode]
+            saldo = max(saldo - r["Total"], 0)
+            saldo_map[kode] = saldo
+            df_calc.at[i, "Sisa saldo"] = saldo
+
+        df_hist["Sisa saldo"] = df_calc.sort_values("id", ascending=False)["Sisa saldo"].values
+
+        st.dataframe(
+            df_hist[[
+                "id",
+                "Tanggal transaksi",
+                "kupon digunakan",
+                "Kode",
+                "Saldo awal",
+                "Sisa saldo",
+                "Total",
+                "Tunai",
+                "Diskon",
+                "Cabang",
+                "Menu"
+            ]],
+            use_container_width=True
+        )
+
+        # =============================
+        # PENJUALAN MENU (SESUSAI FILTER / KODE)
+        # =============================
+        menu_rows = []
+
+        for _, row in df_filt.iterrows():
+            for item in str(row["items"]).split(","):
+                m = re.match(r"(.+?)\s*[xX]\s*(\d+)", item.strip())
+                if m:
+                    menu_rows.append({
+                        "Menu": m.group(1).strip().title(),
+                        "Jumlah": int(m.group(2))
+                    })
+
+        df_menu = pd.DataFrame(menu_rows)
+
+        if not df_menu.empty:
+            st.subheader("📊 Penjualan Per Menu")
             st.dataframe(
-                df_histori_all[[
-                    "id",
-                    "Tanggal transaksi",
-                    "kupon digunakan",
-                    "Kode",
-                    "Saldo awal",
-                    "Sisa saldo",
-                    "Total",
-                    "Tunai",
-                    "Diskon",
-                    "Cabang",
-                    "Menu"
-                ]],
+                df_menu.groupby("Menu")["Jumlah"].sum().reset_index(),
                 use_container_width=True
             )
+
 
     with tab_edit_seller:
         st.subheader("Kelola Seller")
@@ -3071,4 +3058,12 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
+
+
+
+
+
+
+
 
