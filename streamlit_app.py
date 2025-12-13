@@ -757,7 +757,8 @@ def list_transactions(limit=5000):
             t.tunai,
             t.isvoucher,
             t.diskon,
-            v.initial_value
+            v.initial_value,
+            v.balance
         FROM transactions t
         LEFT JOIN vouchers v ON t.code = v.code
         ORDER BY t.tanggal_transaksi DESC
@@ -1374,9 +1375,10 @@ def page_admin():
                             "tunai": "Tunai",
                             "isvoucher": "kupon digunakan",
                             "initial_value": "Initial_value",
+                            "Sisa saldo": "Balance",
                             "diskon": "Diskon"
                         })
-                        # df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
+                # df_display["Tunai"] = df_display["Tunai"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
                 # df_display["Tunai"] = df_display["Initi"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
                 # df_display["Total"] = df_display["Total"].apply(lambda x: "tidak ada" if x == 0 else f"Rp {int(x):,}")
                 df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
@@ -1386,7 +1388,7 @@ def page_admin():
 
                 # Tampilkan tabel histori
                 st.dataframe(
-                    df_display[["id", "Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value",
+                    df_display[["id", "Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value", "Sisa saldo",
                                 "Total", "Tunai", "Diskon", "Cabang", "Menu"]],
                     use_container_width=True
                 )
@@ -1397,6 +1399,7 @@ def page_admin():
                     file_name="transactions.csv",
                     mime="text/csv"
                 )
+                
             def normalize_name(s: str) -> str:
                 # hapus None, lowercase, strip, collapse spaces, hilangkan accent
                 if not isinstance(s, str):
@@ -3093,6 +3096,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
