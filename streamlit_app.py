@@ -1324,7 +1324,7 @@ def page_admin():
         c1.metric("Total Pendapatan", f"Rp {total_uang:,}")
         c2.metric("Cash", f"Rp {total_cash:,}")
         c3.metric("Kupon", f"Rp {total_kupon:,}")
-        c4.metric("Diskon", f"Rp {total_diskon:,}")
+        c4.metric("Diskon", f"Rp {int(total_diskon):,}")
 
         # =============================
         # DETAIL KUPON (JIKA SEARCH)
@@ -3058,6 +3058,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
