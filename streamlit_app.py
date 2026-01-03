@@ -1276,10 +1276,10 @@ def page_admin():
         # =============================
         # FILTER INPUT
         # =============================
-        today = date.date.today()
+        today = date.today()
 
         default_start_date = today.replace(day=1)
-        min_date = dt.date(2020, 1, 1) 
+        min_date = date(2020, 1, 1) 
         max_date = today
         col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
         with col1:
@@ -3068,6 +3068,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
