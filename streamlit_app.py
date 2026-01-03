@@ -1276,11 +1276,21 @@ def page_admin():
         # =============================
         # FILTER INPUT
         # =============================
+        today = dt.date.today()
+
+        default_start_date = today.replace(day=1)
+        min_date = dt.date(2020, 1, 1) 
+        max_date = today
         col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
         with col1:
             search_code = st.text_input("Cari kode kupon", "").strip()
-        with col2:
-            start_date = st.date_input("Tanggal Mulai", min_date)
+       with col2:
+            start_date = st.date_input(
+                "Tanggal Mulai",
+                value=default_start_date,
+                min_value=min_date,
+                max_value=max_date
+            )
         with col3:
             end_date = st.date_input("Tanggal Akhir", max_date)
         with col4:
@@ -3058,6 +3068,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
