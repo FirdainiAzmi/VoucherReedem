@@ -1284,7 +1284,7 @@ def page_admin():
         col1, col2, col3, col4, col5 = st.columns([2, 1.3, 1.3, 1.3, 1.3])
         with col1:
             search_code = st.text_input("Cari kode kupon", "").strip()
-       with col2:
+        with col2:
             start_date = st.date_input(
                 "Tanggal Mulai",
                 value=default_start_date,
@@ -3068,6 +3068,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
