@@ -1032,7 +1032,7 @@ def show_login_page():
     with col2:
         # Header Visual
         st.markdown('<div class="cyber-title">PAWON SAPPITOE</div>', unsafe_allow_html=True)
-        st.markdown('<div class="cyber-subtitle">SYSTEM ACCESS PORTAL</div>', unsafe_allow_html=True)
+        st.markdown('<div class="cyber-subtitle">WEB APP SISTEM KASIR DAN ADMIN</div>', unsafe_allow_html=True)
 
         # Tab Navigation
         tab_kasir, tab_daftar, tab_seller, tab_admin = st.tabs(
@@ -3310,6 +3310,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
