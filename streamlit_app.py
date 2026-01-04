@@ -2931,14 +2931,14 @@ def page_kasir():
     # -----------------------------------------------------
     if st.session_state.active_page == "Pemesanan":
         st.header("Kasir / Transaksi")
-
+        
         # Init State (Logika Asli)
         if "redeem_step" not in st.session_state: st.session_state.redeem_step = 1
         if "entered_code" not in st.session_state: st.session_state.entered_code = ""
         if "order_items" not in st.session_state: st.session_state.order_items = {} 
         if "diskon" not in st.session_state: st.session_state.diskon = 0
         if "isvoucher" not in st.session_state: st.session_state.isvoucher = "no"
-
+       
         # --- STEP 1: PILIH MENU ---
         if st.session_state.redeem_step == 1:
             if "redeem_error" in st.session_state: del st.session_state["redeem_error"]
@@ -2965,65 +2965,90 @@ def page_kasir():
                 st.warning("Menu kosong.")
                 st.stop()
 
-            # 2. TABS KATEGORI (KEMBALI KE TABS SESUAI PERMINTAAN)
-            categories = sorted({item["kategori"] for item in menu_items})
-            tabs = st.tabs(categories)
 
-            # 3. RENDER GRID MENU (DESAIN KARTU BARU)
-            for i, tab_name in enumerate(categories):
-                with tabs[i]:
-                    # Filter
-                    if tab_name == "SEMUA":
-                        filtered_items = menu_items
-                    else:
-                        filtered_items = [m for m in menu_items if m["kategori"] == tab_name]
-                    
-                    if not filtered_items:
-                        st.info("Tidak ada menu di kategori ini.")
-                        continue
+            # --- 2. SEARCH BAR UI ---
+            col_search, _ = st.columns([2, 1]) 
+            with col_search:
+                search_query = st.text_input("🔍 Cari Menu", placeholder="Ketik nama menu...").strip().lower()
+            
+            st.write("") # Jarak dikit biar rapi
 
-                    # Grid Columns (3 Kolom biar kartu lega)
-                    cols = st.columns(3)
-                    for idx, item in enumerate(filtered_items):
-                        with cols[idx % 3]:
-                            # --- TAMPILAN CARD KEREN ---
-                            st.markdown(f"""
-                            <div class="menu-card">
-                                <div>
-                                    <div class="card-header">
-                                        <span class="badge-cat">{item['kategori']}</span>
-                                    </div>
-                                    <div class="menu-name">{item['nama']}</div>
-                                    <div class="menu-price">Rp {item['harga']:,}</div>
+            # --- 3. FUNGSI RENDER GRID (HELPER) ---
+            # Fungsi ini dibuat biar kita gak nulis kode HTML Card berulang-ulang
+            def render_grid(items_to_show, key_suffix):
+                if not items_to_show:
+                    st.info("Menu tidak ditemukan.")
+                    return
+                
+                cols = st.columns(3) 
+                for idx, item in enumerate(items_to_show):
+                    with cols[idx % 3]:
+                        # A. TAMPILAN CARD (HTML/CSS)
+                        st.markdown(f"""
+                        <div class="menu-card">
+                            <div>
+                                <div class="card-header">
+                                    <span class="badge-cat">{item['kategori']}</span>
                                 </div>
+                                <div class="menu-name">{item['nama']}</div>
+                                <div class="menu-price">Rp {item['harga']:,}</div>
                             </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # --- INPUT QTY ---
-                            id_menu = item["id_menu"]
-                            old_val = st.session_state.order_items.get(id_menu, 0)
-                            qty = st.number_input(
-                                f"qty_{id_menu}", 
-                                min_value=0, 
-                                value=int(old_val), 
-                                step=1, 
-                                label_visibility="collapsed",
-                                key=f"inp_{tab_name}_{id_menu}" # Unique key per tab
-                            )
-                            st.session_state.order_items[id_menu] = int(qty)
-                            st.write("") # Spacer
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # B. INPUT JUMLAH (QTY)
+                        id_menu = item["id_menu"]
+                        # Ambil nilai lama dari state biar gak kereset
+                        old_val = st.session_state.order_items.get(id_menu, 0)
+                        
+                        qty = st.number_input(
+                            f"qty_{id_menu}", 
+                            min_value=0, 
+                            value=int(old_val), 
+                            step=1, 
+                            label_visibility="collapsed",
+                            # Key unik: ditambahkan suffix (search/tab) biar gak error Duplicate Widget ID
+                            key=f"inp_{id_menu}_{key_suffix}" 
+                        )
+                        
+                        # Simpan perubahan ke session state utama
+                        st.session_state.order_items[id_menu] = int(qty)
+                        st.write("") # Spacer bawah card
 
-            # Total Floating
+            # --- 4. LOGIKA UTAMA: SEARCH vs TABS ---
+            if search_query:
+                # KONDISI A: User sedang mencari sesuatu
+                # Tampilkan semua hasil pencarian tanpa sekat Tab Kategori
+                filtered_search = [m for m in menu_items if search_query in m["nama"].lower()]
+                st.caption(f"Hasil pencarian: {len(filtered_search)} menu")
+                render_grid(filtered_search, "search_mode")
+            
+            else:
+                # KONDISI B: Tampilan Normal (Tabs Kategori)
+                # Ambil daftar kategori unik & urutkan
+                categories = sorted({item["kategori"] for item in menu_items}) 
+                tabs = st.tabs(categories)
+
+                for i, tab_name in enumerate(categories):
+                    with tabs[i]:
+                        # Filter menu yang kategorinya sesuai tab ini saja
+                        filtered_tab = [m for m in menu_items if m["kategori"] == tab_name]
+                        render_grid(filtered_tab, "tab_mode")
+
+            # --- 5. FOOTER (TOTAL HARGA & TOMBOL LANJUT) ---
+            # Hitung total belanja sementara
             price_map = {m["id_menu"]: m["harga"] for m in menu_items}
             total_sementara = sum(price_map.get(k,0)*v for k,v in st.session_state.order_items.items())
             
             if total_sementara > 0:
                 st.markdown("---")
                 st.success(f"💰 Total Sementara: **Rp {total_sementara:,}**")
+                
+                # Tombol Lanjut ke Step 2
                 if st.button("Lanjut Bayar ➡️", type="primary", use_container_width=True):
                     st.session_state.redeem_step = 2
                     st.rerun()
-
+           
         # --- STEP 2: KONFIRMASI (LOGIKA ASLI UTUH) ---
         elif st.session_state.redeem_step == 2:
             menu_db = get_menu_from_db(st.session_state.selected_branch)
@@ -3322,6 +3347,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
