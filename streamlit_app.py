@@ -2763,17 +2763,27 @@ def page_kasir():
         st.session_state.active_page = "Pemesanan"
 
     with st.sidebar:
-        st.title("NAVIGASI")
-        # Tombol Sidebar Kotak
-        if st.button("🛒 PEMESANAN", use_container_width=True):
-            st.session_state.active_page = "Pemesanan"
-        
-        if st.button("📜 RIWAYAT", use_container_width=True):
-            st.session_state.active_page = "Riwayat"
-        
-        # Info Cabang (Dari logika asli)
-        curr = st.session_state.get("cabang", "Pusat")
-        st.info(f"📍 Cabang: **{curr}**")
+            st.title("NAVIGASI")
+            if st.button("🛒 PEMESANAN", use_container_width=True):
+                st.session_state.active_page = "Pemesanan"
+            
+            if st.button("📜 RIWAYAT", use_container_width=True):
+                st.session_state.active_page = "Riwayat"
+
+            curr = st.session_state.get("cabang", "Pusat")
+            st.info(f"📍 Cabang: **{curr}**")
+    
+            # --- TAMBAHAN TOMBOL LOGOUT DISINI ---
+            st.markdown("---")
+            
+            # Tombol Logout
+            if st.button("🚪 KELUAR / LOGOUT", use_container_width=True):
+                # 1. Hapus semua session state (bersih-bersih)
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                
+                # 2. Rerun agar kembali ke halaman login (jika ada logic login di main.py)
+                st.rerun()
 
     # --- B. KONTEN HALAMAN ---
 
@@ -3173,6 +3183,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
