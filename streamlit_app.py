@@ -890,151 +890,280 @@ def kasir_logout():
 # ============================================================
 init_db()
 ensure_session_state()
+# ============================================================
+# 1. SETUP PAGE & STYLE (BLUE CYBER THEME)
+# ============================================================
+# Pastikan ini ada di baris paling awal file, kalau sudah ada di atas, hapus baris ini
+st.set_page_config(page_title="Pawon Sappitoe", layout="wide", page_icon="❄️") 
 
-st.set_page_config(page_title="Pawon Sappitoe", layout="wide")
-st.title("🎫 Pawon Sappitoe — Sistem Transaksi")
+def inject_blue_theme():
+    st.markdown("""
+    <style>
+        /* IMPORT FONT FUTURISTIK */
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;800&display=swap');
+        
+        html, body, [class*="css"] {
+            font-family: 'Outfit', sans-serif;
+        }
 
+        /* BACKGROUND DEEP BLUE ANIMATED */
+        .stApp {
+            background-color: #0D5EA6;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 242, 255, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(0, 100, 255, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        # /* HILANGKAN STANDARD ELEMENT */
+        # header, footer {visibility: hidden;}
+        
+        /* CONTAINER TENGAH (THE BLUE GLASS) */
+        div[data-testid="column"]:nth-of-type(2) {
+            background: rgba(10, 25, 47, 0.7); /* Biru Gelap Transparan */
+            border: 1px solid rgba(100, 255, 218, 0.1); /* Garis Cyan Tipis */
+            border-top: 1px solid rgba(100, 255, 218, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+        }
+
+        /* JUDUL GRADIENT */
+        .cyber-title {
+            font-size: 3rem;
+            font-weight: 800;
+            text-align: center;
+            background-color: #FFFFFF;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
+        }
+        
+        .cyber-subtitle {
+            text-align: center;
+            color: #FFFFFF;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+        }
+
+        /* CUSTOM TABS - BIRU */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 10px;
+            background-color: rgba(2, 12, 27, 0.5);
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 45px;
+            border-radius: 8px;
+            color: #8892b0;
+            font-weight: 600;
+            border: none;
+            background-color: transparent;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: rgba(0, 242, 255, 0.1) !important;
+            color: #00f2ff !important;
+            border: 1px solid rgba(0, 242, 255, 0.2) !important;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
+        }
+
+        /* INPUT FIELDS - GHOST STYLE */
+        .stTextInput > div > div > input {
+            background-color: rgba(255, 255, 255, 0.03) !important;
+            color: #e6f1ff !important;
+            border: 1px solid rgba(136, 146, 176, 0.2) !important;
+            border-radius: 10px !important;
+            padding: 12px !important;
+        }
+        .stTextInput > div > div > input:focus {
+            input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #0a192f inset !important;
+            -webkit-text-fill-color: white !important;
+        }
+        #     border-color: #00f2ff !important;
+        #     box-shadow: 0 0 15px rgba(0, 242, 255, 0.2) !important;
+        #     background-color: rgba(0, 242, 255, 0.02) !important;
+        # }
+
+        /* BUTTONS - NEON GRADIENT */
+        .stButton > button {
+            background: linear-gradient(90deg, #0072ff 0%, #00c6ff 100%) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 6px !important; /* Sedikit kotak biar techy */
+            font-weight: bold !important;
+            letter-spacing: 1px;
+            padding: 12px 0 !important;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 114, 255, 0.3);
+        }
+        .stButton > button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(0, 198, 255, 0.6);
+        }
+        
+        /* ALERT/SUCCESS BOX */
+        .stAlert {
+            background-color: rgba(0, 242, 255, 0.05);
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            color: #e6f1ff;
+        }
+
+    </style>
+    """, unsafe_allow_html=True)
 
 # ============================================================
-# LOGIN PAGE (PAGE PERTAMA)
+# LOGIN PAGE FUNCTION
 # ============================================================
 def show_login_page():
-    st.header("🔐 Masuk ke Sistem Pawon Sappitoe")
+    inject_blue_theme()
+    
+    # Layout 3 Kolom (Tengah Lebar)
+    col1, col2, col3 = st.columns([1, 1.8, 1])
+    
+    with col2:
+        # Header Visual
+        st.markdown('<div class="cyber-title">PAWON SAPPITOE</div>', unsafe_allow_html=True)
+        st.markdown('<div class="cyber-subtitle">SYSTEM ACCESS PORTAL</div>', unsafe_allow_html=True)
 
-    tab_kasir, tab_daftar, tab_seller, tab_admin = st.tabs(
-        ["Kasir", "Daftar Seller", "Seller", "Admin"]
-    )
+        # Tab Navigation
+        tab_kasir, tab_daftar, tab_seller, tab_admin = st.tabs(
+            ["💳 Kasir", "📝 Register", "👤 Seller", "🔐 Admin"]
+        )
 
-    # ADMIN LOGIN
-    with tab_admin:
-        pwd = st.text_input("Password Admin", type="password")
-        if st.button("Login Admin"):
-            if pwd == ADMIN_PASSWORD:
-                st.session_state.admin_logged_in = True
-                st.success("Login berhasil!")
-                st.rerun()
-            else:
-                st.error("Password salah")
+        # ================= KASIR LOGIN =================
+        with tab_kasir:
+            st.write("")
+            st.markdown("<h5 style='color: #FFFFFF; margin-bottom: 10px;'>🏪 Akses Outlet</h5>", unsafe_allow_html=True)
+            st.markdown("<h5 style='color: #FFFFFF; margin-bottom: 0px;'>Password Outlet</h5>", unsafe_allow_html=True)
 
-    # SELLER LOGIN
-    with tab_seller:
-        seller_id = st.text_input("ID Seller")
-        if st.button("Login Seller"):
-            if not seller_id.strip():
-                st.error("ID tidak boleh kosong")
-            else:
-                with engine.connect() as conn:
-                    row = conn.execute(
-                        text("SELECT id_seller, nama_seller, status FROM seller WHERE id_seller = :id"),
-                        {"id": seller_id.upper()}
-                    ).fetchone()
+            pwd = st.text_input("Password Outlet", type="password", key="kasir_pass", label_visibility="collapsed")
 
-                if not row:
-                    st.error("ID seller tidak ditemukan")
+            if st.button("LOGIN KASIR", use_container_width=True):
+                if pwd in KASIR_PASSWORDS:
+                    # Animasi Loading
+                    with st.spinner('Authenticating...'):
+                        time.sleep(0.8) 
+                    
+                    st.session_state.kasir_logged_in = True
+                    st.session_state.page = "kasir"
+                    st.session_state.cabang = KASIR_PASSWORDS[pwd]
+                    
+                    st.success(f"ACCESS GRANTED: Cabang {st.session_state.cabang.upper()}")
+                    st.balloons()
+                    time.sleep(1)
+                    st.rerun()
                 else:
-                    sid, sname, sstatus = row
-                    if sstatus != "diterima":
-                        st.error("Akun belum disetujui admin")
-                    else:
-                        st.session_state.seller_logged_in = True
-                        st.session_state.id_seller = sid
-                        st.session_state.nama_seller = sname
-                        st.success(f"Selamat datang, {sname}!")
-                        st.rerun()
+                    st.error("❌ Access Denied: Password Salah")
 
-    # KASIR LOGIN
-    with tab_kasir:
-        pwd = st.text_input("Password Kasir", type="password")
-
-        if st.button("Login Kasir"):
-            if pwd in KASIR_PASSWORDS:
-                st.session_state.kasir_logged_in = True
-                st.session_state.page = "kasir"
-                st.session_state.cabang = KASIR_PASSWORDS[pwd]  # ✅ SET CABANG OTOMATIS
+        # ================= DAFTAR SELLER =================
+        with tab_daftar:
+            st.write("")
+            st.markdown("<h5 style='color: #FFFFFF; margin-bottom: 10px;'>✨ Join Mitra Baru</h5>", unsafe_allow_html=True)
+            with st.form("form_daftar_seller"):
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.markdown("<h5 style='color: #FFFFFF; font-size: 15px; margin-bottom: 0px;'>Nama Lengkap</h5>", unsafe_allow_html=True)
+                    nama = st.text_input("Nama Lengkap", label_visibility="collapsed")
+                with col_b:
+                    st.markdown("<h5 style='color: #FFFFFF; font-size: 15px; margin-bottom: 0px;'>No. Handphone</h5>", unsafe_allow_html=True)
+                    nohp = st.text_input("No. Handphone", label_visibility="collapsed")
+                st.markdown("<h5 style='color: #FFFFFF; font-size: 15px; margin-bottom: 0px;'>Buat ID Unik (3 Digit - Contoh: A01)</h5>", unsafe_allow_html=True)
+                id_seller = st.text_input("Buat ID Unik (3 Digit - Contoh: A01)", max_chars=3, label_visibility="collapsed").upper().strip()
                 
-                st.success(f"Login kasir berhasil — Cabang: {st.session_state.cabang.upper()}")
-                st.rerun()
-            else:
-                st.error("Password kasir salah")
-
-
-    # DAFTAR SELLER
-    with tab_daftar:
-        st.header("📋 Daftar Sebagai Seller")
-        st.write("Silakan isi data berikut untuk mendaftar sebagai seller.")
-        
-        with st.form("form_daftar_seller"):
-            nama = st.text_input("Nama lengkap")
-            nohp = st.text_input("No HP")
-            id_seller = st.text_input("Buat ID unik Anda (3 digit)").upper().strip()
-            st.caption("ID terdiri dari 3 karakter huruf/angka, contoh: A9X, 4TB, B01")
-        
-            submit = st.form_submit_button("Daftar")
-        
-        if submit:
-            # === Validasi basic ===
-            if not id_seller:
-                st.error("ID Seller tidak boleh kosong.")
-                st.stop()
-
-            if len(nohp) < 11 or len(nohp) > 13:
-                st.error("Nomor HP seharusnya 11-13 digit.")
-                st.stop()
+                st.write("")
+                submit = st.form_submit_button("DAFTAR SEKARANG", use_container_width=True)
             
-            if len(id_seller) != 3:
-                st.error("ID harus 3 karakter!")
-                st.stop()
-        
-            if not nama.strip():
-                st.error("Nama tidak boleh kosong.")
-                st.stop()
-        
-            if not nohp.strip():
-                st.error("No HP tidak boleh kosong.")
-                st.stop()
-        
-            try:
-                # === Cek ID apakah sudah ada ===
-                with engine.connect() as conn:
-                    exists = conn.execute(
-                        text("SELECT 1 FROM seller WHERE id_seller = :id"),
-                        {"id": id_seller}
-                    ).fetchone()
-        
-                if exists:
-                    st.error("❌ ID sudah digunakan seller lain! Silakan buat ID baru.")
+            if submit:
+                # Validasi
+                if not id_seller or len(id_seller) != 3:
+                    st.error("ID harus tepat 3 karakter.")
                     st.stop()
-        
-                # === Simpan ke database ===
-                with engine.begin() as conn:
-                    conn.execute(
-                        text("""
-                            INSERT INTO seller (nama_seller, no_hp, status, id_seller)
-                            VALUES (:nama, :no_hp, :status, :id_seller)
-                        """),
-                        {
-                            "nama": nama.strip(),
-                            "no_hp": nohp.strip(),
-                            "status": "belum diterima",
-                            "id_seller": id_seller,
-                        }
-                    )
-        
-                st.success(f"🎉 Pendaftaran berhasil! Admin akan segera memverifikasi akun Anda.")
-                st.warning(
-                    f"⚠️ **PENTING!** Simpan ID ini baik-baik untuk login nanti:\n\n"
-                    f"🔐 **ID Seller Anda: {id_seller}**"
-                )
-                daftar_notification(
-                    nama = nama,
-                    nohp = nohp
-                )
-        
-            except Exception as e:
-                st.error("❌ Terjadi error saat menyimpan data")
-                st.code(str(e))
+                if not nama or not nohp:
+                    st.error("Data harus lengkap.")
+                    st.stop()
 
+                try:
+                    with engine.connect() as conn:
+                        exists = conn.execute(
+                            text("SELECT 1 FROM seller WHERE id_seller = :id"),
+                            {"id": id_seller}
+                        ).fetchone()
+                    
+                    if exists:
+                        st.warning("⚠️ ID sudah terpakai. Gunakan ID lain.")
+                    else:
+                        with engine.begin() as conn:
+                            conn.execute(
+                                text("INSERT INTO seller (nama_seller, no_hp, status, id_seller) VALUES (:nama, :no_hp, :status, :id_seller)"),
+                                {
+                                    "nama": nama.strip(),
+                                    "no_hp": nohp.strip(),
+                                    "status": "belum diterima",
+                                    "id_seller": id_seller,
+                                }
+                            )
+                        st.success("✅ Registrasi Terkirim!")
+                        st.info(f"ID Login Anda: **{id_seller}** (Simpan ID ini!)")
+                        
+                except Exception as e:
+                    st.error(f"System Error: {e}")
 
+        # ================= SELLER LOGIN =================
+        with tab_seller:
+            st.write("")
+            st.markdown("<h5 style='color: #FFFFFF; margin-bottom: 10px;'>🚀 Login Mitra</h5>", unsafe_allow_html=True)
+            st.markdown("<h5 style='color: #FFFFFF; font-size: 15px; margin-bottom: 0px;'>ID Seller (3 Digit)</h5>", unsafe_allow_html=True)
+            seller_id = st.text_input("ID Seller (3 Digit)",  label_visibility="collapsed", key="seller_login_id")
+            
+            if st.button("LOGIN SELLER", use_container_width=True):
+                if not seller_id.strip():
+                    st.warning("Masukkan ID.")
+                else:
+                    try:
+                        with engine.connect() as conn:
+                            row = conn.execute(
+                                text("SELECT id_seller, nama_seller, status FROM seller WHERE id_seller = :id"),
+                                {"id": seller_id.upper()}
+                            ).fetchone()
+
+                        if not row:
+                            st.error("❌ ID Tidak Ditemukan.")
+                        else:
+                            sid, sname, sstatus = row
+                            if sstatus != "diterima":
+                                st.warning("⏳ Akun dalam peninjauan admin.")
+                            else:
+                                st.session_state.seller_logged_in = True
+                                st.session_state.id_seller = sid
+                                st.session_state.nama_seller = sname
+                                st.success(f"Welcome back, {sname}!")
+                                st.rerun()
+                    except Exception as e:
+                        st.error(f"Connection Error: {e}")
+
+        # ================= ADMIN LOGIN =================
+        with tab_admin:
+            st.write("")
+            st.markdown("<h5 style='color: #FFFFFF; margin-bottom: 10px;'>🛡️ Admin</h5>", unsafe_allow_html=True)
+            st.markdown("<h5 style='color: #FFFFFF; font-size: 15px; margin-bottom: 0px;'>Password Admin</h5>", unsafe_allow_html=True)
+            pwd = st.text_input("Password Admin", label_visibility="collapsed", type="password", key="admin_pass")
+            
+            if st.button("LOGIN", use_container_width=True):
+                if pwd == ADMIN_PASSWORD:
+                    st.session_state.admin_logged_in = True
+                    st.success("System Unlocked.")
+                    st.rerun()
+                else:
+                    st.error("⛔ Unauthorized Access.")
 # ============================================================
 # ROUTING — WAJIB LOGIN
 # ============================================================
@@ -1045,8 +1174,6 @@ if not (
 ):
     show_login_page()
     st.stop()
-
-
 
 # ---------------------------
 # Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
@@ -3183,6 +3310,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
