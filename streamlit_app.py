@@ -2807,9 +2807,59 @@ def create_receipt_image(receipt):
 def apply_custom_css():
     st.markdown("""
     <style>
-        .stApp { background-color: #f8fafc; }
+        /* =============================================
+           1. FORCE LIGHT MODE (MENGATASI HP DARK MODE) 
+           ============================================= */
+        
+        /* Paksa Background Utama Putih Kebiruan */
+        .stApp { 
+            background-color: #f8fafc !important; 
+        }
+        
+        /* Paksa Semua Teks Menjadi Gelap (Biar terbaca di background putih) */
+        h1, h2, h3, h4, h5, h6, p, span, div, li {
+            color: #1e293b !important; /* Slate-800 */
+        }
 
-        /* --- SIDEBAR BUTTONS (Kotak) --- */
+        /* KHUSUS INPUT (Search Bar, Number Input, Password) */
+        /* Paksa background kotak input jadi PUTIH, bukan abu-abu gelap */
+        div[data-baseweb="input"], div[data-baseweb="base-input"] {
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+        }
+        
+        /* Paksa Teks di dalam input jadi HITAM */
+        input[type="text"], input[type="number"], input[type="password"] {
+            color: #333333 !important;
+            -webkit-text-fill-color: #333333 !important; /* Fix untuk Chrome Mobile */
+            background-color: transparent !important;
+        }
+
+        /* Tombol +/- pada Number Input */
+        div[data-testid="stNumberInput"] button {
+            background-color: #f1f5f9 !important;
+            color: #333333 !important;
+            border-color: #cbd5e1 !important;
+        }
+
+        /* Label di atas input (misal: "Kode Kupon") */
+        label[data-testid="stWidgetLabel"] p {
+            color: #475569 !important; /* Abu tua */
+            font-weight: 600 !important;
+        }
+
+        /* Sidebar Background Putih */
+        section[data-testid="stSidebar"] {
+            background-color: #ffffff !important;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        /* =============================================
+           2. KOMPONEN DESAIN (TOMBOL, CARD, TAB)
+           ============================================= */
+
+        /* --- SIDEBAR BUTTONS --- */
         div[data-testid="stSidebar"] button {
             width: 100%;
             border-radius: 6px;
@@ -2818,79 +2868,71 @@ def apply_custom_css():
             margin-bottom: 8px;
             font-weight: 600;
             transition: all 0.3s ease;
+            background-color: white !important; /* Paksa putih */
+            color: #475569 !important;
         }
         div[data-testid="stSidebar"] button:hover {
-            border-color: #3b82f6;
-            color: #3b82f6;
-            background-color: #eff6ff;
+            border-color: #3b82f6 !important;
+            color: #3b82f6 !important;
+            background-color: #eff6ff !important;
         }
 
-        /* --- MENU CARD DESIGN (Shadow & Hover) --- */
+        /* --- MENU CARD DESIGN --- */
         .menu-card {
-            background-color: white;
+            background-color: white !important;
             border-radius: 12px;
             padding: 15px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border: 1px solid #e2e8f0;
             height: 100%;
-            transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
-        
         .menu-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
             border-color: #3b82f6;
         }
 
-        .card-header {
-            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;
-        }
+        /* Override Text Color Khusus Card (Biar tidak tertimpa rule global) */
         .badge-cat {
-            background-color: #dbeafe; color: #1e40af; font-size: 0.7rem;
-            padding: 2px 8px; border-radius: 99px; font-weight: bold; text-transform: uppercase;
+            background-color: #dbeafe !important; 
+            color: #1e40af !important; 
+            font-size: 0.7rem; padding: 2px 8px; border-radius: 99px; font-weight: bold;
         }
         .menu-name {
-            font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 5px; line-height: 1.2;
+            font-size: 1.1rem; font-weight: 700; color: #1e293b !important; margin-bottom: 5px;
         }
         .menu-price {
-            font-size: 1rem; color: #059669; font-weight: 800; margin-bottom: 10px;
+            font-size: 1rem; color: #059669 !important; font-weight: 800;
         }
-        
-        /* Modifikasi Tabs agar lebih bersih */
+
+        /* --- TABS --- */
         .stTabs [data-baseweb="tab-list"] { gap: 10px; background-color: transparent; }
         .stTabs [data-baseweb="tab"] {
-            background-color: white; border-radius: 8px 8px 0 0; border: 1px solid #e2e8f0; padding: 10px 20px;
+            background-color: white !important; 
+            border-radius: 8px 8px 0 0; 
+            border: 1px solid #e2e8f0; 
+            padding: 10px 20px;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #3b82f6 !important; color: white !important; border: none;
+            background-color: #3b82f6 !important; 
+            border: none;
         }
-        /* STAT CARD (HALAMAN RIWAYAT) */
-        .stat-card {
-            background-color: white; border-radius: 10px; padding: 20px;
-            border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            text-align: center; height: 100%;
+        /* Teks Tab Aktif harus Putih */
+        .stTabs [aria-selected="true"] p {
+            color: white !important; 
         }
-        .stat-card:hover {
-            border-color: #3b82f6; transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); transition: all 0.3s ease;
-        }
-        .stat-title { font-size: 0.9rem; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
-        .stat-value { font-size: 1.5rem; font-weight: 800; color: #1e293b; }
-        .stat-value.green { color: #059669; }
-        .stat-value.blue { color: #2563eb; }
-        .stat-value.purple { color: #7c3aed; }
-        
-        /* SECTION TITLE */
-        .section-title {
-            font-size: 1.2rem; font-weight: 700; color: #334155; margin-top: 20px; margin-bottom: 10px; border-left: 5px solid #3b82f6; padding-left: 10px;
+
+        /* --- BUTTON PRIMARY (Warna Merah/Biru Tombol) --- */
+        /* Pastikan tulisan di tombol primary tetap putih */
+        button[kind="primary"] p, button[kind="primary"] {
+            color: #ffffff !important;
         }
 
     </style>
     """, unsafe_allow_html=True)
-
 # ============================================
 # 3. FUNGSI UTAMA (GABUNGAN LOGIKA ASLI + UI BARU)
 # ============================================
@@ -3347,6 +3389,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
