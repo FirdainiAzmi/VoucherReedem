@@ -2808,45 +2808,15 @@ def apply_custom_css():
     st.markdown("""
     <style>
         /* =============================================
-           1. FORCE LIGHT MODE (MENGATASI HP DARK MODE) 
+           1. RESET GLOBAL (AGAR BACKGROUND TETAP PUTIH)
            ============================================= */
-        
-        /* Paksa Background Utama Putih Kebiruan */
         .stApp { 
             background-color: #f8fafc !important; 
         }
         
-        /* Paksa Semua Teks Menjadi Gelap (Biar terbaca di background putih) */
+        /* Semua teks paragraf/judul jadi gelap (biar terbaca) */
         h1, h2, h3, h4, h5, h6, p, span, div, li {
-            color: #1e293b !important; /* Slate-800 */
-        }
-
-        /* KHUSUS INPUT (Search Bar, Number Input, Password) */
-        /* Paksa background kotak input jadi PUTIH, bukan abu-abu gelap */
-        div[data-baseweb="input"], div[data-baseweb="base-input"] {
-            background-color: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-        }
-        
-        /* Paksa Teks di dalam input jadi HITAM */
-        input[type="text"], input[type="number"], input[type="password"] {
-            color: #333333 !important;
-            -webkit-text-fill-color: #333333 !important; /* Fix untuk Chrome Mobile */
-            background-color: transparent !important;
-        }
-
-        /* Tombol +/- pada Number Input */
-        div[data-testid="stNumberInput"] button {
-            background-color: #f1f5f9 !important;
-            color: #333333 !important;
-            border-color: #cbd5e1 !important;
-        }
-
-        /* Label di atas input (misal: "Kode Kupon") */
-        label[data-testid="stWidgetLabel"] p {
-            color: #475569 !important; /* Abu tua */
-            font-weight: 600 !important;
+            color: #1e293b !important; 
         }
 
         /* Sidebar Background Putih */
@@ -2856,79 +2826,93 @@ def apply_custom_css():
         }
 
         /* =============================================
-           2. KOMPONEN DESAIN (TOMBOL, CARD, TAB)
+           2. INPUT FIELD (Cari Menu, Qty, Kode Kupon)
            ============================================= */
+        /* Paksa background kotak input jadi PUTIH BERSIH */
+        div[data-baseweb="input"], div[data-baseweb="base-input"] {
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+        }
+        
+        /* Paksa Teks yang diketik jadi HITAM */
+        input[type="text"], input[type="number"], input[type="password"] {
+            color: #333333 !important;
+            -webkit-text-fill-color: #333333 !important; 
+            background-color: transparent !important;
+        }
+        
+        /* Tombol +/- di input angka */
+        div[data-testid="stNumberInput"] button {
+             background-color: #f1f5f9 !important;
+             color: #333333 !important;
+        }
 
-        /* --- SIDEBAR BUTTONS --- */
+        /* =============================================
+           3. TOMBOL (BUTTONS) - GAYA BIRU & PUTIH
+           ============================================= */
+        
+        /* A. TOMBOL SIDEBAR (Pemesanan, Riwayat, Logout) */
         div[data-testid="stSidebar"] button {
-            width: 100%;
-            border-radius: 6px;
-            height: 50px;
-            border: 1px solid #cbd5e1;
-            margin-bottom: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            background-color: white !important; /* Paksa putih */
-            color: #475569 !important;
+            background-color: #3b82f6 !important; /* Biru Cerah */
+            color: #ffffff !important;            /* Tulisan Putih */
+            border: none !important;
+            border-radius: 8px !important;
+            height: 45px !important;
+            font-weight: 600 !important;
+            margin-bottom: 8px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
         }
         div[data-testid="stSidebar"] button:hover {
-            border-color: #3b82f6 !important;
-            color: #3b82f6 !important;
-            background-color: #eff6ff !important;
+            background-color: #2563eb !important; /* Biru lebih gelap saat hover */
+            color: white !important;
+            transform: translateY(-2px);
         }
 
-        /* --- MENU CARD DESIGN --- */
+        /* B. TOMBOL BIASA (Kembali, Cek Kupon, Lanjut) */
+        /* Kita targetkan tombol secondary (bukan primary yg merah) */
+        div[data-testid="stButton"] button {
+            background-color: #3b82f6 !important; /* Biru */
+            color: #ffffff !important;            /* Putih */
+            border: none !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+        }
+        div[data-testid="stButton"] button:hover {
+            background-color: #2563eb !important;
+            color: white !important;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.4);
+        }
+
+        /* C. TOMBOL 'PROSES' atau 'BAYAR' (Primary) */
+        /* Biarkan tetap merah atau oranye jika mau, atau ubah jadi Biru Tua */
+        button[kind="primary"] {
+            background-color: #dc2626 !important; /* Merah (Untuk tombol Aksi Penting) */
+            color: white !important;
+            border: none !important;
+        }
+
+        /* =============================================
+           4. KARTU MENU & LAINNYA
+           ============================================= */
         .menu-card {
             background-color: white !important;
             border-radius: 12px;
             padding: 15px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border: 1px solid #e2e8f0;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
         }
-        .menu-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
-            border-color: #3b82f6;
-        }
-
-        /* Override Text Color Khusus Card (Biar tidak tertimpa rule global) */
-        .badge-cat {
-            background-color: #dbeafe !important; 
-            color: #1e40af !important; 
-            font-size: 0.7rem; padding: 2px 8px; border-radius: 99px; font-weight: bold;
-        }
-        .menu-name {
-            font-size: 1.1rem; font-weight: 700; color: #1e293b !important; margin-bottom: 5px;
-        }
-        .menu-price {
-            font-size: 1rem; color: #059669 !important; font-weight: 800;
-        }
-
-        /* --- TABS --- */
-        .stTabs [data-baseweb="tab-list"] { gap: 10px; background-color: transparent; }
+        
+        /* Tab Styles */
         .stTabs [data-baseweb="tab"] {
-            background-color: white !important; 
-            border-radius: 8px 8px 0 0; 
-            border: 1px solid #e2e8f0; 
-            padding: 10px 20px;
+            background-color: white !important;
+            border: 1px solid #e2e8f0;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #3b82f6 !important; 
-            border: none;
+            background-color: #3b82f6 !important;
         }
-        /* Teks Tab Aktif harus Putih */
         .stTabs [aria-selected="true"] p {
-            color: white !important; 
-        }
-
-        /* --- BUTTON PRIMARY (Warna Merah/Biru Tombol) --- */
-        /* Pastikan tulisan di tombol primary tetap putih */
-        button[kind="primary"] p, button[kind="primary"] {
-            color: #ffffff !important;
+            color: white !important;
         }
 
     </style>
@@ -3389,6 +3373,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
