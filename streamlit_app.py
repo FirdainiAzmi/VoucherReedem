@@ -2895,13 +2895,15 @@ def apply_custom_css():
         /* =============================================
            4. CARD MENU (TIDAK DIUBAH - SESUAI PERMINTAAN)
            ============================================= */
+        /* --- MENU CARD DESIGN (Shadow & Hover) --- */
         .menu-card {
-            background-color: white !important;
+            background-color: white;
             border-radius: 12px;
             padding: 15px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             border: 1px solid #e2e8f0;
             height: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -2913,40 +2915,27 @@ def apply_custom_css():
             border-color: #3b82f6;
         }
 
-        /* Badge Kategori */
-        .badge-cat {
-            background-color: #dbeafe !important;
-            color: #1e40af !important; /* Biru Tua */
-            font-size: 0.7rem; padding: 2px 8px; border-radius: 99px; font-weight: bold;
+        .card-header {
+            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;
         }
-        
-        /* Nama Menu & Harga (Warna spesifik agar tidak berubah jadi putih) */
+        .badge-cat {
+            background-color: #dbeafe; color: #1e40af; font-size: 0.7rem;
+            padding: 2px 8px; border-radius: 99px; font-weight: bold; text-transform: uppercase;
+        }
         .menu-name {
-            font-size: 1.1rem; font-weight: 700; 
-            color: #1e293b !important; /* Hitam Gelap */
-            margin-bottom: 5px;
+            font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 5px; line-height: 1.2;
         }
         .menu-price {
-            font-size: 1rem; 
-            color: #059669 !important; /* Hijau */
-            font-weight: 800;
+            font-size: 1rem; color: #059669; font-weight: 800; margin-bottom: 10px;
         }
-
-        /* TABS (Kategori) */
+        
+        /* Modifikasi Tabs agar lebih bersih */
+        .stTabs [data-baseweb="tab-list"] { gap: 10px; background-color: transparent; }
         .stTabs [data-baseweb="tab"] {
-            background-color: white !important;
-            border: 1px solid #e2e8f0;
+            background-color: white; border-radius: 8px 8px 0 0; border: 1px solid #e2e8f0; padding: 10px 20px;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #3b82f6 !important;
-        }
-        /* Teks Tab Aktif Putih */
-        .stTabs [aria-selected="true"] p {
-            color: white !important;
-        }
-        /* Teks Tab Tidak Aktif Hitam */
-        .stTabs [aria-selected="false"] p {
-            color: #334155 !important;
+            background-color: #3b82f6 !important; color: white !important; border: none;
         }
 
     </style>
@@ -3407,6 +3396,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
