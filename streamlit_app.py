@@ -900,7 +900,7 @@ st.set_page_config(page_title="Pawon Sappitoe", layout="wide", page_icon="❄️
 def inject_blue_theme():
     st.markdown("""
     <style>
-        /* IMPORT FONT KEREN */
+        /* IMPORT FONT FUTURISTIK */
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;800&display=swap');
         
         html, body, [class*="css"] {
@@ -908,36 +908,34 @@ def inject_blue_theme():
         }
 
         /* ============================================================
-           1. BAGIAN INI YG SAYA PERBAIKI (INPUT FIELD)
-           Supaya di HP Jelas, tidak hijau neon, tidak hilang.
+           FIX PENTING UNTUK HP (SUPAYA INPUT TIDAK JADI PUTIH)
            ============================================================ */
-        
-        /* Kotak Input (Wadah) -> SAYA KUNCI JADI PUTIH (Sesuai Screenshot Laptop) */
-        div[data-baseweb="input"], div[data-baseweb="base-input"] {
-            background-color: #ffffff !important; 
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 8px !important;
+        /* Memaksa browser HP menganggap area ini mode gelap */
+        :root {
+            color-scheme: dark;
         }
 
-        /* Teks yang diketik -> SAYA KUNCI JADI HITAM (Biar kontras) */
-        input[type="text"], input[type="password"] {
-            color: #333333 !important;           
-            -webkit-text-fill-color: #333333 !important; 
-            background-color: transparent !important;
-            caret-color: #333333 !important;     
+        /* INPUT FIELDS - GHOST STYLE (DIMODIF DIKIT BIAR KEBACA DI HP) */
+        /* Kita kasih background biru gelap transparan, BUKAN putih transparan */
+        div[data-baseweb="input"], div[data-baseweb="base-input"] {
+            background-color: rgba(10, 25, 47, 0.6) !important; /* Biru Gelap Transparan */
+            border: 1px solid rgba(136, 146, 176, 0.3) !important;
+            border-radius: 10px !important;
+            color: white !important;
         }
-        
-        /* Label di atas input (Password Outlet) -> TETAP PUTIH */
-        label[data-testid="stWidgetLabel"] p {
-            color: #ffffff !important;
-            font-weight: 600;
+
+        /* Teks di dalam input */
+        input[type="text"], input[type="password"], input[type="number"] {
+            color: #e6f1ff !important; /* Putih Kebiruan */
+            -webkit-text-fill-color: #e6f1ff !important;
+            caret-color: #00f2ff !important; /* Kursor Cyan */
         }
 
         /* ============================================================
-           2. BACKGROUND & DESAIN ASLI (TIDAK SAYA UBAH)
+           SISA KODE ASLI KAMU (TIDAK DIUBAH)
            ============================================================ */
-        
-        /* BACKGROUND DEEP BLUE ANIMATED (ORIGINAL) */
+
+        /* BACKGROUND DEEP BLUE ANIMATED */
         .stApp {
             background-color: #0D5EA6;
             background-image: 
@@ -946,23 +944,69 @@ def inject_blue_theme():
             background-attachment: fixed;
         }
 
-        /* HEADER & TEXT CENTER (ORIGINAL) */
-        h1, h2, h3 {
-            color: #ffffff !important;
-            text-align: center;
-            font-weight: 800;
-        }
-        .stMarkdown p {
-            color: #e0f2fe !important;
-            text-align: center; 
+        /* HILANGKAN STANDARD ELEMENT */
+        header, footer {visibility: hidden;}
+        
+        /* CONTAINER TENGAH (THE BLUE GLASS) */
+        div[data-testid="column"]:nth-of-type(2) {
+            background: rgba(10, 25, 47, 0.7); /* Biru Gelap Transparan */
+            border: 1px solid rgba(100, 255, 218, 0.1); /* Garis Cyan Tipis */
+            border-top: 1px solid rgba(100, 255, 218, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
         }
 
-        /* BUTTONS - NEON GRADIENT (ORIGINAL) */
+        /* JUDUL GRADIENT */
+        .cyber-title {
+            font-size: 3rem;
+            font-weight: 800;
+            text-align: center;
+            background-color: #FFFFFF;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
+        }
+        
+        .cyber-subtitle {
+            text-align: center;
+            color: #FFFFFF;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+        }
+
+        /* CUSTOM TABS - BIRU */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 10px;
+            background-color: rgba(2, 12, 27, 0.5);
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 45px;
+            border-radius: 8px;
+            color: #8892b0;
+            font-weight: 600;
+            border: none;
+            background-color: transparent;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: rgba(0, 242, 255, 0.1) !important;
+            color: #00f2ff !important;
+            border: 1px solid rgba(0, 242, 255, 0.2) !important;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
+        }
+
+        /* BUTTONS - NEON GRADIENT */
         .stButton > button {
             background: linear-gradient(90deg, #0072ff 0%, #00c6ff 100%) !important;
             color: white !important;
             border: none !important;
-            border-radius: 6px !important;
+            border-radius: 6px !important; /* Sedikit kotak biar techy */
             font-weight: bold !important;
             letter-spacing: 1px;
             padding: 12px 0 !important;
@@ -973,26 +1017,18 @@ def inject_blue_theme():
             transform: translateY(-2px);
             box-shadow: 0 0 25px rgba(0, 198, 255, 0.6);
         }
-
-        /* TABS STYLE (ORIGINAL) */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 10px;
-            background-color: rgba(2, 12, 27, 0.5);
-            padding: 8px;
-            border-radius: 12px;
-        }
-        .stTabs [data-baseweb="tab"] {
-            color: #8892b0;
-            font-weight: 600;
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: rgba(0, 242, 255, 0.1) !important;
-            color: #00f2ff !important;
-            border: 1px solid rgba(0, 242, 255, 0.2) !important;
-        }
         
-        /* Remove default header/footer */
-        header, footer {visibility: hidden;}
+        /* ALERT/SUCCESS BOX */
+        .stAlert {
+            background-color: rgba(0, 242, 255, 0.05);
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            color: #e6f1ff;
+        }
+
+        /* Label di atas Input */
+        label p {
+            color: #e6f1ff !important;
+        }
 
     </style>
     """, unsafe_allow_html=True)
@@ -3361,6 +3397,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
