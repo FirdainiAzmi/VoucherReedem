@@ -2702,11 +2702,11 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 from sqlalchemy import text 
 
-import streamlit as st
-import pandas as pd
-from datetime import datetime, date
-import io
-from PIL import Image, ImageDraw, ImageFont
+st.set_page_config(
+    page_title="Pawon Sappitoe",
+    layout="wide",                    # Opsional: biar tampilan melebar
+    initial_sidebar_state="expanded"  # <--- INI KUNCINYA (Supaya sidebar langsung terbuka)
+)
 
 # ============================================
 # 1. HELPER: GENERATOR STRUK (LOGIKA ASLI)
@@ -3412,6 +3412,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
