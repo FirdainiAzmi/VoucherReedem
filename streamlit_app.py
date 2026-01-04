@@ -915,8 +915,8 @@ def inject_blue_theme():
             background-attachment: fixed;
         }
 
-        # /* HILANGKAN STANDARD ELEMENT */
-        # header, footer {visibility: hidden;}
+        /* HILANGKAN STANDARD ELEMENT */
+        header, footer {visibility: hidden;}
         
         /* CONTAINER TENGAH (THE BLUE GLASS) */
         div[data-testid="column"]:nth-of-type(2) {
@@ -3310,6 +3310,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
