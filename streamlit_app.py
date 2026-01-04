@@ -3214,18 +3214,18 @@ def page_kasir():
             
             with col_btn:
                 st.download_button("💾 Simpan Gambar", img_bytes, "struk.png", "image/png")
-                 if st.button("🏠 Transaksi Baru"):
-                    # 1. DAFTAR DATA PENTING (DATA LOGIN) - JANGAN DIHAPUS
-                    # Pastikan nama variabel loginmu ada di sini semua
-                    data_aman = ['logged_in', 'username', 'role', 'outlet_name', 'page']
-    
-                    # 2. HAPUS SEMUA SISA TRANSAKSI (Keranjang, Struk, Inputan lama)
-                    for key in list(st.session_state.keys()):
-                        if key not in data_aman:
-                            del st.session_state[key]
-    
-                    # 3. MULAI DARI AWAL
-                    st.session_state.redeem_step = 1
+                if st.button("🏠 Transaksi Baru"):
+                    # 1. Kosongkan Keranjang (Reset jadi list kosong)
+                    st.session_state['cart'] = []
+                    
+                    # 2. Kembalikan ke Langkah 1 (Pilih Menu)
+                    st.session_state['redeem_step'] = 1
+                    
+                    # 3. Hapus data struk lama (Cek dulu biar gak error)
+                    if 'final_receipt' in st.session_state:
+                        del st.session_state['final_receipt']
+                    
+                    # 4. Refresh Halaman
                     st.rerun()
 
     # -----------------------------------------------------
@@ -3412,6 +3412,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
