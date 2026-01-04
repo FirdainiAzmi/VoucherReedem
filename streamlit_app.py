@@ -906,7 +906,18 @@ def inject_blue_theme():
         html, body, [class*="css"] {
             font-family: 'Outfit', sans-serif;
         }
-
+        /* Memaksa teks di dalam kolom input (username/password) jadi hitam */
+        input[type="text"], input[type="password"] {
+            color: #333333 !important; /* Warna teks abu gelap/hitam */
+            -webkit-text-fill-color: #333333 !important; /* Fix untuk browser Chrome/Safari */
+            caret-color: #333333 !important; /* Warna kursor ketik */
+        }
+        
+        /* Opsional: Memastikan background input tetap putih bersih */
+        div[data-baseweb="input"] {
+            background-color: white !important;
+            border: 1px solid #cbd5e1;
+        }
         /* BACKGROUND DEEP BLUE ANIMATED */
         .stApp {
             background-color: #0D5EA6;
@@ -3311,6 +3322,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
