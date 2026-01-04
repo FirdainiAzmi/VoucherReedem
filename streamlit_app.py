@@ -900,7 +900,7 @@ st.set_page_config(page_title="Pawon Sappitoe", layout="wide", page_icon="❄️
 def inject_blue_theme():
     st.markdown("""
     <style>
-        /* IMPORT FONT FUTURISTIK */
+        /* IMPORT FONT FUTURISTIK (TETAP SAMA) */
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;800&display=swap');
         
         html, body, [class*="css"] {
@@ -908,34 +908,32 @@ def inject_blue_theme():
         }
 
         /* ============================================================
-           FIX PENTING UNTUK HP (SUPAYA INPUT TIDAK JADI PUTIH)
+           FIX PENTING UNTUK HP (SUPAYA INPUT TIDAK JADI PUTIH/SILAU)
            ============================================================ */
-        /* Memaksa browser HP menganggap area ini mode gelap */
         :root {
-            color-scheme: dark;
+            color-scheme: dark; /* Memaksa mode gelap untuk elemen browser */
         }
 
-        /* INPUT FIELDS - GHOST STYLE (DIMODIF DIKIT BIAR KEBACA DI HP) */
-        /* Kita kasih background biru gelap transparan, BUKAN putih transparan */
+        /* Input Field: Biru Gelap Transparan (Bukan Putih) */
         div[data-baseweb="input"], div[data-baseweb="base-input"] {
-            background-color: rgba(10, 25, 47, 0.6) !important; /* Biru Gelap Transparan */
+            background-color: rgba(10, 25, 47, 0.6) !important; 
             border: 1px solid rgba(136, 146, 176, 0.3) !important;
             border-radius: 10px !important;
             color: white !important;
         }
 
-        /* Teks di dalam input */
+        /* Teks di dalam input: Putih Kebiruan (Jelas terbaca) */
         input[type="text"], input[type="password"], input[type="number"] {
-            color: #e6f1ff !important; /* Putih Kebiruan */
+            color: #e6f1ff !important; 
             -webkit-text-fill-color: #e6f1ff !important;
-            caret-color: #00f2ff !important; /* Kursor Cyan */
+            caret-color: #00f2ff !important; 
         }
 
         /* ============================================================
-           SISA KODE ASLI KAMU (TIDAK DIUBAH)
+           DESAIN UTAMA (BACKGROUND & CONTAINER)
            ============================================================ */
 
-        /* BACKGROUND DEEP BLUE ANIMATED */
+        /* Background Biru Laut (Tetap) */
         .stApp {
             background-color: #0D5EA6;
             background-image: 
@@ -944,13 +942,13 @@ def inject_blue_theme():
             background-attachment: fixed;
         }
 
-        /* HILANGKAN STANDARD ELEMENT */
+        /* Hilangkan Header/Footer bawaan */
         header, footer {visibility: hidden;}
         
-        /* CONTAINER TENGAH (THE BLUE GLASS) */
+        /* Container Tengah (Kaca Biru) */
         div[data-testid="column"]:nth-of-type(2) {
-            background: rgba(10, 25, 47, 0.7); /* Biru Gelap Transparan */
-            border: 1px solid rgba(100, 255, 218, 0.1); /* Garis Cyan Tipis */
+            background: rgba(10, 25, 47, 0.7);
+            border: 1px solid rgba(100, 255, 218, 0.1);
             border-top: 1px solid rgba(100, 255, 218, 0.3);
             border-radius: 20px;
             padding: 40px;
@@ -958,27 +956,35 @@ def inject_blue_theme():
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
         }
 
-        /* JUDUL GRADIENT */
+        /* ============================================================
+           JUDUL: PAWON SAPPITOE (UBAH JADI PUTIH SOLID)
+           ============================================================ */
         .cyber-title {
-            font-size: 3rem;
-            font-weight: 800;
+            font-size: 3rem;        /* Ukuran Tetap */
+            font-weight: 800;       /* Tebal Tetap */
             text-align: center;
-            background-color: #FFFFFF;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            
+            /* GANTI DI SINI: Jadi Putih Solid */
+            color: #FFFFFF !important; 
+            
+            /* Hapus efek gradient text yg bikin masalah, sisakan glow saja */
+            text-shadow: 0 0 20px rgba(0, 242, 255, 0.5); /* Efek bersinar biru muda */
             margin-bottom: 5px;
-            text-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
         }
         
         .cyber-subtitle {
             text-align: center;
-            color: #FFFFFF;
+            color: #FFFFFF !important; /* Putih Solid */
             font-size: 1rem;
             letter-spacing: 1px;
             margin-bottom: 30px;
         }
 
-        /* CUSTOM TABS - BIRU */
+        /* ============================================================
+           ELEMENT LAIN (TABS, TOMBOL, ALERT) - TETAP SAMA
+           ============================================================ */
+
+        /* Tabs */
         .stTabs [data-baseweb="tab-list"] {
             gap: 10px;
             background-color: rgba(2, 12, 27, 0.5);
@@ -1001,12 +1007,12 @@ def inject_blue_theme():
             box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
         }
 
-        /* BUTTONS - NEON GRADIENT */
+        /* Tombol Login */
         .stButton > button {
             background: linear-gradient(90deg, #0072ff 0%, #00c6ff 100%) !important;
             color: white !important;
             border: none !important;
-            border-radius: 6px !important; /* Sedikit kotak biar techy */
+            border-radius: 6px !important;
             font-weight: bold !important;
             letter-spacing: 1px;
             padding: 12px 0 !important;
@@ -1018,14 +1024,14 @@ def inject_blue_theme():
             box-shadow: 0 0 25px rgba(0, 198, 255, 0.6);
         }
         
-        /* ALERT/SUCCESS BOX */
+        /* Alert Box */
         .stAlert {
             background-color: rgba(0, 242, 255, 0.05);
             border: 1px solid rgba(0, 242, 255, 0.2);
             color: #e6f1ff;
         }
 
-        /* Label di atas Input */
+        /* Label Input (Password Outlet dll) */
         label p {
             color: #e6f1ff !important;
         }
@@ -3397,6 +3403,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
