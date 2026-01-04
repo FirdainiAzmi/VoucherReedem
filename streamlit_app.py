@@ -900,90 +900,99 @@ st.set_page_config(page_title="Pawon Sappitoe", layout="wide", page_icon="❄️
 def inject_blue_theme():
     st.markdown("""
     <style>
-        /* =========================================
-           1. BACKGROUND UTAMA (BIRU GRADASI)
-           ========================================= */
-        .stApp {
-            background-color: #005cbf; /* Warna dasar Biru */
-            background-image: linear-gradient(180deg, #0284c7 0%, #003366 100%);
-            background-attachment: fixed;
+        /* IMPORT FONT KEREN */
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;800&display=swap');
+        
+        html, body, [class*="css"] {
+            font-family: 'Outfit', sans-serif;
         }
 
-        /* Sembunyikan Header/Footer bawaan Streamlit biar bersih */
-        header, footer { visibility: hidden; }
-
-        /* =========================================
-           2. INPUT FIELD (SANGAT PENTING UTK HP)
-           ========================================= */
+        /* ============================================================
+           1. BAGIAN INI YG SAYA PERBAIKI (INPUT FIELD)
+           Supaya di HP Jelas, tidak hijau neon, tidak hilang.
+           ============================================================ */
         
-        /* A. KOTAK INPUT (Wadah) -> WAJIB PUTIH */
+        /* Kotak Input (Wadah) -> SAYA KUNCI JADI PUTIH (Sesuai Screenshot Laptop) */
         div[data-baseweb="input"], div[data-baseweb="base-input"] {
-            background-color: #ffffff !important; /* Putih Bersih */
-            border: 1px solid #e2e8f0 !important;
+            background-color: #ffffff !important; 
+            border: 1px solid #cbd5e1 !important;
             border-radius: 8px !important;
         }
 
-        /* B. TEKS YANG DIKETIK -> WAJIB HITAM */
-        /* Ini memperbaiki masalah tulisan hilang/neon di HP */
+        /* Teks yang diketik -> SAYA KUNCI JADI HITAM (Biar kontras) */
         input[type="text"], input[type="password"] {
-            color: #333333 !important;           /* Tulisan Hitam Gelap */
-            -webkit-text-fill-color: #333333 !important; /* Fix untuk Chrome/Safari Mobile */
-            caret-color: #333333 !important;     /* Kursor kedip-kedip hitam */
+            color: #333333 !important;           
+            -webkit-text-fill-color: #333333 !important; 
             background-color: transparent !important;
+            caret-color: #333333 !important;     
         }
-
-        /* C. LABEL DI ATAS INPUT (Misal: "Password Outlet") */
-        /* Harus Putih supaya terbaca di atas background biru */
+        
+        /* Label di atas input (Password Outlet) -> TETAP PUTIH */
         label[data-testid="stWidgetLabel"] p {
             color: #ffffff !important;
             font-weight: 600;
-            font-size: 1rem;
         }
 
-        /* =========================================
-           3. JUDUL & TEKS HALAMAN
-           ========================================= */
+        /* ============================================================
+           2. BACKGROUND & DESAIN ASLI (TIDAK SAYA UBAH)
+           ============================================================ */
+        
+        /* BACKGROUND DEEP BLUE ANIMATED (ORIGINAL) */
+        .stApp {
+            background-color: #0D5EA6;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 242, 255, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(0, 100, 255, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        /* HEADER & TEXT CENTER (ORIGINAL) */
         h1, h2, h3 {
             color: #ffffff !important;
             text-align: center;
             font-weight: 800;
         }
-        
-        /* Subjudul / Deskripsi */
         .stMarkdown p {
-            color: #e0f2fe !important; /* Putih agak biru */
-            text-align: center;
+            color: #e0f2fe !important;
+            text-align: center; 
         }
 
-        /* =========================================
-           4. TOMBOL LOGIN (LOGIN KASIR)
-           ========================================= */
+        /* BUTTONS - NEON GRADIENT (ORIGINAL) */
         .stButton > button {
-            background-color: #00bfff !important; /* Biru Langit Cerah (Cyan) */
-            color: #ffffff !important;            /* Tulisan Putih */
+            background: linear-gradient(90deg, #0072ff 0%, #00c6ff 100%) !important;
+            color: white !important;
             border: none !important;
-            border-radius: 8px !important;
-            font-weight: 700 !important;
-            width: 100%;                          /* Lebar penuh */
+            border-radius: 6px !important;
+            font-weight: bold !important;
+            letter-spacing: 1px;
             padding: 12px 0 !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 114, 255, 0.3);
+        }
+        .stButton > button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(0, 198, 255, 0.6);
+        }
+
+        /* TABS STYLE (ORIGINAL) */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 10px;
+            background-color: rgba(2, 12, 27, 0.5);
+            padding: 8px;
+            border-radius: 12px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            color: #8892b0;
+            font-weight: 600;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: rgba(0, 242, 255, 0.1) !important;
+            color: #00f2ff !important;
+            border: 1px solid rgba(0, 242, 255, 0.2) !important;
         }
         
-        .stButton > button:hover {
-            background-color: #0ea5e9 !important; /* Biru agak gelap saat hover */
-            transform: translateY(-2px);
-            box-shadow: 0 6px 10px rgba(0,0,0,0.3);
-        }
-
-        /* =========================================
-           5. ALERT / PESAN ERROR
-           ========================================= */
-        .stAlert {
-            background-color: rgba(255, 255, 255, 0.9);
-            color: #333333;
-            border-radius: 8px;
-        }
+        /* Remove default header/footer */
+        header, footer {visibility: hidden;}
 
     </style>
     """, unsafe_allow_html=True)
@@ -3352,6 +3361,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
