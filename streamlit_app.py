@@ -2328,11 +2328,26 @@ def page_admin():
                     keterangan = st.text_area("Keterangan", value=selected["keterangan"])
                     status_options = ["aktif", "inaktif"]
                     default_status = (selected.get("status") or "").strip().lower()
+                    
+                    default_index = (
+                        status_options.index(default_status)
+                        if default_status in status_options
+                        else 0
+                    )
+                    
                     status = st.selectbox(
                         "Status",
                         status_options,
-                        index=status_options.index(default_status)
+                        index=default_index
                     )
+
+                    # status_options = ["aktif", "inaktif"]
+                    # default_status = (selected.get("status") or "").strip().lower()
+                    # status = st.selectbox(
+                    #     "Status",
+                    #     status_options,
+                    #     index=status_options.index(default_status)
+                    # )
     
                     harga_sedati = st.text_input("Harga Sedati", value=str(selected["harga_sedati"] or ""))
                     harga_twsari = st.text_input("Harga Tawangsari", value=str(selected["harga_twsari"] or ""))
@@ -3412,6 +3427,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
