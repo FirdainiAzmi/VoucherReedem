@@ -2291,10 +2291,12 @@ def page_admin():
             nama_item = st.text_input("Nama Item")
             keterangan = st.text_area("Keterangan")
             satuan = st.selectbox(
-                                    "Satuan",
-                                    ["pcs", "kg"],
-                                    index=0
-                                )
+                "Satuan",
+                ["pcs", "kg"],
+                index=0,
+                key="satuan_tambah"
+            )
+
 
 
             harga_sedati = st.text_input("Harga Sedati (boleh kosong)")
@@ -2358,8 +2360,10 @@ def page_admin():
                         "Satuan",
                         satuan_options,
                         index=satuan_options.index(default_satuan)
-                        if default_satuan in satuan_options else 0
-)
+                            if default_satuan in satuan_options else 0,
+                        key=f"satuan_edit_{id_menu}"
+                    )
+
 
                     status_options = ["aktif", "inaktif"]
                     default_status = (selected.get("status") or "").strip().lower()
@@ -3487,6 +3491,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
