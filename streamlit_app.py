@@ -3214,17 +3214,26 @@ def page_kasir():
                 st.markdown(f"### Bayar Cash: Rp {final_cash:,}")
 
                 if st.button("✅ PROSES", type="primary"):
-                    items_str = ", ".join([f"{i['nama']} x{i['qty']}" for i in cart_list])
+                    items_payload = [
+                            {
+                                "nama": i["nama"],
+                                "qty": float(i["qty"]),
+                                "harga": int(i["harga_satuan"])
+                            }
+                            for i in cart_list
+                        ]
+
                     final_code = st.session_state.voucher_row[0] if is_vou else None
                     
                     # Call DB Logic
                     ok, msg, newbal = atomic_redeem(
-                        final_code, 
-                        (subtotal - disc), # Real trx amount
-                        st.session_state.selected_branch, 
-                        items_str, 
+                        final_code,
+                        float(subtotal - disc),
+                        st.session_state.selected_branch,
+                        items_payload,
                         disc
                     )
+
                     
                     if ok:
                         transaksi_notification(
@@ -3466,8 +3475,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
 
 
 
