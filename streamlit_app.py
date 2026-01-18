@@ -336,8 +336,8 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                     if " x" not in i:
                         continue
                     nama_item, qty = i.split(" x")
-                    qty = int(qty)
-
+                    qty = int(qty["jumlah"])
+            
                     # Nama cabang -> nama kolom
                     mapping = {
                         "tawangsari": "terjual_twsari",
@@ -425,7 +425,8 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                     if " x" not in i:
                         continue
                     nama_item, qty = i.split(" x")
-                    qty = float(qty)
+                    qty = float(qty["jumlah"])
+
                     mapping = {
                         "tawangsari": "terjual_twsari",
                         "sedati": "terjual_sedati",
@@ -3465,6 +3466,21 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
