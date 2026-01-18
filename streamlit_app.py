@@ -788,14 +788,17 @@ def list_transactions(limit=5000):
     """
     return run_query(query)
 
-
-
 def df_to_csv_bytes(df: pd.DataFrame):
     buf = BytesIO()
     df.to_csv(buf, index=False)
     buf.seek(0)
     return buf.read()
 
+def serialize_items(items):
+    return ", ".join(
+        f"{i['nama']} x{i['qty']}"
+        for i in items
+    )
 
 # ---------------------------
 # Seller activation helper
@@ -3240,13 +3243,14 @@ def page_kasir():
                         ]
 
                     final_code = st.session_state.voucher_row[0] if is_vou else None
+                    items_str = serialize_items(order_items)
                     
                     # Call DB Logic
                     ok, msg, newbal = atomic_redeem(
                         final_code,
                         float(subtotal - disc),
                         st.session_state.selected_branch,
-                        items_payload,
+                        items_str,
                         disc
                     )
 
@@ -3491,6 +3495,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
