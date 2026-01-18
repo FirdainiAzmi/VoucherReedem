@@ -2576,7 +2576,7 @@ def page_seller_activation():
                 # Update data voucher
                 conn.execute(
                     text("""
-                        UPDATE vouchers
+                        UPDATE public.vouchers
                         SET nama = :nama,
                             no_hp = :no_hp,
                             status = 'proses'
@@ -3155,7 +3155,7 @@ def page_kasir():
         # --- STEP 2: KONFIRMASI (LOGIKA ASLI UTUH) ---
         elif st.session_state.redeem_step == 2:
             menu_db = get_menu_from_db(st.session_state.selected_branch)
-            price_map = {m["id_menu"]: int(m["harga"]) for m in menu_db}
+            price_map = {m["id_menu"]: float(m["harga"]) for m in menu_db}
             name_map = {m["id_menu"]: m["nama"] for m in menu_db}
             
             cart_list = []
@@ -3226,8 +3226,12 @@ def page_kasir():
                     )
                     
                     if ok:
-                        transaksi_notification(date.today(), st.session_state.selected_branch, (subtotal - disc))
-                        
+                        transaksi_notification(
+                            date.today(),
+                            st.session_state.selected_branch,
+                            (subtotal - disc)
+                        )
+
                         v_details = None
                         vou_amt = 0
                         if is_vou:
@@ -3248,6 +3252,8 @@ def page_kasir():
                         }
                         st.session_state.redeem_step = 3
                         st.rerun()
+                    else:
+                        st.error(msg)
 
         # --- STEP 3: STRUK (LOGIKA ASLI) ---
         elif st.session_state.redeem_step == 3:
@@ -3263,7 +3269,7 @@ def page_kasir():
                 st.download_button("💾 Simpan Gambar", img_bytes, "struk.png", "image/png")
                 if st.button("🏠 Transaksi Baru"):
                     # 1. Kosongkan Keranjang (Reset jadi list kosong)
-                    st.session_state['cart'] = []
+                    st.session_state['order_items'] = {}
                     
                     # 2. Kembalikan ke Langkah 1 (Pilih Menu)
                     st.session_state['redeem_step'] = 1
@@ -3422,10 +3428,10 @@ def page_kasir():
                 for item in menu_items:
                     raw = item.strip()
                     if not raw: continue
-                    match = re.match(r"(.+?)\s*[xX]\s*(\d+)\s*$", raw)
+                    match = re.match(r"(.+?)\s*[xX]\s*(\d+(?:\.\d+)?)\s*$", raw)
                     if match:
                         nama_menu = match.group(1).strip()
-                        jumlah = int(match.group(2))
+                        jumlah = float(match.group(2))
                     else:
                         parts = raw.rsplit(" ", 1)
                         if len(parts) == 2 and parts[1].isdigit():
@@ -3459,22 +3465,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
