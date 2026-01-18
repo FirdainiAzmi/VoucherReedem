@@ -47,6 +47,7 @@ def init_db():
                     tanggal_aktivasi DATE,
                     tunai INTEGER,
                     jenis_kupon TEXT NOT NULL,
+                    satuan TEXT,
                     FOREIGN KEY(jenis_kupon) REFERENCES jenis_db(jenis_kupon)
                 )
             """))
@@ -424,7 +425,7 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                     if " x" not in i:
                         continue
                     nama_item, qty = i.split(" x")
-                    qty = int(qty)
+                    qty = float(qty)
                     mapping = {
                         "tawangsari": "terjual_twsari",
                         "sedati": "terjual_sedati",
@@ -511,15 +512,15 @@ def list_all_kategori():
     return res
 
 def add_menu_item(kategori, nama_item, keterangan,
-                  harga_sedati, harga_twsari, harga_kesambi, harga_tulangan):
+                  harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, satuan):
 
     query = """
         INSERT INTO menu_items (
             kategori, nama_item, keterangan,
-            harga_sedati, harga_twsari, harga_kesambi, harga_tulangan
+            harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, satuan
         ) VALUES (
             :kategori, :nama_item, :keterangan,
-            :harga_sedati, :harga_twsari, :harga_kesambi, :harga_tulangan
+            :harga_sedati, :harga_twsari, :harga_kesambi, :harga_tulangan, :satuan
         )
     """
 
@@ -530,7 +531,8 @@ def add_menu_item(kategori, nama_item, keterangan,
         "harga_sedati": to_int_or_none(harga_sedati),
         "harga_twsari": to_int_or_none(harga_twsari),
         "harga_kesambi": to_int_or_none(harga_kesambi),
-        "harga_tulangan": to_int_or_none(harga_tulangan)
+        "harga_tulangan": to_int_or_none(harga_tulangan),
+        "satuan" : to_upper_or_none(satuan)
     }
 
     with engine.begin() as conn:
@@ -538,7 +540,7 @@ def add_menu_item(kategori, nama_item, keterangan,
 
 
 def update_menu_item(id_menu, kategori, nama_item, keterangan,
-                     harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status):
+                     harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status, satuan):
 
     query = """
         UPDATE menu_items SET
@@ -549,7 +551,8 @@ def update_menu_item(id_menu, kategori, nama_item, keterangan,
             harga_twsari = :harga_twsari,
             harga_kesambi = :harga_kesambi,
             harga_tulangan = :harga_tulangan,
-            status = :status
+            status = :status,
+            satuan = :satuan
         WHERE id_menu = :id_menu
     """
 
@@ -562,7 +565,8 @@ def update_menu_item(id_menu, kategori, nama_item, keterangan,
         "harga_twsari": to_int_or_none(harga_twsari),
         "harga_kesambi": to_int_or_none(harga_kesambi),
         "harga_tulangan": to_int_or_none(harga_tulangan),
-        "status": status
+        "status": status,
+        "satuan" : to_upper_or_none(satuan)
     }
 
     with engine.begin() as conn:
@@ -628,7 +632,8 @@ def list_all_menu():
                     "harga_twsari": r[4],
                     "harga_kesambi" : r[8],
                     "harga_tulangan" : r[10],
-                    "status" : r[12]
+                    "status" : r[12],
+                    "satuan" : r[13]
                 })
 
             return menu_list
@@ -651,6 +656,7 @@ def get_menu_from_db(branch):
                     m.harga_kesambi,
                     m.harga_tulangan,
                     m.status,
+                    m.satuan,
                     k.status_kategori
                 FROM menu_items AS m
                 LEFT JOIN kategori_menu AS k 
@@ -688,7 +694,8 @@ def get_menu_from_db(branch):
                 "kategori": str(row["kategori"]) if row["kategori"] is not None else "Lainnya",
                 "keterangan": "" if row["keterangan"] is None else str(row["keterangan"]),
                 "status": str(row["status"]),
-                "status_kategori": row["status_kategori"]
+                "status_kategori": row["status_kategori"],
+                "satuan": row["satuan"]
             })
 
         return menu_list
@@ -708,6 +715,7 @@ def get_full_menu():
             harga_kesambi,
             harga_tulangan,
             status,
+            satuan,
             COALESCE(terjual_twsari, 0) AS terjual_twsari,
             COALESCE(terjual_sedati, 0) AS terjual_sedati,
             COALESCE(terjual_kesambi, 0) AS terjual_kesambi,
@@ -891,10 +899,7 @@ def kasir_logout():
 # ============================================================
 init_db()
 ensure_session_state()
-# ============================================================
-# 1. SETUP PAGE & STYLE (BLUE CYBER THEME)
-# ============================================================
-# Pastikan ini ada di baris paling awal file, kalau sudah ada di atas, hapus baris ini
+
 st.set_page_config(page_title="Pawon Sappitoe", layout="wide", page_icon="❄️") 
 
 def inject_blue_theme():
@@ -2272,6 +2277,12 @@ def page_admin():
 
             nama_item = st.text_input("Nama Item")
             keterangan = st.text_area("Keterangan")
+            satuan = st.selectbox(
+                                    "Satuan",
+                                    ["pcs", "kg"],
+                                    index=0
+                                )
+
 
             harga_sedati = st.text_input("Harga Sedati (boleh kosong)")
             harga_twsari = st.text_input("Harga Tawangsari (boleh kosong)")
@@ -2287,6 +2298,7 @@ def page_admin():
                         kategori=kategori_value,
                         nama_item=nama_item,
                         keterangan=keterangan,
+                        satuan=satuan,
                         harga_sedati=harga_sedati,
                         harga_twsari=harga_twsari,
                         harga_kesambi=harga_kesambi,
@@ -2326,6 +2338,16 @@ def page_admin():
                     kategori = st.text_input("Kategori", value=selected["kategori"])
                     nama_item = st.text_input("Nama Item", value=selected["nama_item"])
                     keterangan = st.text_area("Keterangan", value=selected["keterangan"])
+                    satuan_options = ["pcs", "kg"]
+                    default_satuan = (selected.get("satuan") or "pcs").lower()
+
+                    satuan = st.selectbox(
+                        "Satuan",
+                        satuan_options,
+                        index=satuan_options.index(default_satuan)
+                        if default_satuan in satuan_options else 0
+)
+
                     status_options = ["aktif", "inaktif"]
                     default_status = (selected.get("status") or "").strip().lower()
                     
@@ -2360,7 +2382,7 @@ def page_admin():
                         if st.button("Simpan Perubahan"):
                             update_menu_item(
                                 id_menu, kategori, nama_item, keterangan,
-                                harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status
+                                harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status, satuan
                             )
                             st.success("Menu berhasil diperbarui!")
                             st.rerun()
@@ -3028,7 +3050,8 @@ def page_kasir():
                             "id_menu": int(it["id_menu"]),
                             "nama": str(it["nama"]),
                             "kategori": str(it.get("kategori", "Lainnya")),
-                            "harga": int(it["harga"])
+                            "harga": (it["harga"]),
+                            "satuan": it["satuan"]
                         })
                     except: continue
             
@@ -3069,21 +3092,30 @@ def page_kasir():
                         
                         # B. INPUT JUMLAH (QTY)
                         id_menu = item["id_menu"]
-                        # Ambil nilai lama dari state biar gak kereset
                         old_val = st.session_state.order_items.get(id_menu, 0)
-                        
-                        qty = st.number_input(
-                            f"qty_{id_menu}", 
-                            min_value=0, 
-                            value=int(old_val), 
-                            step=1, 
-                            label_visibility="collapsed",
-                            # Key unik: ditambahkan suffix (search/tab) biar gak error Duplicate Widget ID
-                            key=f"inp_{id_menu}_{key_suffix}" 
-                        )
-                        
-                        # Simpan perubahan ke session state utama
-                        st.session_state.order_items[id_menu] = int(qty)
+
+                        if item["satuan"] == "kg":
+                            qty = st.number_input(
+                                f"qty_{id_menu}",
+                                min_value=0.0,
+                                value=float(old_val),
+                                step=0.1,
+                                format="%.2f",
+                                label_visibility="collapsed",
+                                key=f"inp_{id_menu}_{key_suffix}"
+                            )
+                        else:
+                            qty = st.number_input(
+                                f"qty_{id_menu}",
+                                min_value=0,
+                                value=int(old_val),
+                                step=1,
+                                label_visibility="collapsed",
+                                key=f"inp_{id_menu}_{key_suffix}"
+                            )
+
+                        # ⬅️ SIMPAN TANPA int()
+                        st.session_state.order_items[id_menu] = qty
                         st.write("") # Spacer bawah card
 
             # --- 4. LOGIKA UTAMA: SEARCH vs TABS ---
@@ -3427,21 +3459,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
