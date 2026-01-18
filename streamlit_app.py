@@ -234,14 +234,14 @@ def insert_jenis_if_not_exists(jenis, awal, akhir):
     """Insert data jenis ke jenis_db hanya jika belum ada."""
     with engine.begin() as conn:
         exists = conn.execute(
-            text("SELECT 1 FROM jenis_db WHERE jenis_kupon = :j"),
+            text("SELECT 1 FROM public.jenis_db WHERE jenis_kupon = :j"),
             {"j": jenis}
         ).fetchone()
 
         if not exists:
             conn.execute(
                 text("""
-                    INSERT INTO jenis_db (jenis_kupon, awal_berlaku, akhir_berlaku)
+                    INSERT INTO public.jenis_db (jenis_kupon, awal_berlaku, akhir_berlaku)
                     VALUES (:j, :a, :b)
                 """),
                 {"j": jenis, "a": awal, "b": akhir}
@@ -253,7 +253,7 @@ def insert_voucher(code, initial_value, jenis, awal, akhir):
     with engine.begin() as conn:
         conn.execute(
             text("""
-                INSERT INTO vouchers
+                INSERT INTO public.vouchers
                 (code, initial_value, balance, jenis_kupon, tanggal_penjualan, tanggal_aktivasi, status)
                 VALUES (:c, :iv, :bal, :jenis, :awal, :akhir, 'inactive')
             """),
@@ -286,8 +286,8 @@ def find_voucher(code):
                     v.tanggal_aktivasi,
                     j.awal_berlaku,
                     j.akhir_berlaku
-                FROM vouchers v
-                JOIN jenis_db j 
+                FROM public.vouchers v
+                JOIN public.jenis_db j 
                 ON v.jenis_kupon = j.jenis_kupon
                 WHERE v.code = :code
                 LIMIT 1
@@ -301,7 +301,7 @@ def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                UPDATE vouchers
+                UPDATE public.vouchers
                 SET nama = :nama,
                     no_hp = :no_hp,
                     status = :status,
@@ -318,7 +318,7 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
         if code is None:
             with engine.begin() as conn:
                 conn.execute(text("""
-                    INSERT INTO transactions 
+                    INSERT INTO public.transactions 
                     (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
                     VALUES (NULL, :tunai, :now, :branch, :items, :tunai, 'no', :diskon)
                 """), {
@@ -351,7 +351,7 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                         return False, f"Cabang '{branch}' tidak dikenali.", None
 
                     conn.execute(text(f"""
-                        UPDATE menu_items
+                        UPDATE public.menu_items
                         SET {col} = COALESCE({col}, 0) + :qty
                         WHERE nama_item = :item
                     """), {"qty": qty, "item": nama_item})
@@ -390,7 +390,7 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                 # Update saldo, status, dan tunai (tambahkan shortage)
                 conn.execute(
                     text("""
-                        UPDATE vouchers 
+                        UPDATE public.vouchers 
                         SET balance = :newbal,
                             status = :newstatus,
                             tunai = :newtunai
@@ -406,7 +406,7 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
     
                 # Simpan transaksi ke database
                 conn.execute(text("""
-                    INSERT INTO transactions 
+                    INSERT INTO public.transactions 
                     (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
                     VALUES (:c, :amt, :now, :branch, :items, :tunai, 'yes', :diskon)
                 """), {
@@ -438,7 +438,7 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                         return False, f"Cabang '{branch}' tidak dikenali.", None
                     
                     conn.execute(text(f"""
-                        UPDATE menu_items
+                        UPDATE public.menu_items
                         SET {col} = COALESCE({col}, 0) + :qty
                         WHERE nama_item = :item
                     """), {"qty": qty, "item": nama_item})
@@ -450,7 +450,7 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
         return False, f"DB error saat redeem: {e}", None
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
-    q = "SELECT v.code, v.initial_value, v.balance, v.nama, v.no_hp, v.status, v.seller, v.tanggal_aktivasi, j.awal_berlaku, j.akhir_berlaku FROM vouchers v JOIN jenis_db j ON v.jenis_kupon = j.jenis_kupon"
+    q = "SELECT v.code, v.initial_value, v.balance, v.nama, v.no_hp, v.status, v.seller, v.tanggal_aktivasi, j.awal_berlaku, j.akhir_berlaku FROM public.vouchers v JOIN public.jenis_db j ON v.jenis_kupon = j.jenis_kupon"
     clauses = []
     params = {}
     if filter_status == "aktif":
@@ -495,7 +495,7 @@ def to_upper_or_none(value: str):
     
 def list_all_menu():
     query = """
-        SELECT * FROM menu_items
+        SELECT * FROM public.menu_items
         ORDER BY kategori, nama_item
     """
     with engine.begin() as conn:
@@ -504,7 +504,7 @@ def list_all_menu():
 
 def list_all_kategori():
     query = """
-        SELECT * FROM kategori_menu
+        SELECT * FROM public.kategori_menu
         ORDER BY id_kategori
     """
     with engine.begin() as conn:
@@ -515,7 +515,7 @@ def add_menu_item(kategori, nama_item, keterangan,
                   harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, satuan):
 
     query = """
-        INSERT INTO menu_items (
+        INSERT INTO public.menu_items (
             kategori, nama_item, keterangan,
             harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, satuan
         ) VALUES (
@@ -543,7 +543,7 @@ def update_menu_item(id_menu, kategori, nama_item, keterangan,
                      harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status, satuan):
 
     query = """
-        UPDATE menu_items SET
+        UPDATE public.menu_items SET
             kategori = :kategori,
             nama_item = :nama_item,
             keterangan = :keterangan,
@@ -574,7 +574,7 @@ def update_menu_item(id_menu, kategori, nama_item, keterangan,
 
 def update_kategori_menu(id_kategori, status_kategori):
     query = """
-        UPDATE kategori_menu 
+        UPDATE public.kategori_menu 
         SET status_kategori = :status_kategori
         WHERE id_kategori = :id_kategori
     """
@@ -591,7 +591,7 @@ def delete_menu_item(id_menu):
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                DELETE FROM menu_items WHERE id_menu = :id_menu
+                DELETE FROM public.menu_items WHERE id_menu = :id_menu
             """), {"id_menu": id_menu})
         return True
     except Exception as e:
@@ -601,7 +601,7 @@ def delete_menu_item(id_menu):
 def get_kategori_list():
     query = text("""
         SELECT DISTINCT kategori
-        FROM menu_items
+        FROM public.menu_items
         WHERE kategori IS NOT NULL AND kategori <> ''
         ORDER BY kategori
     """)
@@ -615,7 +615,7 @@ def list_all_menu():
         with engine.connect() as conn:
             result = conn.execute(text("""
                 SELECT *
-                FROM menu_items
+                FROM public.menu_items
                 ORDER BY kategori, nama_item
             """))
 
@@ -658,8 +658,8 @@ def get_menu_from_db(branch):
                     m.status,
                     m.satuan,
                     k.status_kategori
-                FROM menu_items AS m
-                LEFT JOIN kategori_menu AS k 
+                FROM public.menu_items AS m
+                LEFT JOIN public.kategori_menu AS k 
                     ON m.kategori = k.nama_kategori
             """), conn)
 
@@ -720,7 +720,7 @@ def get_full_menu():
             COALESCE(terjual_sedati, 0) AS terjual_sedati,
             COALESCE(terjual_kesambi, 0) AS terjual_kesambi,
             COALESCE(terjual_tulangan, 0) AS terjual_tulangan
-        FROM menu_items
+        FROM public.menu_items
         ORDER BY id_menu;
     """
 
@@ -768,8 +768,8 @@ def list_transactions(limit=5000):
             t.diskon,
             v.initial_value,
             v.balance
-        FROM transactions t
-        LEFT JOIN vouchers v ON t.code = v.code
+        FROM public.transactions t
+        LEFT JOIN public.vouchers v ON t.code = v.code
         ORDER BY t.tanggal_transaksi DESC
         LIMIT {limit};
     """
@@ -801,7 +801,7 @@ def seller_activate_voucher(code, seller_input, buyer_name, buyer_phone):
         with engine.begin() as conn:
             row = conn.execute(text("""
                 SELECT code, status, seller
-                FROM vouchers
+                FROM public.vouchers
                 WHERE code = :c
                 FOR UPDATE
             """), {"c": code}).fetchone()
@@ -825,7 +825,7 @@ def seller_activate_voucher(code, seller_input, buyer_name, buyer_phone):
 
             # all good -> update
             conn.execute(text("""
-                UPDATE vouchers
+                UPDATE public.vouchers
                 SET nama = :buyer_name,
                     no_hp = :buyer_phone,
                     status = 'active',
@@ -1378,7 +1378,7 @@ def page_admin():
                                     
                                 with engine.begin() as conn2:
                                     conn2.execute(text("""
-                                        UPDATE vouchers
+                                        UPDATE public.vouchers
                                         SET nama = :nama,
                                             no_hp = :no_hp,
                                             status = :status,
@@ -1586,7 +1586,7 @@ def page_admin():
             try:
                 with engine.connect() as conn:
                     df_seller = pd.read_sql("""
-                        SELECT * FROM seller
+                        SELECT * FROM public.seller
                         WHERE status = 'diterima'
                         ORDER BY nama_seller ASC
                     """, conn)
@@ -1641,7 +1641,7 @@ def page_admin():
                     with engine.connect() as conn:
                         df_voucher = pd.read_sql("""
                             SELECT code, initial_value, balance, status
-                            FROM vouchers
+                            FROM public.vouchers
                             WHERE seller IS NULL OR TRIM(seller) = ''
                         """, conn)
     
@@ -1680,7 +1680,7 @@ def page_admin():
                                     df_changed = pd.read_sql(
                                         text("""
                                             SELECT code, seller, tanggal_penjualan
-                                            FROM vouchers
+                                            FROM public.vouchers
                                             WHERE code IN :codes
                                         """),
                                         conn3,
@@ -1775,7 +1775,7 @@ def page_admin():
                             status,
                             seller,
                             nama
-                        FROM vouchers
+                        FROM public.vouchers
                         WHERE status = 'proses'
                         ORDER BY code ASC
                     """, conn)
@@ -1871,8 +1871,8 @@ def page_admin():
             # ============================
             # 📥 LOAD DATA
             # ============================
-            vouchers = pd.read_sql("SELECT * FROM vouchers", engine)
-            transactions = pd.read_sql("SELECT * FROM transactions", engine)
+            vouchers = pd.read_sql("SELECT * FROM public.vouchers", engine)
+            transactions = pd.read_sql("SELECT * FROM public.transactions", engine)
         
             # Normalisasi
             vouchers["initial_value"] = vouchers["initial_value"].fillna(0).astype(float)
@@ -2001,7 +2001,7 @@ def page_admin():
             st.subheader("📊 Ringkasan Transaksi")
         
             # Load data transaksi
-            df_tx = pd.read_sql("SELECT * FROM transactions", engine)
+            df_tx = pd.read_sql("SELECT * FROM public.transactions", engine)
         
             if df_tx.empty:
                 st.info("Belum ada data transaksi.")
@@ -2436,7 +2436,7 @@ def page_admin():
 
         jenis_list = []
         with engine.connect() as conn:
-            df_jenis = pd.read_sql("SELECT jenis_kupon FROM jenis_db", conn)
+            df_jenis = pd.read_sql("SELECT jenis_kupon FROM public.jenis_db", conn)
             jenis_list = df_jenis['jenis_kupon'].tolist()
 
         col1, col2 = st.columns(2)
@@ -2541,7 +2541,7 @@ def page_seller_activation():
                 result = conn.execute(
                     text("""
                         SELECT seller, status 
-                        FROM vouchers 
+                        FROM public.vouchers 
                         WHERE code = :code
                     """),
                     {"code": kode}
@@ -2622,7 +2622,7 @@ def page_seller_activation():
                         initial_value,
                         status,
                         tanggal_aktivasi
-                    FROM vouchers
+                    FROM public.vouchers
                     WHERE code = :code
                     LIMIT 1
                 """), {"code": lacak_code}).fetchone()
@@ -3459,7 +3459,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
 
 
 
