@@ -3243,7 +3243,7 @@ def page_kasir():
                         ]
 
                     final_code = st.session_state.voucher_row[0] if is_vou else None
-                    items_str = serialize_items(order_items)
+                    items_str = serialize_items(items_payload)
                     
                     # Call DB Logic
                     ok, msg, newbal = atomic_redeem(
@@ -3495,24 +3495,3 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
