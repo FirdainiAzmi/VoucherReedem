@@ -315,96 +315,101 @@ def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
 
 def atomic_redeem(code, amount, branch, items_str, diskon):
     try:
+        # =====================================================
+        # =================== TANPA VOUCHER ===================
+        # =====================================================
         if code is None:
             with engine.begin() as conn:
+                # SIMPAN TRANSAKSI
                 conn.execute(text("""
                     INSERT INTO public.transactions 
                     (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
-                    VALUES (NULL, :tunai, :now, :branch, :items, :tunai, 'no', :diskon)
+                    VALUES (NULL, :used_amount, :now, :branch, :items, :tunai, 'no', :diskon)
                 """), {
                     "now": datetime.utcnow(),
                     "branch": branch,
-                    "items": items_str,
+                    "items": items_str,      # STRING
                     "used_amount": amount,
                     "tunai": amount,
                     "diskon": diskon
                 })
 
-                # Update terjual untuk menu
+                # UPDATE TERJUAL MENU
                 items = [x.strip() for x in items_str.split(",")]
+
+                mapping = {
+                    "tawangsari": "terjual_twsari",
+                    "sedati": "terjual_sedati",
+                    "kesambi": "terjual_kesambi",
+                    "tulangan": "terjual_tulangan"
+                }
+
+                col = mapping.get(branch.lower())
+                if not col:
+                    return False, f"Cabang '{branch}' tidak dikenali.", None
+
                 for i in items:
                     if " x" not in i:
                         continue
-                    nama_item, qty = i.split(" x")
-                    qty = int(qty["jumlah"])
-            
-                    # Nama cabang -> nama kolom
-                    mapping = {
-                        "tawangsari": "terjual_twsari",
-                        "sedati": "terjual_sedati",
-                        "kesambi": "terjual_kesambi",
-                        "tulangan": "terjual_tulangan"
-                    }
 
-                    col = mapping.get(branch.lower(), None)   # None kalau branch tidak ditemukan
-                    if not col:
-                        return False, f"Cabang '{branch}' tidak dikenali.", None
+                    nama_item, qty = i.split(" x")
+                    qty = float(qty)  # ✅ SUPPORT KG / DESIMAL
 
                     conn.execute(text(f"""
                         UPDATE public.menu_items
                         SET {col} = COALESCE({col}, 0) + :qty
                         WHERE nama_item = :item
-                    """), {"qty": qty, "item": nama_item})
+                    """), {
+                        "qty": qty,
+                        "item": nama_item
+                    })
 
                 return True, "Transaksi cash berhasil 💸", None
-        else:    
+
+        # =====================================================
+        # ===================== DENGAN VOUCHER =================
+        # =====================================================
+        else:
             with engine.begin() as conn:
-    
-                # Ambil saldo voucher (lock row)
-                r = conn.execute(
-                    text("SELECT balance, COALESCE(tunai, 0) FROM vouchers WHERE code = :c AND status = 'active' FOR UPDATE"),
-                    {"c": code}
-                ).fetchone()
-    
+                r = conn.execute(text("""
+                    SELECT balance, COALESCE(tunai, 0)
+                    FROM public.vouchers
+                    WHERE code = :c AND status = 'active'
+                    FOR UPDATE
+                """), {"c": code}).fetchone()
+
                 if not r:
                     return False, "Voucher tidak ditemukan.", None
-    
+
                 balance = int(r[0])
                 tunai_existing = int(r[1])
-    
-                # Jika saldo 0 → tidak boleh dipakai
+
                 if balance <= 0:
                     return False, "Saldo voucher sudah habis.", balance
-    
-                # Hitung saldo baru & cash shortage
+
                 if amount > balance:
-                    shortage = amount - balance  # kekurangan
+                    shortage = amount - balance
                     new_balance = 0
                 else:
                     shortage = 0
                     new_balance = balance - amount
-    
-                # Update status voucher
+
                 new_status = "habis" if new_balance == 0 else "active"
-    
-                # Update saldo, status, dan tunai (tambahkan shortage)
-                conn.execute(
-                    text("""
-                        UPDATE public.vouchers 
-                        SET balance = :newbal,
-                            status = :newstatus,
-                            tunai = :newtunai
-                        WHERE code = :c
-                    """),
-                    {
-                        "newbal": new_balance,
-                        "newstatus": new_status,
-                        "newtunai": tunai_existing + shortage,
-                        "c": code
-                    }
-                )
-    
-                # Simpan transaksi ke database
+
+                conn.execute(text("""
+                    UPDATE public.vouchers
+                    SET balance = :newbal,
+                        status = :newstatus,
+                        tunai = :newtunai
+                    WHERE code = :c
+                """), {
+                    "newbal": new_balance,
+                    "newstatus": new_status,
+                    "newtunai": tunai_existing + shortage,
+                    "c": code
+                })
+
+                # SIMPAN TRANSAKSI
                 conn.execute(text("""
                     INSERT INTO public.transactions 
                     (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
@@ -418,37 +423,44 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                     "tunai": shortage,
                     "diskon": diskon
                 })
-    
-                # Update penjualan menu
+
+                # UPDATE TERJUAL MENU
                 items = [x.strip() for x in items_str.split(",")]
+
+                mapping = {
+                    "tawangsari": "terjual_twsari",
+                    "sedati": "terjual_sedati",
+                    "kesambi": "terjual_kesambi",
+                    "tulangan": "terjual_tulangan"
+                }
+
+                col = mapping.get(branch.lower())
+                if not col:
+                    return False, f"Cabang '{branch}' tidak dikenali.", None
+
                 for i in items:
                     if " x" not in i:
                         continue
+
                     nama_item, qty = i.split(" x")
-                    qty = float(qty["jumlah"])
+                    qty = float(qty)  # ✅ DESIMAL AMAN
 
-                    mapping = {
-                        "tawangsari": "terjual_twsari",
-                        "sedati": "terjual_sedati",
-                        "kesambi": "terjual_kesambi",
-                        "tulangan": "terjual_tulangan"
-                    }
-
-                    col = mapping.get(branch.lower(), None) 
-                    if not col:
-                        return False, f"Cabang '{branch}' tidak dikenali.", None
-                    
                     conn.execute(text(f"""
                         UPDATE public.menu_items
                         SET {col} = COALESCE({col}, 0) + :qty
                         WHERE nama_item = :item
-                    """), {"qty": qty, "item": nama_item})
-    
+                    """), {
+                        "qty": qty,
+                        "item": nama_item
+                    })
+
                 return True, "Redeem berhasil ✅", new_balance
 
     except Exception as e:
         traceback.print_exc()
         return False, f"DB error saat redeem: {e}", None
+
+
 
 def list_vouchers(filter_status=None, search=None, limit=5000, offset=0):
     q = "SELECT v.code, v.initial_value, v.balance, v.nama, v.no_hp, v.status, v.seller, v.tanggal_aktivasi, j.awal_berlaku, j.akhir_berlaku FROM public.vouchers v JOIN public.jenis_db j ON v.jenis_kupon = j.jenis_kupon"
@@ -3475,6 +3487,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
