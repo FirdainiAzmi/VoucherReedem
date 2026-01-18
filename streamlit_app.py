@@ -2817,7 +2817,7 @@ def create_receipt_image(receipt):
     def draw_row(label, value, color="black", is_bold=False):
         fnt = font_bold if is_bold else font_reg
         draw.text((margin, y), label, fill=color, font=fnt)
-        val_str = f"{value:,}" if isinstance(value, int) else value
+        val_str = f"{value:,}" if isinstance(value, int) else str(value)
         bbox = draw.textbbox((0, 0), val_str, font=fnt)
         t_w = bbox[2] - bbox[0]
         draw.text((W - margin - t_w, y), val_str, fill=color, font=fnt)
@@ -3495,3 +3495,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
