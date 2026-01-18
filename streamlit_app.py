@@ -35,7 +35,7 @@ def init_db():
     try:
         with engine.begin() as conn:
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS vouchers (
+                CREATE TABLE IF NOT EXISTS public.vouchers (
                     code TEXT PRIMARY KEY,
                     initial_value INTEGER NOT NULL,
                     balance INTEGER NOT NULL,
@@ -52,7 +52,7 @@ def init_db():
                 )
             """))
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS transactions (
+                CREATE TABLE IF NOT EXISTS public.transactions (
                     id SERIAL PRIMARY KEY,
                     code TEXT NOT NULL,
                     used_amount INTEGER NOT NULL,
@@ -63,7 +63,7 @@ def init_db():
                 )
             """))
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS menu_items (
+                CREATE TABLE IF NOT EXISTS public.menu_items (
                     id SERIAL PRIMARY KEY,
                     kategori TEXT,
                     nama_item TEXT,
@@ -76,14 +76,14 @@ def init_db():
                 )
             """))
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS jenis_db (
+                CREATE TABLE IF NOT EXISTS public.jenis_db (
                     jenis_kupon TEXT PRIMARY KEY,
                     awal_berlaku DATE NOT NULL,
                     akhir_berlaku DATE NOT NULL
                 )
             """))
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS kategori_menu (
+                CREATE TABLE IF NOT EXISTS public.kategori_menu (
                     id_kategori SERIAL PRIMARY KEY,
                     nama_kategori TEXT,
                     status_kategori TEXT
@@ -3459,6 +3459,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
