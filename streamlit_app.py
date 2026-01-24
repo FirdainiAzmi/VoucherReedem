@@ -2730,176 +2730,176 @@ def page_admin():
                     unsafe_allow_html=True
                 )
 
-with tab_lock:
-    st.subheader("🔒 Draft Transaksi (Edit dulu, lalu Lock)")
-
-    # FILTER DRAFT DI ATAS
-    f1, f2 = st.columns([1, 1])
-    with f1:
-        tgl = st.date_input("Tanggal draft", value=date.today(), key="draft_tgl_admin")
-    with f2:
-        cabang_filter = st.selectbox(
-            "Cabang (filter)",
-            ["Semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"],
-            key="draft_cbg_filter"
+    with tab_lock:
+        st.subheader("🔒 Draft Transaksi (Edit dulu, lalu Lock)")
+    
+        # FILTER DRAFT DI ATAS
+        f1, f2 = st.columns([1, 1])
+        with f1:
+            tgl = st.date_input("Tanggal draft", value=date.today(), key="draft_tgl_admin")
+        with f2:
+            cabang_filter = st.selectbox(
+                "Cabang (filter)",
+                ["Semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"],
+                key="draft_cbg_filter"
+            )
+    
+        # LOAD DRAFT
+        with engine.connect() as conn:
+            q = """
+            SELECT *
+            FROM public.transactions_draft
+            WHERE is_locked = false
+              AND tanggal_transaksi = :tgl
+            """
+            params = {"tgl": tgl}
+            if cabang_filter != "Semua":
+                q += " AND branch = :b"
+                params["b"] = cabang_filter
+            q += " ORDER BY id DESC"
+            df_draft = pd.read_sql(text(q), conn, params=params)
+    
+        # 1) DAFTAR DRAFT DI ATAS
+        st.markdown("### 📋 Daftar Draft (belum locked)")
+        if df_draft.empty:
+            st.info("Tidak ada draft untuk tanggal/filter ini.")
+            st.stop()
+    
+        st.dataframe(
+            df_draft[["id", "tanggal_transaksi", "branch", "used_amount", "tunai", "isvoucher", "diskon", "items"]],
+            use_container_width=True,
+            height=260
         )
-
-    # LOAD DRAFT
-    with engine.connect() as conn:
-        q = """
-        SELECT *
-        FROM public.transactions_draft
-        WHERE is_locked = false
-          AND tanggal_transaksi = :tgl
-        """
-        params = {"tgl": tgl}
-        if cabang_filter != "Semua":
-            q += " AND branch = :b"
-            params["b"] = cabang_filter
-        q += " ORDER BY id DESC"
-        df_draft = pd.read_sql(text(q), conn, params=params)
-
-    # 1) DAFTAR DRAFT DI ATAS
-    st.markdown("### 📋 Daftar Draft (belum locked)")
-    if df_draft.empty:
-        st.info("Tidak ada draft untuk tanggal/filter ini.")
-        st.stop()
-
-    st.dataframe(
-        df_draft[["id", "tanggal_transaksi", "branch", "used_amount", "tunai", "isvoucher", "diskon", "items"]],
-        use_container_width=True,
-        height=260
-    )
-
-    st.markdown("---")
-
-    # 2) PILIH DRAFT UNTUK DIEDIT (DI BAWAH)
-    st.markdown("### ✏️ Pilih Draft untuk Diedit")
-    draft_id = st.selectbox(
-        "Draft ID",
-        df_draft["id"].tolist(),
-        format_func=lambda x: f"Draft #{x}",
-        key="draft_pick_edit"
-    )
-    row = df_draft[df_draft["id"] == draft_id].iloc[0]
-
-    # Branch dropdown (searchable otomatis)
-    branch_options = ["Sedati", "Tawangsari", "Kesambi", "Tulangan"]
-    branch_now = str(row.get("branch") or "")
-    if branch_now not in branch_options:
-        branch_options = [branch_now] + branch_options if branch_now else branch_options
-
-    st.markdown("### 🧾 Header Draft")
-    c1, c2, c3, c4 = st.columns([1.2, 1.2, 1, 1])
-    with c1:
-        branch = st.selectbox("Cabang", branch_options, index=branch_options.index(branch_now) if branch_now in branch_options else 0)
-    with c2:
-        tanggal_transaksi = st.date_input("Tanggal", value=row["tanggal_transaksi"], key="edit_tgl_draft")
-    with c3:
-        isvoucher = st.selectbox("Kupon?", ["no", "yes"], index=0 if str(row.get("isvoucher","no"))=="no" else 1)
-    with c4:
-        diskon = st.number_input("Diskon", min_value=0.0, step=1000.0, value=float(row.get("diskon") or 0), key="edit_diskon_draft")
-
-    # Ambil daftar menu dan harga utk cabang terpilih
-    price_map, menu_options = get_price_map_for_branch(branch)
-
-    st.markdown("### 🍽️ Items (pilih menu + qty, tanpa typo)")
-
-    # items editor: dari string -> df
-    df_items = parse_items_str(row.get("items", ""))
-
-    # pastikan kolom ada
-    if df_items.empty:
-        df_items = pd.DataFrame([{"menu": "", "qty": 0.0}], columns=["menu", "qty"])
-
-    # Data editor dengan dropdown menu + qty step
-    edited = st.data_editor(
-        df_items,
-        use_container_width=True,
-        num_rows="dynamic",
-        column_config={
-            "menu": st.column_config.SelectboxColumn(
-                "Menu",
-                options=menu_options,  # searchable
-                required=False,
-            ),
-            "qty": st.column_config.NumberColumn(
-                "Qty",
-                min_value=0.0,
-                step=1.0,  # default, nanti kamu bisa ubah per menu kalau ada satuan kg
-                format="%.2f",
-            ),
-        },
-        key=f"items_editor_{draft_id}"
-    )
-
-    # Hitung total otomatis (klik tombol atau realtime)
-    # Realtime:
-    subtotal = 0.0
-    for _, r in edited.iterrows():
-        menu = str(r.get("menu") or "").strip()
-        qty = float(r.get("qty") or 0)
-        subtotal += price_map.get(menu, 0) * qty
-
-    st.info(f"Subtotal (hasil hitung dari menu x qty): Rp {int(subtotal):,}")
-
-    # Tunai (bisa diketik, tapi number_input juga ada +/-)
-    tunai = st.number_input(
-        "Tunai (cash dibayar)",
-        min_value=0.0,
-        step=1000.0,
-        value=float(row.get("tunai") or 0),
-        key="edit_tunai_draft"
-    )
-
-    # used_amount (total bersih)
-    total_bersih = max(subtotal - float(diskon), 0)
-    st.success(f"Total bersih (subtotal - diskon): Rp {int(total_bersih):,}")
-
-    colS1, colS2, colS3 = st.columns(3)
-
-    with colS1:
-        if st.button("🧮 Hitung & Isi Total", use_container_width=True):
-            # isi tunai default kalau kosong
-            if tunai == 0:
-                st.session_state["edit_tunai_draft"] = float(total_bersih)
-            st.rerun()
-
-    with colS2:
-        if st.button("💾 Simpan Draft", type="primary", use_container_width=True):
-            items_str = serialize_items_df(edited)
-            with engine.begin() as conn:
-                conn.execute(text("""
-                    UPDATE public.transactions_draft
-                    SET branch=:branch,
-                        tanggal_transaksi=:tgl,
-                        items=:items,
-                        used_amount=:used_amount,
-                        tunai=:tunai,
-                        isvoucher=:isvoucher,
-                        diskon=:diskon,
-                        updated_at=NOW()
-                    WHERE id=:id AND is_locked=false
-                """), {
-                    "branch": branch,
-                    "tgl": tanggal_transaksi,
-                    "items": items_str,
-                    "used_amount": float(total_bersih),
-                    "tunai": float(st.session_state.get("edit_tunai_draft", tunai)),
-                    "isvoucher": isvoucher,
-                    "diskon": float(diskon),
-                    "id": int(draft_id),
-                })
-            st.success("Draft tersimpan.")
-            st.rerun()
-
-    with colS3:
-        if st.button("🔒 LOCK Draft Ini", use_container_width=True):
-            lock_draft_to_final(draft_id, locked_by="admin")
-            st.success("Draft di-lock dan masuk histori (transactions).")
-            st.rerun()
-
-
+    
+        st.markdown("---")
+    
+        # 2) PILIH DRAFT UNTUK DIEDIT (DI BAWAH)
+        st.markdown("### ✏️ Pilih Draft untuk Diedit")
+        draft_id = st.selectbox(
+            "Draft ID",
+            df_draft["id"].tolist(),
+            format_func=lambda x: f"Draft #{x}",
+            key="draft_pick_edit"
+        )
+        row = df_draft[df_draft["id"] == draft_id].iloc[0]
+    
+        # Branch dropdown (searchable otomatis)
+        branch_options = ["Sedati", "Tawangsari", "Kesambi", "Tulangan"]
+        branch_now = str(row.get("branch") or "")
+        if branch_now not in branch_options:
+            branch_options = [branch_now] + branch_options if branch_now else branch_options
+    
+        st.markdown("### 🧾 Header Draft")
+        c1, c2, c3, c4 = st.columns([1.2, 1.2, 1, 1])
+        with c1:
+            branch = st.selectbox("Cabang", branch_options, index=branch_options.index(branch_now) if branch_now in branch_options else 0)
+        with c2:
+            tanggal_transaksi = st.date_input("Tanggal", value=row["tanggal_transaksi"], key="edit_tgl_draft")
+        with c3:
+            isvoucher = st.selectbox("Kupon?", ["no", "yes"], index=0 if str(row.get("isvoucher","no"))=="no" else 1)
+        with c4:
+            diskon = st.number_input("Diskon", min_value=0.0, step=1000.0, value=float(row.get("diskon") or 0), key="edit_diskon_draft")
+    
+        # Ambil daftar menu dan harga utk cabang terpilih
+        price_map, menu_options = get_price_map_for_branch(branch)
+    
+        st.markdown("### 🍽️ Items (pilih menu + qty, tanpa typo)")
+    
+        # items editor: dari string -> df
+        df_items = parse_items_str(row.get("items", ""))
+    
+        # pastikan kolom ada
+        if df_items.empty:
+            df_items = pd.DataFrame([{"menu": "", "qty": 0.0}], columns=["menu", "qty"])
+    
+        # Data editor dengan dropdown menu + qty step
+        edited = st.data_editor(
+            df_items,
+            use_container_width=True,
+            num_rows="dynamic",
+            column_config={
+                "menu": st.column_config.SelectboxColumn(
+                    "Menu",
+                    options=menu_options,  # searchable
+                    required=False,
+                ),
+                "qty": st.column_config.NumberColumn(
+                    "Qty",
+                    min_value=0.0,
+                    step=1.0,  # default, nanti kamu bisa ubah per menu kalau ada satuan kg
+                    format="%.2f",
+                ),
+            },
+            key=f"items_editor_{draft_id}"
+        )
+    
+        # Hitung total otomatis (klik tombol atau realtime)
+        # Realtime:
+        subtotal = 0.0
+        for _, r in edited.iterrows():
+            menu = str(r.get("menu") or "").strip()
+            qty = float(r.get("qty") or 0)
+            subtotal += price_map.get(menu, 0) * qty
+    
+        st.info(f"Subtotal (hasil hitung dari menu x qty): Rp {int(subtotal):,}")
+    
+        # Tunai (bisa diketik, tapi number_input juga ada +/-)
+        tunai = st.number_input(
+            "Tunai (cash dibayar)",
+            min_value=0.0,
+            step=1000.0,
+            value=float(row.get("tunai") or 0),
+            key="edit_tunai_draft"
+        )
+    
+        # used_amount (total bersih)
+        total_bersih = max(subtotal - float(diskon), 0)
+        st.success(f"Total bersih (subtotal - diskon): Rp {int(total_bersih):,}")
+    
+        colS1, colS2, colS3 = st.columns(3)
+    
+        with colS1:
+            if st.button("🧮 Hitung & Isi Total", use_container_width=True):
+                # isi tunai default kalau kosong
+                if tunai == 0:
+                    st.session_state["edit_tunai_draft"] = float(total_bersih)
+                st.rerun()
+    
+        with colS2:
+            if st.button("💾 Simpan Draft", type="primary", use_container_width=True):
+                items_str = serialize_items_df(edited)
+                with engine.begin() as conn:
+                    conn.execute(text("""
+                        UPDATE public.transactions_draft
+                        SET branch=:branch,
+                            tanggal_transaksi=:tgl,
+                            items=:items,
+                            used_amount=:used_amount,
+                            tunai=:tunai,
+                            isvoucher=:isvoucher,
+                            diskon=:diskon,
+                            updated_at=NOW()
+                        WHERE id=:id AND is_locked=false
+                    """), {
+                        "branch": branch,
+                        "tgl": tanggal_transaksi,
+                        "items": items_str,
+                        "used_amount": float(total_bersih),
+                        "tunai": float(st.session_state.get("edit_tunai_draft", tunai)),
+                        "isvoucher": isvoucher,
+                        "diskon": float(diskon),
+                        "id": int(draft_id),
+                    })
+                st.success("Draft tersimpan.")
+                st.rerun()
+    
+        with colS3:
+            if st.button("🔒 LOCK Draft Ini", use_container_width=True):
+                lock_draft_to_final(draft_id, locked_by="admin")
+                st.success("Draft di-lock dan masuk histori (transactions).")
+                st.rerun()
+    
+    
 
 # ---------------------------
 # Page: Seller Activation (seller-only)
@@ -3870,5 +3870,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
