@@ -2835,13 +2835,31 @@ def page_admin():
     
         # Hitung total otomatis (klik tombol atau realtime)
         # Realtime:
+        import math
+
         subtotal = 0.0
         for _, r in edited.iterrows():
             menu = str(r.get("menu") or "").strip()
-            qty = float(r.get("qty") or 0)
-            subtotal += price_map.get(menu, 0) * qty
-    
-        st.info(f"Subtotal (hasil hitung dari menu x qty): Rp {int(subtotal):,}")
+            if not menu:
+                continue  # skip baris kosong
+        
+            qty_raw = r.get("qty", 0)
+            try:
+                qty = float(qty_raw)
+            except:
+                qty = 0.0
+        
+            if math.isnan(qty) or qty <= 0:
+                continue
+        
+            harga = float(price_map.get(menu, 0) or 0)
+            subtotal += harga * qty
+        
+        # amanin subtotal dari NaN/inf
+        if not isinstance(subtotal, (int, float)) or math.isnan(subtotal) or math.isinf(subtotal):
+            subtotal = 0.0
+        
+        st.info(f"Subtotal (hasil hitung dari menu x qty): Rp {int(round(subtotal)):,}")
     
         # Tunai (bisa diketik, tapi number_input juga ada +/-)
         tunai = st.number_input(
@@ -3870,6 +3888,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
