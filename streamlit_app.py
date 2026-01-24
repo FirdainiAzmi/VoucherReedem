@@ -89,6 +89,30 @@ def init_db():
                     status_kategori TEXT
                 )
             """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS public.transactions_draft (
+                    id BIGSERIAL PRIMARY KEY,
+                    code TEXT,
+                    used_amount NUMERIC,
+                    tanggal_transaksi DATE NOT NULL,
+                    branch TEXT,
+                    items TEXT,
+                    tunai NUMERIC,
+                    isvoucher BOOLEAN DEFAULT FALSE,
+                    diskon NUMERIC DEFAULT 0,
+
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ DEFAULT NOW(),
+                    is_locked BOOLEAN DEFAULT FALSE,
+                    locked_at TIMESTAMPTZ,
+                    locked_by TEXT
+                    );
+
+                    ALTER TABLE public.transactions
+                    ADD COLUMN IF NOT EXISTS draft_id BIGINT UNIQUE;
+                )
+            """))
+
 
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
@@ -312,7 +336,7 @@ def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
     except Exception as e:
         st.error(f"Gagal update voucher: {e}")
         return False
-
+    
 def atomic_redeem(code, amount, branch, items_str, diskon):
     try:
         # =====================================================
@@ -320,15 +344,15 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
         # =====================================================
         if code is None:
             with engine.begin() as conn:
-                # SIMPAN TRANSAKSI
+                # SIMPAN TRANSAKSI KE DRAFT
                 conn.execute(text("""
-                    INSERT INTO public.transactions 
+                    INSERT INTO public.transactions_draft
                     (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
                     VALUES (NULL, :used_amount, :now, :branch, :items, :tunai, 'no', :diskon)
                 """), {
                     "now": datetime.utcnow(),
                     "branch": branch,
-                    "items": items_str,      # STRING
+                    "items": items_str,
                     "used_amount": amount,
                     "tunai": amount,
                     "diskon": diskon
@@ -351,20 +375,16 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                 for i in items:
                     if " x" not in i:
                         continue
-
                     nama_item, qty = i.split(" x")
-                    qty = float(qty)  # ✅ SUPPORT KG / DESIMAL
+                    qty = float(qty)
 
                     conn.execute(text(f"""
                         UPDATE public.menu_items
                         SET {col} = COALESCE({col}, 0) + :qty
                         WHERE nama_item = :item
-                    """), {
-                        "qty": qty,
-                        "item": nama_item
-                    })
+                    """), {"qty": qty, "item": nama_item})
 
-                return True, "Transaksi cash berhasil 💸", None
+                return True, "Transaksi cash berhasil 💸 (draft)", None
 
         # =====================================================
         # ===================== DENGAN VOUCHER =================
@@ -409,9 +429,9 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                     "c": code
                 })
 
-                # SIMPAN TRANSAKSI
+                # SIMPAN TRANSAKSI KE DRAFT
                 conn.execute(text("""
-                    INSERT INTO public.transactions 
+                    INSERT INTO public.transactions_draft
                     (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
                     VALUES (:c, :amt, :now, :branch, :items, :tunai, 'yes', :diskon)
                 """), {
@@ -441,24 +461,101 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                 for i in items:
                     if " x" not in i:
                         continue
-
                     nama_item, qty = i.split(" x")
-                    qty = float(qty)  # ✅ DESIMAL AMAN
+                    qty = float(qty)
 
                     conn.execute(text(f"""
                         UPDATE public.menu_items
                         SET {col} = COALESCE({col}, 0) + :qty
                         WHERE nama_item = :item
-                    """), {
-                        "qty": qty,
-                        "item": nama_item
-                    })
+                    """), {"qty": qty, "item": nama_item})
 
-                return True, "Redeem berhasil ✅", new_balance
+                return True, "Redeem berhasil ✅ (draft)", new_balance
 
     except Exception as e:
         traceback.print_exc()
         return False, f"DB error saat redeem: {e}", None
+
+
+
+def list_transactions_draft(engine, tanggal=None, branch="Semua"):
+    q = """
+    SELECT *
+    FROM public.transactions_draft
+    WHERE is_locked = false
+    """
+    params = {}
+    if tanggal:
+        q += " AND tanggal_transaksi = :tgl"
+        params["tgl"] = tanggal
+    if branch and branch != "Semua":
+        q += " AND branch = :branch"
+        params["branch"] = branch
+    q += " ORDER BY id DESC"
+
+    with engine.connect() as conn:
+        return pd.read_sql(text(q), conn, params=params)
+
+def update_transaction_draft(engine, draft_id, data: dict):
+    # data keys harus sesuai kolom
+    sql = """
+    UPDATE public.transactions_draft
+    SET code=:code,
+        used_amount=:used_amount,
+        tanggal_transaksi=:tanggal_transaksi,
+        branch=:branch,
+        items=:items,
+        tunai=:tunai,
+        is_voucher=:is_voucher,
+        diskon=:diskon,
+        updated_at=NOW()
+    WHERE id=:id AND is_locked=false
+    """
+    data = dict(data)
+    data["id"] = int(draft_id)
+    with engine.begin() as conn:
+        conn.execute(text(sql), data)
+
+def lock_one_draft_to_final(engine, draft_id, locked_by="admin"):
+    """
+    Pindahkan 1 draft ke public.transactions lalu lock draft-nya.
+    Aman karena pakai transaksi DB.
+    """
+    with engine.begin() as conn:
+        # lock row draft (biar gak diedit barengan)
+        conn.execute(text("""
+            SELECT 1
+            FROM public.transactions_draft
+            WHERE id=:id AND is_locked=false
+            FOR UPDATE
+        """), {"id": int(draft_id)})
+
+        # insert ke final
+        conn.execute(text("""
+            INSERT INTO public.transactions
+              (code, used_amount, tanggal_transaksi, branch, items, tunai, is_voucher, diskon, draft_id)
+            SELECT
+              code, used_amount, tanggal_transaksi, branch, items, tunai, is_voucher, diskon, id
+            FROM public.transactions_draft
+            WHERE id=:id AND is_locked=false
+        """), {"id": int(draft_id)})
+
+        # tandai draft locked
+        conn.execute(text("""
+            UPDATE public.transactions_draft
+            SET is_locked=true, locked_at=NOW(), locked_by=:by, updated_at=NOW()
+            WHERE id=:id
+        """), {"id": int(draft_id), "by": locked_by})
+
+def lock_all_draft_by_date(engine, tanggal: date, branch="Semua", locked_by="admin"):
+    """
+    Lock semua draft pada tanggal tertentu (opsional filter cabang).
+    """
+    # ambil id draft dulu (biar jelas)
+    df = list_transactions_draft(engine, tanggal=tanggal, branch=branch)
+    for did in df["id"].tolist():
+        lock_one_draft_to_final(engine, did, locked_by=locked_by)
+    return len(df)
 
 
 
@@ -1216,13 +1313,44 @@ if not (
     show_login_page()
     st.stop()
 
-# ---------------------------
-# Page: Aktivasi Voucher (admin) — inline edit (unchanged except access)
-# ---------------------------
+from sqlalchemy import text
+
+def lock_draft_to_final(draft_id, locked_by="admin"):
+    """
+    Pindahkan 1 transaksi draft -> final (public.transactions),
+    lalu tandai draft jadi locked.
+    """
+    with engine.begin() as conn:
+        # kunci row draft biar aman (ga bisa ke-lock 2x)
+        conn.execute(text("""
+            SELECT 1
+            FROM public.transactions_draft
+            WHERE id=:id AND is_locked=false
+            FOR UPDATE
+        """), {"id": int(draft_id)})
+
+        # insert ke tabel final
+        conn.execute(text("""
+            INSERT INTO public.transactions
+            (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon, draft_id)
+            SELECT
+              code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon, id
+            FROM public.transactions_draft
+            WHERE id=:id AND is_locked=false
+        """), {"id": int(draft_id)})
+
+        # tandai draft sudah locked
+        conn.execute(text("""
+            UPDATE public.transactions_draft
+            SET is_locked=true, locked_at=NOW(), locked_by=:by, updated_at=NOW()
+            WHERE id=:id
+        """), {"id": int(draft_id), "by": locked_by})
+
 def page_admin():
     st.header("Halaman Admin")
     show_back_to_login_button("admin")
-    tab_edit, tab_edit_seller, tab_laporan, tab_histori, tab_menu, tab_kupon= st.tabs(["Informasi Kupon", "Edit Seller", "Laporan warung", "Histori", "Kelola Menu", "Kelola Kupon"])
+    tab_edit, tab_edit_seller, tab_laporan, tab_histori, tab_menu, tab_kupon, tab_lock = st.tabs([
+    "Informasi Kupon", "Edit Seller", "Laporan warung", "Histori", "Kelola Menu", "Kelola Kupon", "🔒 Lock Transaksi"])
 
     with tab_edit:
         st.subheader("Informasi Kupon")
@@ -2536,6 +2664,86 @@ def page_admin():
                     unsafe_allow_html=True
                 )
 
+    with tab_lock:
+        st.subheader("🔒 Lock Transaksi (Draft → Final)")
+
+        # Filter tanggal + cabang
+        colA, colB = st.columns([1, 1])
+        with colA:
+            tgl = st.date_input("Tanggal transaksi (draft)", value=date.today(), key="lock_tgl")
+        with colB:
+            cabang = st.selectbox(
+                "Cabang",
+                ["Semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"],
+                key="lock_cabang"
+            )
+
+        df_draft = list_transactions_draft(engine, tanggal=tgl, branch=cabang)
+
+        if df_draft.empty:
+            st.info("Tidak ada transaksi draft yang belum di-lock untuk filter ini.")
+        else:
+            st.warning("Draft di bawah ini bisa diedit. Setelah LOCK, data pindah ke histori dan tidak muncul lagi di sini.")
+
+            # --- pilih transaksi draft untuk diedit ---
+            pilihan = st.selectbox(
+                "Pilih draft transaksi",
+                df_draft["id"].tolist(),
+                format_func=lambda x: f"Draft ID {x}",
+                key="draft_pick"
+            )
+
+            r = df_draft[df_draft["id"] == pilihan].iloc[0]
+
+            st.markdown("### ✏️ Edit Draft (sebelum lock)")
+
+            with st.form("edit_draft_form"):
+                code = st.text_input("Code", value=str(r.get("code") or ""))
+                used_amount = st.number_input("Used Amount", value=float(r.get("used_amount") or 0), min_value=0.0)
+                tanggal_transaksi = st.date_input("Tanggal Transaksi", value=r["tanggal_transaksi"])
+                branch = st.text_input("Branch", value=str(r.get("branch") or ""))
+                items = st.text_area("Items", value=str(r.get("items") or ""), height=120)
+                tunai = st.number_input("Tunai", value=float(r.get("tunai") or 0), min_value=0.0)
+                isvoucher = st.checkbox("Is Voucher", value=bool(r.get("isvoucher") or False))
+                diskon = st.number_input("Diskon", value=float(r.get("diskon") or 0), min_value=0.0)
+
+                simpan = st.form_submit_button("💾 Simpan Perubahan Draft")
+
+                if simpan:
+                    update_transaction_draft(engine, pilihan, {
+                        "code": code.strip(),
+                        "used_amount": used_amount,
+                        "tanggal_transaksi": tanggal_transaksi,
+                        "branch": branch.strip(),
+                        "items": items.strip(),
+                        "tunai": tunai,
+                        "isvoucher": isvoucher,
+                        "diskon": diskon
+                    })
+                    st.success("Draft berhasil diupdate.")
+                    st.rerun()
+
+            st.markdown("---")
+
+            # --- tombol lock ---
+            colL1, colL2 = st.columns(2)
+
+            with colL1:
+                if st.button("🔒 LOCK draft ini", key="lock_one_btn"):
+                    lock_one_draft_to_final(engine, pilihan, locked_by="admin")
+                    st.success(f"Draft {pilihan} berhasil di-lock dan masuk histori (public.transactions).")
+                    st.rerun()
+
+            with colL2:
+                if st.button("🔒 LOCK SEMUA draft tanggal ini", key="lock_all_btn"):
+                    n = lock_all_draft_by_date(engine, tgl, branch=cabang, locked_by="admin")
+                    st.success(f"Berhasil lock {n} draft transaksi.")
+                    st.rerun()
+
+            st.markdown("### 📋 Daftar Draft (belum locked)")
+            st.dataframe(df_draft, use_container_width=True, height=350)
+
+
 
 # ---------------------------
 # Page: Seller Activation (seller-only)
@@ -3506,7 +3714,3 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
-
-
