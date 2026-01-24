@@ -3332,7 +3332,7 @@ from sqlalchemy import text
 st.set_page_config(
     page_title="Pawon Sappitoe",
     layout="wide",                    # Opsional: biar tampilan melebar
-    initial_sidebar_state="expanded"  # <--- INI KUNCINYA (Supaya sidebar langsung terbuka)
+    initial_sidebar_state="expanded" 
 )
 
 # ============================================
@@ -3890,7 +3890,7 @@ def page_kasir():
         st.header("📜 Riwayat Transaksi")
         
         # --- 1. LOAD DATA (LOGIKA ASLI) ---
-        df_tx = list_transactions(limit=5000)
+        df_tx = list_transactions_draft(limit=5000)
         df_tx = df_tx.sort_values(by="id", ascending=False).reset_index(drop=True)
 
         if df_tx.empty:
@@ -4065,6 +4065,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
