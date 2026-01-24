@@ -1411,6 +1411,35 @@ def get_price_map_for_branch(branch: str):
             continue
         price_map[str(name).strip()] = float(m.get("harga") or 0)
     return price_map, sorted(price_map.keys())
+from sqlalchemy import text
+
+def search_active_voucher(engine, keyword=""):
+    q = """
+    SELECT code, balance
+    FROM public.vouchers
+    WHERE status = 'active'
+    """
+    params = {}
+    if keyword:
+        q += " AND UPPER(code) LIKE :kw"
+        params["kw"] = f"%{keyword.upper()}%"
+    q += " ORDER BY code ASC LIMIT 200"
+
+    with engine.connect() as conn:
+        rows = conn.execute(text(q), params).fetchall()
+
+    return [(str(r[0]), int(r[1] or 0)) for r in rows]
+
+def get_voucher_balance(engine, code):
+    with engine.connect() as conn:
+        r = conn.execute(text("""
+            SELECT balance, status
+            FROM public.vouchers
+            WHERE code=:c
+        """), {"c": code}).fetchone()
+    if not r:
+        return None, None
+    return int(r[0] or 0), str(r[1] or "")
 
 def page_admin():
     st.header("Halaman Admin")
@@ -2731,7 +2760,7 @@ def page_admin():
                 )
 
     with tab_lock:
-        st.subheader("🔒 Draft Transaksi")
+        st.subheader("🔒 Draft Transaksi (Edit dulu)")
     
         # =========================
         # FILTER DRAFT
@@ -2747,7 +2776,7 @@ def page_admin():
             )
     
         # =========================
-        # LOAD DRAFT
+        # LOAD DRAFT (BELUM LOCK)
         # =========================
         with engine.connect() as conn:
             q = """
@@ -2763,16 +2792,13 @@ def page_admin():
             q += " ORDER BY id DESC"
             df_draft = pd.read_sql(text(q), conn, params=params)
     
-        # =========================
-        # DAFTAR DRAFT (ATAS)
-        # =========================
         st.markdown("### 📋 Daftar Draft (belum locked)")
         if df_draft.empty:
             st.info("Tidak ada draft untuk tanggal/filter ini.")
             st.stop()
     
         st.dataframe(
-            df_draft[["id", "tanggal_transaksi", "branch", "used_amount", "tunai", "isvoucher", "diskon", "items"]],
+            df_draft[["id", "tanggal_transaksi", "branch", "used_amount", "tunai", "isvoucher", "code", "diskon", "items"]],
             use_container_width=True,
             height=260
         )
@@ -2780,7 +2806,7 @@ def page_admin():
         st.markdown("---")
     
         # =========================
-        # PILIH DRAFT (BAWAH)
+        # PILIH DRAFT
         # =========================
         st.markdown("### ✏️ Pilih Draft untuk Diedit")
         draft_id = st.selectbox(
@@ -2791,22 +2817,26 @@ def page_admin():
         )
         row = df_draft[df_draft["id"] == draft_id].iloc[0]
     
-        # key unik per draft (biar gak nyangkut)
+        # Key unik per draft biar gak nyangkut
         items_key = f"items_editor_{draft_id}"
         diskon_key = f"edit_diskon_{draft_id}"
-        tunai_key = f"edit_tunai_{draft_id}"
-        auto_tunai_key = f"auto_tunai_{draft_id}"
-        tgl_key = f"edit_tgl_{draft_id}"
-        kupon_key = f"edit_kupon_{draft_id}"
+        tunai_key  = f"edit_tunai_{draft_id}"
+        code_key   = f"edit_code_{draft_id}"
+        kw_key     = f"kw_voucher_{draft_id}"
+        sel_code_key = f"sel_voucher_{draft_id}"
+        tgl_key    = f"edit_tgl_{draft_id}"
+        kupon_key  = f"edit_kupon_{draft_id}"
         branch_key = f"edit_branch_{draft_id}"
     
         # =========================
-        # HEADER EDITOR
+        # HEADER
         # =========================
         branch_options = ["Sedati", "Tawangsari", "Kesambi", "Tulangan"]
         branch_now = str(row.get("branch") or "")
         if branch_now and branch_now not in branch_options:
             branch_options = [branch_now] + branch_options
+    
+        code_db = (row.get("code") or "").strip()
     
         st.markdown("### 🧾 Header Draft")
         c1, c2, c3, c4 = st.columns([1.2, 1.2, 1, 1])
@@ -2840,15 +2870,12 @@ def page_admin():
             )
     
         # =========================
-        # MENU + HARGA (SESUAI CABANG)
+        # MENU + ITEMS EDITOR
         # =========================
         price_map, menu_options = get_price_map_for_branch(branch)
     
         st.markdown("### 🍽️ Items (pilih menu + qty, tanpa typo)")
-    
-        # parse items string dari DB
         df_items = parse_items_str(row.get("items", ""))
-    
         if df_items.empty:
             df_items = pd.DataFrame([{"menu": "", "qty": 0.0}], columns=["menu", "qty"])
     
@@ -2859,7 +2886,7 @@ def page_admin():
             column_config={
                 "menu": st.column_config.SelectboxColumn(
                     "Menu",
-                    options=menu_options,   # searchable
+                    options=menu_options,
                     required=False,
                 ),
                 "qty": st.column_config.NumberColumn(
@@ -2875,27 +2902,21 @@ def page_admin():
         # =========================
         # HITUNG SUBTOTAL + TOTAL
         # =========================
-        import math
-    
         subtotal = 0.0
         for _, r in edited.iterrows():
             menu = str(r.get("menu") or "").strip()
             if not menu:
                 continue
-    
-            qty_raw = r.get("qty", 0)
             try:
-                qty = float(qty_raw)
+                qty = float(r.get("qty", 0))
             except:
                 qty = 0.0
-    
-            if math.isnan(qty) or qty <= 0:
+            if qty <= 0 or math.isnan(qty):
                 continue
-    
             harga = float(price_map.get(menu, 0) or 0)
             subtotal += harga * qty
     
-        if not isinstance(subtotal, (int, float)) or math.isnan(subtotal) or math.isinf(subtotal):
+        if math.isnan(subtotal) or math.isinf(subtotal):
             subtotal = 0.0
     
         st.info(f"Subtotal (menu x qty): Rp {int(round(subtotal)):,}")
@@ -2904,40 +2925,96 @@ def page_admin():
         st.success(f"Total bersih (subtotal - diskon): Rp {int(round(total_bersih)):,}")
     
         # =========================
-        # AUTO TUNAI
+        # KUPON + TUNAI AUTO
         # =========================
-        auto_tunai = st.checkbox(
-            "Auto tunai = total",
-            value=bool(st.session_state.get(auto_tunai_key, False)),
-            key=auto_tunai_key
-        )
-    
-        if auto_tunai:
+        if isvoucher == "no":
+            # non-kupon: code kosong & tunai = total
+            st.session_state[code_key] = ""
             st.session_state[tunai_key] = float(total_bersih)
     
-        # =========================
-        # INPUT TUNAI (PER DRAFT)
-        # =========================
-        tunai = st.number_input(
-            "Tunai (cash dibayar)",
-            min_value=0.0,
-            step=1000.0,
-            value=float(st.session_state.get(tunai_key, row.get("tunai") or 0)),
-            key=tunai_key
-        )
+            st.number_input(
+                "Tunai (cash dibayar) — otomatis = total",
+                min_value=0.0,
+                step=1000.0,
+                value=float(st.session_state[tunai_key]),
+                key=tunai_key,
+                disabled=True
+            )
     
-        # =========================
-        # BUTTONS
-        # =========================
-        colS1, colS2, colS3 = st.columns(3)
+        else:
+            st.markdown("### 🎟️ Kupon")
+            kw = st.text_input("Cari kode kupon", value="", key=kw_key).strip()
     
-        with colS1:
-            if st.button("🧮 Set Tunai = Total", use_container_width=True, key=f"btn_set_tunai_{draft_id}"):
+            options = search_active_voucher(engine, kw)
+            code_list = ["-- pilih kupon --"] + [c for c, _ in options]
+    
+            default_code = (st.session_state.get(code_key) or code_db).strip()
+            if default_code and default_code not in code_list:
+                code_list = [default_code] + code_list
+    
+            selected_code = st.selectbox(
+                "Pilih kode kupon (ketik untuk cari)",
+                code_list,
+                index=code_list.index(default_code) if default_code in code_list else 0,
+                key=sel_code_key
+            )
+    
+            if selected_code == "-- pilih kupon --":
+                st.warning("Pilih kode kupon dulu.")
                 st.session_state[tunai_key] = float(total_bersih)
+                st.number_input(
+                    "Tunai (cash dibayar)",
+                    min_value=0.0,
+                    step=1000.0,
+                    value=float(st.session_state[tunai_key]),
+                    key=tunai_key,
+                    disabled=True
+                )
+            else:
+                st.session_state[code_key] = selected_code
+    
+                bal, status = get_voucher_balance(engine, selected_code)
+                if bal is None:
+                    st.error("Kode kupon tidak ditemukan.")
+                    bal = 0
+                else:
+                    st.info(f"Saldo kupon: Rp {bal:,} | Status: {status}")
+    
+                shortage = max(float(total_bersih) - float(bal), 0.0)
+                st.session_state[tunai_key] = float(shortage)
+    
+                st.number_input(
+                    "Tunai (cash dibayar) — otomatis = total - saldo kupon",
+                    min_value=0.0,
+                    step=1000.0,
+                    value=float(st.session_state[tunai_key]),
+                    key=tunai_key,
+                    disabled=True
+                )
+    
+        # =========================
+        # ACTION BUTTONS
+        # =========================
+        st.markdown("---")
+        colA, colB, colC = st.columns(3)
+    
+        with colA:
+            if st.button("🗑️ Hapus Draft Ini", use_container_width=True, key=f"btn_del_{draft_id}"):
+                delete_draft_transaction(draft_id)
+                st.warning("Draft berhasil dihapus.")
                 st.rerun()
     
-        with colS2:
+        with colB:
             if st.button("💾 Simpan Draft", type="primary", use_container_width=True, key=f"btn_save_{draft_id}"):
+                # validasi kupon
+                final_code = None
+                if isvoucher == "yes":
+                    c = (st.session_state.get(code_key) or "").strip()
+                    if not c:
+                        st.error("Kalau pakai kupon, kode kupon wajib dipilih.")
+                        st.stop()
+                    final_code = c
+    
                 items_str = serialize_items_df(edited)
     
                 with engine.begin() as conn:
@@ -2949,6 +3026,7 @@ def page_admin():
                             used_amount=:used_amount,
                             tunai=:tunai,
                             isvoucher=:isvoucher,
+                            code=:code,
                             diskon=:diskon,
                             updated_at=NOW()
                         WHERE id=:id AND is_locked=false
@@ -2957,8 +3035,9 @@ def page_admin():
                         "tgl": tanggal_transaksi,
                         "items": items_str,
                         "used_amount": float(total_bersih),
-                        "tunai": float(st.session_state.get(tunai_key, tunai)),
+                        "tunai": float(st.session_state.get(tunai_key, 0)),
                         "isvoucher": isvoucher,
+                        "code": final_code,     # None untuk non-kupon
                         "diskon": float(diskon),
                         "id": int(draft_id),
                     })
@@ -2966,11 +3045,17 @@ def page_admin():
                 st.success("Draft tersimpan.")
                 st.rerun()
     
-        with colS3:
+        with colC:
             if st.button("🔒 LOCK Draft Ini", use_container_width=True, key=f"btn_lock_{draft_id}"):
+                # optional: kalau kupon wajib pilih code sebelum lock
+                if isvoucher == "yes" and not (st.session_state.get(code_key) or code_db).strip():
+                    st.error("Sebelum LOCK, pilih kode kupon dulu.")
+                    st.stop()
+    
                 lock_draft_to_final(draft_id, locked_by="admin")
                 st.success("Draft di-lock dan masuk histori (transactions).")
                 st.rerun()
+
 
     
     
@@ -3944,6 +4029,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
