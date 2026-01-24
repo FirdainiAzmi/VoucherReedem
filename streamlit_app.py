@@ -2815,7 +2815,21 @@ def page_admin():
             height=260
         )
     
-        st.markdown("---")
+        st.write("")
+        if st.button("🔒 LOCK SEMUA DRAFT DI ATAS", type="primary", use_container_width=True, key="btn_lock_all"):
+            try:
+                ids_to_lock = df_draft["id"].tolist()
+        
+                for did in ids_to_lock:
+                    lock_draft_to_final(int(did), locked_by="admin")
+        
+                st.success(f"Berhasil LOCK {len(ids_to_lock)} draft.")
+                st.rerun()
+        
+            except Exception as e:
+                st.error("Gagal LOCK semua draft.")
+                st.code(str(e))
+
     
         # =========================
         # PILIH DRAFT
@@ -4051,6 +4065,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
