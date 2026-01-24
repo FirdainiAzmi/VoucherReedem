@@ -2731,9 +2731,11 @@ def page_admin():
                 )
 
     with tab_lock:
-        st.subheader("🔒 Draft Transaksi (Edit dulu, lalu Lock)")
+        st.subheader("🔒 Draft Transaksi")
     
-        # FILTER DRAFT DI ATAS
+        # =========================
+        # FILTER DRAFT
+        # =========================
         f1, f2 = st.columns([1, 1])
         with f1:
             tgl = st.date_input("Tanggal draft", value=date.today(), key="draft_tgl_admin")
@@ -2744,7 +2746,9 @@ def page_admin():
                 key="draft_cbg_filter"
             )
     
+        # =========================
         # LOAD DRAFT
+        # =========================
         with engine.connect() as conn:
             q = """
             SELECT *
@@ -2759,7 +2763,9 @@ def page_admin():
             q += " ORDER BY id DESC"
             df_draft = pd.read_sql(text(q), conn, params=params)
     
-        # 1) DAFTAR DRAFT DI ATAS
+        # =========================
+        # DAFTAR DRAFT (ATAS)
+        # =========================
         st.markdown("### 📋 Daftar Draft (belum locked)")
         if df_draft.empty:
             st.info("Tidak ada draft untuk tanggal/filter ini.")
@@ -2773,7 +2779,9 @@ def page_admin():
     
         st.markdown("---")
     
-        # 2) PILIH DRAFT UNTUK DIEDIT (DI BAWAH)
+        # =========================
+        # PILIH DRAFT (BAWAH)
+        # =========================
         st.markdown("### ✏️ Pilih Draft untuk Diedit")
         draft_id = st.selectbox(
             "Draft ID",
@@ -2783,36 +2791,67 @@ def page_admin():
         )
         row = df_draft[df_draft["id"] == draft_id].iloc[0]
     
-        # Branch dropdown (searchable otomatis)
+        # key unik per draft (biar gak nyangkut)
+        items_key = f"items_editor_{draft_id}"
+        diskon_key = f"edit_diskon_{draft_id}"
+        tunai_key = f"edit_tunai_{draft_id}"
+        auto_tunai_key = f"auto_tunai_{draft_id}"
+        tgl_key = f"edit_tgl_{draft_id}"
+        kupon_key = f"edit_kupon_{draft_id}"
+        branch_key = f"edit_branch_{draft_id}"
+    
+        # =========================
+        # HEADER EDITOR
+        # =========================
         branch_options = ["Sedati", "Tawangsari", "Kesambi", "Tulangan"]
         branch_now = str(row.get("branch") or "")
-        if branch_now not in branch_options:
-            branch_options = [branch_now] + branch_options if branch_now else branch_options
+        if branch_now and branch_now not in branch_options:
+            branch_options = [branch_now] + branch_options
     
         st.markdown("### 🧾 Header Draft")
         c1, c2, c3, c4 = st.columns([1.2, 1.2, 1, 1])
         with c1:
-            branch = st.selectbox("Cabang", branch_options, index=branch_options.index(branch_now) if branch_now in branch_options else 0)
+            branch = st.selectbox(
+                "Cabang",
+                branch_options,
+                index=branch_options.index(branch_now) if branch_now in branch_options else 0,
+                key=branch_key
+            )
         with c2:
-            tanggal_transaksi = st.date_input("Tanggal", value=row["tanggal_transaksi"], key="edit_tgl_draft")
+            tanggal_transaksi = st.date_input(
+                "Tanggal",
+                value=row["tanggal_transaksi"],
+                key=tgl_key
+            )
         with c3:
-            isvoucher = st.selectbox("Kupon?", ["no", "yes"], index=0 if str(row.get("isvoucher","no"))=="no" else 1)
+            isvoucher = st.selectbox(
+                "Kupon?",
+                ["no", "yes"],
+                index=0 if str(row.get("isvoucher", "no")) == "no" else 1,
+                key=kupon_key
+            )
         with c4:
-            diskon = st.number_input("Diskon", min_value=0.0, step=1000.0, value=float(row.get("diskon") or 0), key="edit_diskon_draft")
+            diskon = st.number_input(
+                "Diskon",
+                min_value=0.0,
+                step=1000.0,
+                value=float(st.session_state.get(diskon_key, row.get("diskon") or 0)),
+                key=diskon_key
+            )
     
-        # Ambil daftar menu dan harga utk cabang terpilih
+        # =========================
+        # MENU + HARGA (SESUAI CABANG)
+        # =========================
         price_map, menu_options = get_price_map_for_branch(branch)
     
         st.markdown("### 🍽️ Items (pilih menu + qty, tanpa typo)")
     
-        # items editor: dari string -> df
+        # parse items string dari DB
         df_items = parse_items_str(row.get("items", ""))
     
-        # pastikan kolom ada
         if df_items.empty:
             df_items = pd.DataFrame([{"menu": "", "qty": 0.0}], columns=["menu", "qty"])
     
-        # Data editor dengan dropdown menu + qty step
         edited = st.data_editor(
             df_items,
             use_container_width=True,
@@ -2820,72 +2859,87 @@ def page_admin():
             column_config={
                 "menu": st.column_config.SelectboxColumn(
                     "Menu",
-                    options=menu_options,  # searchable
+                    options=menu_options,   # searchable
                     required=False,
                 ),
                 "qty": st.column_config.NumberColumn(
                     "Qty",
                     min_value=0.0,
-                    step=1.0,  # default, nanti kamu bisa ubah per menu kalau ada satuan kg
+                    step=1.0,
                     format="%.2f",
                 ),
             },
-            key=f"items_editor_{draft_id}"
+            key=items_key
         )
     
-        # Hitung total otomatis (klik tombol atau realtime)
-        # Realtime:
+        # =========================
+        # HITUNG SUBTOTAL + TOTAL
+        # =========================
         import math
-
+    
         subtotal = 0.0
         for _, r in edited.iterrows():
             menu = str(r.get("menu") or "").strip()
             if not menu:
-                continue  # skip baris kosong
-        
+                continue
+    
             qty_raw = r.get("qty", 0)
             try:
                 qty = float(qty_raw)
             except:
                 qty = 0.0
-        
+    
             if math.isnan(qty) or qty <= 0:
                 continue
-        
+    
             harga = float(price_map.get(menu, 0) or 0)
             subtotal += harga * qty
-        
-        # amanin subtotal dari NaN/inf
+    
         if not isinstance(subtotal, (int, float)) or math.isnan(subtotal) or math.isinf(subtotal):
             subtotal = 0.0
-        
-        st.info(f"Subtotal (hasil hitung dari menu x qty): Rp {int(round(subtotal)):,}")
     
-        # Tunai (bisa diketik, tapi number_input juga ada +/-)
+        st.info(f"Subtotal (menu x qty): Rp {int(round(subtotal)):,}")
+    
+        total_bersih = max(subtotal - float(diskon), 0.0)
+        st.success(f"Total bersih (subtotal - diskon): Rp {int(round(total_bersih)):,}")
+    
+        # =========================
+        # AUTO TUNAI
+        # =========================
+        auto_tunai = st.checkbox(
+            "Auto tunai = total",
+            value=bool(st.session_state.get(auto_tunai_key, False)),
+            key=auto_tunai_key
+        )
+    
+        if auto_tunai:
+            st.session_state[tunai_key] = float(total_bersih)
+    
+        # =========================
+        # INPUT TUNAI (PER DRAFT)
+        # =========================
         tunai = st.number_input(
             "Tunai (cash dibayar)",
             min_value=0.0,
             step=1000.0,
-            value=float(row.get("tunai") or 0),
-            key="edit_tunai_draft"
+            value=float(st.session_state.get(tunai_key, row.get("tunai") or 0)),
+            key=tunai_key
         )
     
-        # used_amount (total bersih)
-        total_bersih = max(subtotal - float(diskon), 0)
-        st.success(f"Total bersih (subtotal - diskon): Rp {int(total_bersih):,}")
-    
+        # =========================
+        # BUTTONS
+        # =========================
         colS1, colS2, colS3 = st.columns(3)
     
         with colS1:
-            if st.button("🧮 Hitung & Isi Total", use_container_width=True):
-                # isi tunai default kalau kosong
-                if tunai == 0:
-                    st.session_state["edit_tunai_draft"] = float(total_bersih)
+            if st.button("🧮 Set Tunai = Total", use_container_width=True, key=f"btn_set_tunai_{draft_id}"):
+                st.session_state[tunai_key] = float(total_bersih)
                 st.rerun()
     
         with colS2:
-            if st.button("💾 Simpan Draft", type="primary", use_container_width=True):
+            if st.button("💾 Simpan Draft", type="primary", use_container_width=True, key=f"btn_save_{draft_id}"):
                 items_str = serialize_items_df(edited)
+    
                 with engine.begin() as conn:
                     conn.execute(text("""
                         UPDATE public.transactions_draft
@@ -2903,19 +2957,21 @@ def page_admin():
                         "tgl": tanggal_transaksi,
                         "items": items_str,
                         "used_amount": float(total_bersih),
-                        "tunai": float(st.session_state.get("edit_tunai_draft", tunai)),
+                        "tunai": float(st.session_state.get(tunai_key, tunai)),
                         "isvoucher": isvoucher,
                         "diskon": float(diskon),
                         "id": int(draft_id),
                     })
+    
                 st.success("Draft tersimpan.")
                 st.rerun()
     
         with colS3:
-            if st.button("🔒 LOCK Draft Ini", use_container_width=True):
+            if st.button("🔒 LOCK Draft Ini", use_container_width=True, key=f"btn_lock_{draft_id}"):
                 lock_draft_to_final(draft_id, locked_by="admin")
                 st.success("Draft di-lock dan masuk histori (transactions).")
                 st.rerun()
+
     
     
 
@@ -3888,6 +3944,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
