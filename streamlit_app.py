@@ -2772,7 +2772,7 @@ def page_admin():
                 )
 
     with tab_lock:
-        st.subheader("🔒 Draft Transaksi (Edit dulu)")
+        st.subheader("🔒 Draft Transaksi")
     
         # =========================
         # FILTER DRAFT
@@ -3012,9 +3012,19 @@ def page_admin():
     
         with colA:
             if st.button("🗑️ Hapus Draft Ini", use_container_width=True, key=f"btn_del_{draft_id}"):
-                delete_draft_transaction(draft_id)
-                st.warning("Draft berhasil dihapus.")
-                st.rerun()
+                try:
+                    with engine.begin() as conn:
+                        conn.execute(text("""
+                            DELETE FROM public.transactions_draft
+                            WHERE id=:id AND is_locked=false
+                        """), {"id": int(draft_id)})
+            
+                    st.warning("Draft berhasil dihapus.")
+                    st.rerun()
+                except Exception as e:
+                    st.error("Gagal hapus draft.")
+                    st.code(str(e))
+
     
         with colB:
             if st.button("💾 Simpan Draft", type="primary", use_container_width=True, key=f"btn_save_{draft_id}"):
@@ -4041,6 +4051,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
