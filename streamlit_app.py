@@ -3886,172 +3886,32 @@ def page_kasir():
     # -----------------------------------------------------
     # ... (lanjutan dari if active_page == "Pemesanan") ...
 
-    elif st.session_state.active_page == "Riwayat":
-        st.header("📜 Riwayat Transaksi")
-        
-        # --- 1. LOAD DATA (LOGIKA ASLI) ---
-        df_tx = list_transactions_draft(limit=5000)
-        df_tx = df_tx.sort_values(by="id", ascending=False).reset_index(drop=True)
+   elif st.session_state.active_page == "Riwayat":
+    st.header("📜 Riwayat Transaksi (Draft)")
 
-        if df_tx.empty:
-            st.info("Belum ada transaksi")
-        else:
-            # --- 2. PRE-PROCESSING (LOGIKA ASLI) ---
-            df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"]).dt.date
-            df_tx["code"] = df_tx["code"].fillna("")
-            df_tx["isvoucher"] = df_tx["isvoucher"].fillna("no")
-            min_date = df_tx["tanggal_transaksi"].min()
-            max_date = df_tx["tanggal_transaksi"].max()
+    cabang = st.session_state.get("cabang", "Semua")
 
-            # --- 3. FILTER UI (DIGABUNG DALAM CONTAINER BIAR RAPI) ---
-            with st.container():
-                st.write("**🔍 Filter Data**")
-                col1, col2, col3, col4 = st.columns([2, 1.3, 1.3, 1.3])
-                with col1:
-                    search_code = st.text_input("Cari Kode Kupon", "", placeholder="Ketik kode...").strip()
-                with col2:
-                    start_date = st.date_input("Tanggal Mulai", value=min_date, min_value=min_date, max_value=max_date)
-                with col3:
-                    end_date = st.date_input("Tanggal Akhir", value=max_date, min_value=min_date, max_value=max_date)
-                with col4:
-                    filter_kupon = st.selectbox("Jenis Transaksi", ["semua", "Kupon", "Non Kupon"])
+    # kalau mau hanya cabang kasir + yang belum locked
+    df_tx = list_transactions_draft(engine, tanggal=None, branch=cabang)
 
-            # --- 4. FILTER LOGIC (LOGIKA ASLI) ---
-            if start_date > end_date:
-                st.error("❌ Tanggal Mulai tidak boleh setelah Tanggal Akhir")
-                st.stop()
-            
-            df_tx = df_tx[(df_tx["tanggal_transaksi"] >= start_date) & (df_tx["tanggal_transaksi"] <= end_date)]
+    if df_tx.empty:
+        st.info("Belum ada transaksi.")
+        st.stop()
 
-            filter_cabang = st.session_state.cabang
-            # if filter_cabang != "semua": (Logic user)
-            df_tx = df_tx[df_tx["branch"] == filter_cabang]
+    # normalisasi ringan
+    df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"], errors="coerce").dt.date
+    df_tx["isvoucher"] = df_tx.get("isvoucher", "").fillna("no")
+    df_tx["code"] = df_tx.get("code", "").fillna("")
+    df_tx["diskon"] = pd.to_numeric(df_tx.get("diskon", 0), errors="coerce").fillna(0)
+    df_tx["used_amount"] = pd.to_numeric(df_tx.get("used_amount", 0), errors="coerce").fillna(0)
+    df_tx["tunai"] = pd.to_numeric(df_tx.get("tunai", 0), errors="coerce").fillna(0)
 
-            if filter_kupon != "semua":
-                if filter_kupon == "Kupon":
-                    filter_kupon = "yes"
-                else:
-                    filter_kupon = "no"
-                df_tx = df_tx[df_tx["isvoucher"] == filter_kupon]
+    st.dataframe(
+        df_tx[["id","tanggal_transaksi","branch","items","used_amount","tunai","isvoucher","code","diskon"]],
+        use_container_width=True,
+        height=450
+    )
 
-            if df_tx.empty:
-                st.warning("Tidak ada transaksi dengan filter tersebut.")
-                st.stop()
-
-            # --- 5. HITUNG TOTAL (LOGIKA ASLI) ---
-            total_uang_filtered = df_tx["used_amount"].fillna(0).sum()
-            total_cash_filtered = df_tx["tunai"].fillna(0).sum()
-            total_kupon_filtered = total_uang_filtered - total_cash_filtered
-
-            # --- 6. TAMPILAN STAT CARD (DESAIN BARU) ---
-            st.markdown("<br>", unsafe_allow_html=True)
-            c_stat1, c_stat2, c_stat3 = st.columns(3)
-            
-            with c_stat1:
-                st.markdown(f"""
-                <div class="stat-card">
-                    <div class="stat-title">Total Pendapatan</div>
-                    <div class="stat-value blue">Rp {total_uang_filtered:,}</div>
-                </div>""", unsafe_allow_html=True)
-            
-            with c_stat2:
-                st.markdown(f"""
-                <div class="stat-card">
-                    <div class="stat-title">Total Cash</div>
-                    <div class="stat-value green">Rp {total_cash_filtered:,}</div>
-                </div>""", unsafe_allow_html=True)
-            
-            with c_stat3:
-                st.markdown(f"""
-                <div class="stat-card">
-                    <div class="stat-title">Total Dari Kupon</div>
-                    <div class="stat-value purple">Rp {total_kupon_filtered:,}</div>
-                </div>""", unsafe_allow_html=True)
-            
-            st.markdown("<hr>", unsafe_allow_html=True)
-
-            # --- 7. SEARCH KUPON LOGIC (LOGIKA ASLI) ---
-            if search_code:
-                df_voucher_top = df_tx[df_tx["isvoucher"] == "yes"]
-                df_filtered_top = df_voucher_top[df_voucher_top["code"].str.contains(search_code.upper(), case=False, na=False)]
-
-                st.markdown(f"<div class='section-title'>Detail Kupon: {search_code.upper()}</div>", unsafe_allow_html=True)
-
-                if df_filtered_top.empty:
-                    st.warning(f"Tidak ada transaksi voucher untuk kupon {search_code}")
-                else:
-                    with st.expander("ℹ️ Informasi Lengkap Kupon", expanded=True):
-                        total_transaksi = len(df_filtered_top)
-                        total_nominal = df_filtered_top["used_amount"].sum()
-                        initial_val = df_filtered_top["initial_value"].iloc[0]
-
-                        k1, k2, k3 = st.columns(3)
-                        k1.metric("Initial Value", f"Rp {initial_val:,}")
-                        k2.metric("Jml Transaksi", f"{total_transaksi}")
-                        k3.metric("Terpakai", f"Rp {total_nominal:,}")
-
-                        df_tmp_display = df_filtered_top.rename(columns={
-                            "tanggal_transaksi": "Tanggal_transaksi", "initial_value": "Initial_value",
-                            "used_amount": "Total", "tunai": "Tunai", "branch": "Cabang", "items": "Menu", "code": "Kode"
-                        })
-                        st.dataframe(df_tmp_display[["Tanggal_transaksi", "Kode", "Initial_value", "Total", "Tunai", "Cabang", "Menu"]], use_container_width=True)
-                        st.download_button(f"⬇️ Download CSV {search_code.upper()}", data=df_to_csv_bytes(df_tmp_display), file_name=f"transactions_{search_code.upper()}.csv", mime="text/csv")
-                st.markdown("---")
-            
-            # --- 8. TABEL UTAMA ---
-            st.markdown("<div class='section-title'>📋 Tabel Transaksi</div>", unsafe_allow_html=True)
-            
-            df_display = df_tx.rename(columns={
-                        "code": "Kode", "used_amount": "Total", "tanggal_transaksi": "Tanggal_transaksi",
-                        "branch": "Cabang", "items": "Menu", "tunai": "Tunai", "isvoucher": "kupon digunakan", "initial_value": "Initial_value"
-                    })
-            
-            df_display["kupon digunakan"] = df_display["kupon digunakan"].apply(lambda x: "1" if x == "yes" else "0")
-            df_display.loc[df_display["kupon digunakan"] == "0", "Total"] = df_display["Tunai"]
-
-            st.dataframe(df_display[["id", "Tanggal_transaksi", "kupon digunakan", "Kode", "Initial_value", "Total", "Tunai", "Cabang", "Menu"]], use_container_width=True, height=400)
-
-            st.download_button("⬇️ Download CSV Transaksi", data=df_to_csv_bytes(df_display), file_name="transactions.csv", mime="text/csv")
-         
-            # --- 9. ANALISIS MENU (LOGIKA ASLI) ---
-            def normalize_name(s: str) -> str:
-                if not isinstance(s, str): return ""
-                s = s.strip().lower()
-                s = " ".join(s.split())  
-                s = unicodedata.normalize("NFKD", s)
-                s = "".join(ch for ch in s if not unicodedata.combining(ch))
-                return s
-        
-            menu_list = []
-            for idx, row in df_tx.iterrows():
-                menu_items = str(row.get("items", "")).split(",") 
-                for item in menu_items:
-                    raw = item.strip()
-                    if not raw: continue
-                    match = re.match(r"(.+?)\s*[xX]\s*(\d+(?:\.\d+)?)\s*$", raw)
-                    if match:
-                        nama_menu = match.group(1).strip()
-                        jumlah = float(match.group(2))
-                    else:
-                        parts = raw.rsplit(" ", 1)
-                        if len(parts) == 2 and parts[1].isdigit():
-                            nama_menu = parts[0]; jumlah = int(parts[1])
-                        else:
-                            nama_menu = raw; jumlah = 1
-                    menu_list.append({"Tanggal": row["tanggal_transaksi"], "Menu": normalize_name(nama_menu), "Jumlah": jumlah})
-        
-            df_menu = pd.DataFrame(menu_list)
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("<div class='section-title'>📊 Analisis Penjualan Menu</div>", unsafe_allow_html=True)
-            
-            if df_menu.empty:
-                st.info("Tidak ada menu terjual pada tanggal tersebut.")
-            else:
-                df_pivot = df_menu.groupby("Menu")["Jumlah"].sum().reset_index()
-                df_pivot["Menu"] = df_pivot["Menu"].apply(lambda x: x.title())
-                df_pivot = df_pivot.sort_values(by="Jumlah", ascending=False).reset_index(drop=True)
-                st.dataframe(df_pivot, use_container_width=True)
-                
 # Jika admin login → langsung ke halaman admin
 if st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
     page_admin()
@@ -4065,6 +3925,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
