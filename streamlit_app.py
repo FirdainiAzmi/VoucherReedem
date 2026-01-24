@@ -3885,32 +3885,31 @@ def page_kasir():
     # HALAMAN 2: RIWAYAT (PLACEHOLDER FUNGSI ASLI)
     # -----------------------------------------------------
     # ... (lanjutan dari if active_page == "Pemesanan") ...
-
    elif st.session_state.active_page == "Riwayat":
-    st.header("📜 Riwayat Transaksi (Draft)")
-
-    cabang = st.session_state.get("cabang", "Semua")
-
-    # kalau mau hanya cabang kasir + yang belum locked
-    df_tx = list_transactions_draft(engine, tanggal=None, branch=cabang)
-
-    if df_tx.empty:
-        st.info("Belum ada transaksi.")
-        st.stop()
-
-    # normalisasi ringan
-    df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"], errors="coerce").dt.date
-    df_tx["isvoucher"] = df_tx.get("isvoucher", "").fillna("no")
-    df_tx["code"] = df_tx.get("code", "").fillna("")
-    df_tx["diskon"] = pd.to_numeric(df_tx.get("diskon", 0), errors="coerce").fillna(0)
-    df_tx["used_amount"] = pd.to_numeric(df_tx.get("used_amount", 0), errors="coerce").fillna(0)
-    df_tx["tunai"] = pd.to_numeric(df_tx.get("tunai", 0), errors="coerce").fillna(0)
-
-    st.dataframe(
-        df_tx[["id","tanggal_transaksi","branch","items","used_amount","tunai","isvoucher","code","diskon"]],
-        use_container_width=True,
-        height=450
-    )
+        st.header("📜 Riwayat Transaksi (Draft)")
+    
+        cabang = st.session_state.get("cabang", "Semua")
+    
+        # kalau mau hanya cabang kasir + yang belum locked
+        df_tx = list_transactions_draft(engine, tanggal=None, branch=cabang)
+    
+        if df_tx.empty:
+            st.info("Belum ada transaksi.")
+            st.stop()
+    
+        # normalisasi ringan
+        df_tx["tanggal_transaksi"] = pd.to_datetime(df_tx["tanggal_transaksi"], errors="coerce").dt.date
+        df_tx["isvoucher"] = df_tx.get("isvoucher", "").fillna("no")
+        df_tx["code"] = df_tx.get("code", "").fillna("")
+        df_tx["diskon"] = pd.to_numeric(df_tx.get("diskon", 0), errors="coerce").fillna(0)
+        df_tx["used_amount"] = pd.to_numeric(df_tx.get("used_amount", 0), errors="coerce").fillna(0)
+        df_tx["tunai"] = pd.to_numeric(df_tx.get("tunai", 0), errors="coerce").fillna(0)
+    
+        st.dataframe(
+            df_tx[["id","tanggal_transaksi","branch","items","used_amount","tunai","isvoucher","code","diskon"]],
+            use_container_width=True,
+            height=450
+        )
 
 # Jika admin login → langsung ke halaman admin
 if st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
@@ -3925,6 +3924,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
