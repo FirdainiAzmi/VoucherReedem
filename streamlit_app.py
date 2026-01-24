@@ -35,6 +35,14 @@ def init_db():
     try:
         with engine.begin() as conn:
             conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS public.jenis_db (
+                    jenis_kupon TEXT PRIMARY KEY,
+                    awal_berlaku DATE NOT NULL,
+                    akhir_berlaku DATE NOT NULL
+                );
+            """))
+
+            conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS public.vouchers (
                     code TEXT PRIMARY KEY,
                     initial_value INTEGER NOT NULL,
@@ -48,20 +56,10 @@ def init_db():
                     tunai INTEGER,
                     jenis_kupon TEXT NOT NULL,
                     satuan TEXT,
-                    FOREIGN KEY(jenis_kupon) REFERENCES jenis_db(jenis_kupon)
-                )
+                    FOREIGN KEY(jenis_kupon) REFERENCES public.jenis_db(jenis_kupon)
+                );
             """))
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS public.transactions (
-                    id SERIAL PRIMARY KEY,
-                    code TEXT NOT NULL,
-                    used_amount INTEGER NOT NULL,
-                    tanggal_transaksi TIMESTAMP NOT NULL,
-                    branch TEXT,
-                    items TEXT,
-                    diskon INTEGER
-                )
-            """))
+
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS public.menu_items (
                     id SERIAL PRIMARY KEY,
@@ -73,22 +71,34 @@ def init_db():
                     harga_kesambi INTEGER,
                     harga_tulangan INTEGER,
                     status TEXT
-                )
+                );
             """))
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS public.jenis_db (
-                    jenis_kupon TEXT PRIMARY KEY,
-                    awal_berlaku DATE NOT NULL,
-                    akhir_berlaku DATE NOT NULL
-                )
-            """))
+
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS public.kategori_menu (
                     id_kategori SERIAL PRIMARY KEY,
                     nama_kategori TEXT,
                     status_kategori TEXT
-                )
+                );
             """))
+
+            # FINAL TRANSACTIONS (harus match atomic_redeem)
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS public.transactions (
+                    id SERIAL PRIMARY KEY,
+                    code TEXT,
+                    used_amount INTEGER NOT NULL,
+                    tanggal_transaksi TIMESTAMP NOT NULL,
+                    branch TEXT,
+                    items TEXT,
+                    tunai INTEGER DEFAULT 0,
+                    isvoucher TEXT DEFAULT 'no',
+                    diskon INTEGER DEFAULT 0,
+                    draft_id BIGINT UNIQUE
+                );
+            """))
+
+            # DRAFT TRANSACTIONS
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS public.transactions_draft (
                     id BIGSERIAL PRIMARY KEY,
@@ -98,7 +108,7 @@ def init_db():
                     branch TEXT,
                     items TEXT,
                     tunai NUMERIC,
-                    isvoucher BOOLEAN DEFAULT FALSE,
+                    isvoucher TEXT DEFAULT 'no',
                     diskon NUMERIC DEFAULT 0,
 
                     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -106,17 +116,19 @@ def init_db():
                     is_locked BOOLEAN DEFAULT FALSE,
                     locked_at TIMESTAMPTZ,
                     locked_by TEXT
-                    );
-
-                    ALTER TABLE public.transactions
-                    ADD COLUMN IF NOT EXISTS draft_id BIGINT UNIQUE;
-                )
+                );
             """))
 
+            # kalau kamu tetap mau pastikan kolom draft_id ada (opsional, karena sudah dibuat di CREATE)
+            conn.execute(text("""
+                ALTER TABLE public.transactions
+                ADD COLUMN IF NOT EXISTS draft_id BIGINT UNIQUE;
+            """))
 
     except Exception as e:
         st.error(f"Gagal inisialisasi database: {e}")
         st.stop()
+
 
 def aktivasi_notification(voucher_code, seller_name, buyer_name, buyer_phone):
     subject = f"[INFO] Voucher {voucher_code} Ingin Diaktivasi oleh Seller"
@@ -3714,3 +3726,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
