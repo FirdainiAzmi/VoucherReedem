@@ -1375,28 +1375,40 @@ def parse_items_str(items_str: str) -> pd.DataFrame:
 
     return pd.DataFrame(rows, columns=["menu", "qty"])
 
+import math
+
 def serialize_items_df(df_items: pd.DataFrame) -> str:
     """
     dataframe menu, qty -> "Menu x qty, ..."
+    Aman untuk qty kosong/NaN/string.
     """
     if df_items is None or df_items.empty:
         return ""
 
     out = []
     for _, r in df_items.iterrows():
-        menu = str(r.get("menu", "")).strip()
-        qty = r.get("qty", 0)
+        menu = str(r.get("menu", "") or "").strip()
         if not menu:
             continue
+
+        qty_raw = r.get("qty", 0)
+
+        # convert qty aman
         try:
-            qty = float(qty)
+            qty = float(qty_raw)
         except:
-            qty = 0
-        if qty <= 0:
+            qty = 0.0
+
+        # skip NaN / <=0
+        if math.isnan(qty) or qty <= 0:
             continue
 
-        # rapihin: kalau qty integer, tulis tanpa .0
-        qty_txt = str(int(qty)) if abs(qty - int(qty)) < 1e-9 else f"{qty:.2f}"
+        # rapihin penulisan qty
+        if abs(qty - round(qty)) < 1e-9:
+            qty_txt = str(int(round(qty)))
+        else:
+            qty_txt = f"{qty:.2f}"
+
         out.append(f"{menu} x {qty_txt}")
 
     return ", ".join(out)
@@ -4029,6 +4041,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
