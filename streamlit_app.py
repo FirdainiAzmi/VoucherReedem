@@ -721,6 +721,7 @@ def get_full_menu():
     query = """
         SELECT 
             id_menu,
+            kategori,
             nama_item,
             keterangan,
             harga_twsari,
@@ -3505,6 +3506,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
