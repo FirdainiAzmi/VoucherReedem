@@ -2248,20 +2248,29 @@ def page_admin():
     with tab_menu:
         st.subheader("Kelola Menu")
         tab1, tab2, tab3 = st.tabs(["📋 Lihat Menu", "➕ Tambah Menu", "✏️ Edit / Hapus Menu"])
-
+        
         # ============================
         # TAB 1 — LIST MENU
         # ============================
         with tab1:
             st.subheader("📋 Daftar Menu")
-
+            st.markdown("### 🔎 Filter")
+        
+            col1 = st.columns(1)[0]
+        
+            # Ambil menu dulu supaya kategori diambil dari sumber yang sama
             df_menu = get_full_menu()
-
-            st.dataframe(
-                df_menu,
-                use_container_width=True,
-                height=500
-        )
+        
+            with col1:
+                kategori_list = ["Semua"] + sorted(df_menu["kategori"].dropna().unique().tolist())
+                kategori = st.selectbox("Kategori", kategori_list)
+        
+            # Terapkan filter
+            if kategori != "Semua":
+                df_menu = df_menu[df_menu["kategori"] == kategori]
+        
+            st.dataframe(df_menu, use_container_width=True, height=500)
+        
 
         # ============================
         # TAB 2 — ADD MENU
@@ -3496,5 +3505,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
