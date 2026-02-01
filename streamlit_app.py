@@ -2990,12 +2990,17 @@ def page_admin():
         with col2:
             start_date = st.date_input(
                 "Tanggal Mulai",
-                value=default_start_date,
+                value=min_date,
                 min_value=min_date,
                 max_value=max_date
             )
         with col3:
-            end_date = st.date_input("Tanggal Akhir", max_date)
+            end_date = st.date_input(
+                "Tanggal Akhir", 
+                value=max_date,
+                min_value=min_date,
+                max_value=max_date
+            )
         with col4:
             filter_cabang = st.selectbox("Filter Cabang", ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"])
         with col5:
@@ -3020,12 +3025,6 @@ def page_admin():
                 (df_filt["isvoucher"] == "yes") &
                 (df_filt["code"].str.contains(search_code.upper(), case=False, na=False))
             ]
-
-        st.write("dtype tanggal_transaksi:", df_tx["tanggal_transaksi"].dtype)
-        st.write("contoh tanggal_transaksi:", df_tx["tanggal_transaksi"].head(5))
-        st.write("jumlah NaT/NaN:", df_tx["tanggal_transaksi"].isna().sum())
-        st.write("start_date:", start_date, type(start_date))
-        st.write("end_date:", end_date, type(end_date))
         
         if df_filt.empty:
             st.warning("Tidak ada data sesuai filter.")
@@ -3962,6 +3961,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
