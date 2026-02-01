@@ -3021,6 +3021,12 @@ def page_admin():
                 (df_filt["code"].str.contains(search_code.upper(), case=False, na=False))
             ]
 
+        st.write("dtype tanggal_transaksi:", df_tx["tanggal_transaksi"].dtype)
+        st.write("contoh tanggal_transaksi:", df_tx["tanggal_transaksi"].head(5))
+        st.write("jumlah NaT/NaN:", df_tx["tanggal_transaksi"].isna().sum())
+        st.write("start_date:", start_date, type(start_date))
+        st.write("end_date:", end_date, type(end_date))
+        
         if df_filt.empty:
             st.warning("Tidak ada data sesuai filter.")
             st.stop()
@@ -3956,6 +3962,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
