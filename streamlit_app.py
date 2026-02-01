@@ -1458,202 +1458,6 @@ def page_admin():
     show_back_to_login_button("admin")
     tab_edit, tab_edit_seller, tab_laporan, tab_histori, tab_menu, tab_kupon, tab_lock = st.tabs([
     "Informasi Kupon", "Edit Seller", "Laporan warung", "Histori", "Kelola Menu", "Kelola Kupon", "🔒 Lock Transaksi"])
-
-    with tab_edit:
-        st.subheader("Informasi Kupon")
-
-        # Search & Filter Inputs
-        col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
-        with col1:
-            kode_cari = st.text_input(
-                "Cari kode kupon",
-                placeholder="Masukkan kode",
-            ).strip().upper()
-
-        with col2:
-            cari_berdasarkan = st.selectbox(
-                "Cari berdasarkan",
-                ["Kode", "Nama Seller", "Nama Pembeli"]
-            )
-
-        with col3:
-            filter_status = st.selectbox(
-                "Filter Status",
-                ["semua", "active", "habis", "proses", "inactive"]
-            )
-
-        with col4:
-            filter_nominal = st.selectbox(
-                "Filter Nominal",
-                ["semua", "50000", "100000", "200000"],
-                index=0
-            )
-        
-        # Query builder
-        try:
-            query = "SELECT * FROM vouchers"
-            where_conditions = []
-            params = {}
-        
-            # Filter status
-            if filter_status != "semua":
-                where_conditions.append("status = :status")
-                params["status"] = filter_status
-        
-            # Filter kode
-            if kode_cari:
-                if cari_berdasarkan == "Kode":
-                    where_conditions.append("UPPER(code) LIKE :val")
-                elif cari_berdasarkan == "Nama Seller":
-                    where_conditions.append("UPPER(seller) LIKE :val")
-                elif cari_berdasarkan == "Nama Pembeli":
-                    where_conditions.append("UPPER(nama) LIKE :val")
-            
-                params["val"] = f"%{kode_cari.upper()}%"
-                    
-            # Filter nominal
-            if filter_nominal != "semua":
-                where_conditions.append("initial_value = :nominal")
-                params["nominal"] = int(filter_nominal)
-        
-            # Gabungkan SQL final
-            if where_conditions:
-                query += " WHERE " + " AND ".join(where_conditions)
-        
-            query += """
-             ORDER BY 
-                 CASE 
-                    WHEN seller IS NOT NULL AND seller <> '' THEN 1
-                    ELSE 2
-                END,
-                CASE 
-                    WHEN status = 'active' THEN 1
-                    WHEN status = 'habis' THEN 2
-                    WHEN status = 'proses' THEN 3
-                    WHEN status = 'inactive' THEN 4
-                    ELSE 5
-                END,
-                CASE
-                    WHEN initial_value = 50000 THEN 1
-                    WHEN initial_value = 100000 THEN 2
-                    WHEN initial_value = 200000 THEN 3
-                    ELSE 4
-                END,
-                code ASC
-            """
-        
-            with engine.connect() as conn:
-                df_voucher = pd.read_sql(text(query), conn, params=params)
-        
-            if df_voucher.empty:
-                st.info("Tidak ada voucher ditemukan.")
-            else:
-        
-                # Format nominal
-                format_nominal = lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}"
-                for col in ["initial_value", "balance", "tunai"]:
-                    if col in df_voucher:
-                        df_voucher[col] = df_voucher[col].apply(format_nominal)
-        
-                # Status + badge warna 🎨
-                def status_badge(x):
-                    if x == "active" or x == "Active":
-                        return "🟢 active"
-                    elif x == "habis" or x == "sold out":
-                        return "🔴 habis" 
-                    elif x == "proses":
-                        return "🟡 proses"
-                    return "⚪ inactive"
-        
-                df_voucher["status"] = df_voucher["status"].apply(status_badge)
-        
-                # Display tabel dengan badge
-                st.dataframe(
-                    df_voucher[
-                        ["code", "nama", "no_hp", "status", "tanggal_aktivasi",
-                         "initial_value", "balance", "tunai", "seller", "tanggal_penjualan"]
-                    ],
-                    use_container_width=True,
-                )
-        
-                # Jika search cocok dengan 1 voucher → tampilkan form edit
-                if kode_cari:
-                    match_col = {
-                        "Kode": "code",
-                        "Nama Seller": "seller",
-                        "Nama Pembeli": "nama"
-                    }.get(cari_berdasarkan, "code")
-                
-                    matched = df_voucher[
-                        df_voucher[match_col].astype(str).str.upper() == kode_cari.upper()
-                    ]
-                    if matched.empty:
-                        st.warning("Tidak ditemukan voucher yang cocok dengan pencarian.")
-                    else:
-                        v = matched.iloc[0]
-                        st.markdown("---")
-                        st.subheader(f"✏️ Edit Kupon: {v['code']}")
-        
-                        with st.form(key=f"edit_form_{v['code']}"):
-                            nama_in = st.text_input("Nama Pembeli", v["nama"] or "")
-                            nohp_in = st.text_input("No HP Pembeli", v["no_hp"] or "")
-                            status_in = st.selectbox(
-                                "Status",
-                                ["inactive", "active", "habis"],
-                                index=["inactive", "active", "habis"].index(
-                                    v["status"] if v["status"] in ["inactive", "active", "habis"] else "active"
-                                )
-                            )
-                            nama_sell = st.text_input("Nama Seller", v["seller"] or "")
-                            tgl_jual_in = st.date_input(
-                                "Tanggal Penjualan",
-                                value=v["tanggal_penjualan"] if isinstance(v["tanggal_penjualan"], (date, datetime)) else date.today()
-                            )
-                            tgl_aktif_in = st.date_input(
-                                "Tanggal Aktivasi",
-                                value=v["tanggal_aktivasi"] if isinstance(v["tanggal_aktivasi"], (date, datetime)) else date.today()
-                            )
-        
-                            submit = st.form_submit_button("💾 Simpan Perubahan")
-                            if submit:
-                                if not nama_in:
-                                    st.error("Nama Pembeli tidak boleh kosong.")
-                                    st.stop()
-
-                                if not nohp_in:
-                                    st.error("Nomor HP Pembeli tidak boleh kosong.")
-                                    st.stop()
-
-                                if not nama_sell:
-                                    st.error("Nama Seller tidak boleh kosong.")
-                                    st.stop()
-                                    
-                                with engine.begin() as conn2:
-                                    conn2.execute(text("""
-                                        UPDATE public.vouchers
-                                        SET nama = :nama,
-                                            no_hp = :no_hp,
-                                            status = :status,
-                                            seller = :seller,
-                                            tanggal_penjualan = :tgl_jual,
-                                            tanggal_aktivasi = :tgl_aktif
-                                        WHERE code = :code
-                                    """), {
-                                        "nama": nama_in.strip(),
-                                        "no_hp": nohp_in.strip(),
-                                        "status": status_in,
-                                        "seller": nama_sell.strip(),
-                                        "tgl_jual": tgl_jual_in.strftime("%Y-%m-%d"),
-                                        "tgl_aktif": tgl_aktif_in.strftime("%Y-%m-%d"),
-                                        "code": v["code"]
-                                    })
-        
-                                st.success(f"Voucher {v['code']} berhasil diupdate.")
-                                st.rerun()
-        
-        except Exception as e:
-            st.error("❌ Terjadi error saat memuat data kupon.")
-            st.code(str(e))
         
     with tab_histori:
         st.subheader("Histori Transaksi")
@@ -3128,6 +2932,201 @@ def page_admin():
                 st.success("Transaksi disimpan.")
                 st.rerun()
 
+    with tab_edit:
+        st.subheader("Informasi Kupon")
+
+        # Search & Filter Inputs
+        col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
+        with col1:
+            kode_cari = st.text_input(
+                "Cari kode kupon",
+                placeholder="Masukkan kode",
+            ).strip().upper()
+
+        with col2:
+            cari_berdasarkan = st.selectbox(
+                "Cari berdasarkan",
+                ["Kode", "Nama Seller", "Nama Pembeli"]
+            )
+
+        with col3:
+            filter_status = st.selectbox(
+                "Filter Status",
+                ["semua", "active", "habis", "proses", "inactive"]
+            )
+
+        with col4:
+            filter_nominal = st.selectbox(
+                "Filter Nominal",
+                ["semua", "50000", "100000", "200000"],
+                index=0
+            )
+        
+        # Query builder
+        try:
+            query = "SELECT * FROM vouchers"
+            where_conditions = []
+            params = {}
+        
+            # Filter status
+            if filter_status != "semua":
+                where_conditions.append("status = :status")
+                params["status"] = filter_status
+        
+            # Filter kode
+            if kode_cari:
+                if cari_berdasarkan == "Kode":
+                    where_conditions.append("UPPER(code) LIKE :val")
+                elif cari_berdasarkan == "Nama Seller":
+                    where_conditions.append("UPPER(seller) LIKE :val")
+                elif cari_berdasarkan == "Nama Pembeli":
+                    where_conditions.append("UPPER(nama) LIKE :val")
+            
+                params["val"] = f"%{kode_cari.upper()}%"
+                    
+            # Filter nominal
+            if filter_nominal != "semua":
+                where_conditions.append("initial_value = :nominal")
+                params["nominal"] = int(filter_nominal)
+        
+            # Gabungkan SQL final
+            if where_conditions:
+                query += " WHERE " + " AND ".join(where_conditions)
+        
+            query += """
+             ORDER BY 
+                 CASE 
+                    WHEN seller IS NOT NULL AND seller <> '' THEN 1
+                    ELSE 2
+                END,
+                CASE 
+                    WHEN status = 'active' THEN 1
+                    WHEN status = 'habis' THEN 2
+                    WHEN status = 'proses' THEN 3
+                    WHEN status = 'inactive' THEN 4
+                    ELSE 5
+                END,
+                CASE
+                    WHEN initial_value = 50000 THEN 1
+                    WHEN initial_value = 100000 THEN 2
+                    WHEN initial_value = 200000 THEN 3
+                    ELSE 4
+                END,
+                code ASC
+            """
+        
+            with engine.connect() as conn:
+                df_voucher = pd.read_sql(text(query), conn, params=params)
+        
+            if df_voucher.empty:
+                st.info("Tidak ada voucher ditemukan.")
+            else:
+        
+                # Format nominal
+                format_nominal = lambda x: "-" if pd.isna(x) else f"Rp {int(x):,}"
+                for col in ["initial_value", "balance", "tunai"]:
+                    if col in df_voucher:
+                        df_voucher[col] = df_voucher[col].apply(format_nominal)
+        
+                # Status + badge warna 🎨
+                def status_badge(x):
+                    if x == "active" or x == "Active":
+                        return "🟢 active"
+                    elif x == "habis" or x == "sold out":
+                        return "🔴 habis" 
+                    elif x == "proses":
+                        return "🟡 proses"
+                    return "⚪ inactive"
+        
+                df_voucher["status"] = df_voucher["status"].apply(status_badge)
+        
+                # Display tabel dengan badge
+                st.dataframe(
+                    df_voucher[
+                        ["code", "nama", "no_hp", "status", "tanggal_aktivasi",
+                         "initial_value", "balance", "tunai", "seller", "tanggal_penjualan"]
+                    ],
+                    use_container_width=True,
+                )
+        
+                # Jika search cocok dengan 1 voucher → tampilkan form edit
+                if kode_cari:
+                    match_col = {
+                        "Kode": "code",
+                        "Nama Seller": "seller",
+                        "Nama Pembeli": "nama"
+                    }.get(cari_berdasarkan, "code")
+                
+                    matched = df_voucher[
+                        df_voucher[match_col].astype(str).str.upper() == kode_cari.upper()
+                    ]
+                    if matched.empty:
+                        st.warning("Tidak ditemukan voucher yang cocok dengan pencarian.")
+                    else:
+                        v = matched.iloc[0]
+                        st.markdown("---")
+                        st.subheader(f"✏️ Edit Kupon: {v['code']}")
+        
+                        with st.form(key=f"edit_form_{v['code']}"):
+                            nama_in = st.text_input("Nama Pembeli", v["nama"] or "")
+                            nohp_in = st.text_input("No HP Pembeli", v["no_hp"] or "")
+                            status_in = st.selectbox(
+                                "Status",
+                                ["inactive", "active", "habis"],
+                                index=["inactive", "active", "habis"].index(
+                                    v["status"] if v["status"] in ["inactive", "active", "habis"] else "active"
+                                )
+                            )
+                            nama_sell = st.text_input("Nama Seller", v["seller"] or "")
+                            tgl_jual_in = st.date_input(
+                                "Tanggal Penjualan",
+                                value=v["tanggal_penjualan"] if isinstance(v["tanggal_penjualan"], (date, datetime)) else date.today()
+                            )
+                            tgl_aktif_in = st.date_input(
+                                "Tanggal Aktivasi",
+                                value=v["tanggal_aktivasi"] if isinstance(v["tanggal_aktivasi"], (date, datetime)) else date.today()
+                            )
+        
+                            submit = st.form_submit_button("💾 Simpan Perubahan")
+                            if submit:
+                                if not nama_in:
+                                    st.error("Nama Pembeli tidak boleh kosong.")
+                                    st.stop()
+
+                                if not nohp_in:
+                                    st.error("Nomor HP Pembeli tidak boleh kosong.")
+                                    st.stop()
+
+                                if not nama_sell:
+                                    st.error("Nama Seller tidak boleh kosong.")
+                                    st.stop()
+                                    
+                                with engine.begin() as conn2:
+                                    conn2.execute(text("""
+                                        UPDATE public.vouchers
+                                        SET nama = :nama,
+                                            no_hp = :no_hp,
+                                            status = :status,
+                                            seller = :seller,
+                                            tanggal_penjualan = :tgl_jual,
+                                            tanggal_aktivasi = :tgl_aktif
+                                        WHERE code = :code
+                                    """), {
+                                        "nama": nama_in.strip(),
+                                        "no_hp": nohp_in.strip(),
+                                        "status": status_in,
+                                        "seller": nama_sell.strip(),
+                                        "tgl_jual": tgl_jual_in.strftime("%Y-%m-%d"),
+                                        "tgl_aktif": tgl_aktif_in.strftime("%Y-%m-%d"),
+                                        "code": v["code"]
+                                    })
+        
+                                st.success(f"Voucher {v['code']} berhasil diupdate.")
+                                st.rerun()
+        
+        except Exception as e:
+            st.error("❌ Terjadi error saat memuat data kupon.")
+            st.code(str(e))
 
 # ---------------------------
 # Page: Seller Activation (seller-only)
@@ -3957,6 +3956,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
