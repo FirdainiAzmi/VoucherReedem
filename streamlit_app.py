@@ -2772,14 +2772,14 @@ def page_admin():
                 )
 
     with tab_lock:
-        st.subheader("🔒 Draft Transaksi")
+        st.subheader("🔒 close day")
     
         # =========================
         # FILTER DRAFT
         # =========================
         f1, f2 = st.columns([1, 1])
         with f1:
-            tgl = st.date_input("Tanggal draft", value=date.today(), key="draft_tgl_admin")
+            tgl = st.date_input("Tanggal Transaksi", value=date.today(), key="draft_tgl_admin")
         with f2:
             cabang_filter = st.selectbox(
                 "Cabang (filter)",
@@ -2804,9 +2804,9 @@ def page_admin():
             q += " ORDER BY id DESC"
             df_draft = pd.read_sql(text(q), conn, params=params)
     
-        st.markdown("### 📋 Daftar Draft (belum locked)")
+        st.markdown("### 📋 Daftar Transaksi")
         if df_draft.empty:
-            st.info("Tidak ada draft untuk tanggal/filter ini.")
+            st.info("Tidak ada transaksi untuk tanggal/filter ini.")
             st.stop()
     
         st.dataframe(
@@ -2816,27 +2816,27 @@ def page_admin():
         )
     
         st.write("")
-        if st.button("🔒 LOCK SEMUA DRAFT DI ATAS", type="primary", use_container_width=True, key="btn_lock_all"):
+        if st.button("🔒 SIMPAN SEMUA TRANSAKSI DI ATAS", type="primary", use_container_width=True, key="btn_lock_all"):
             try:
                 ids_to_lock = df_draft["id"].tolist()
         
                 for did in ids_to_lock:
                     lock_draft_to_final(int(did), locked_by="admin")
         
-                st.success(f"Berhasil LOCK {len(ids_to_lock)} draft.")
+                st.success(f"Berhasil Menyimpan {len(ids_to_lock)} Transaksi.")
                 st.rerun()
         
             except Exception as e:
-                st.error("Gagal LOCK semua draft.")
+                st.error("Gagal Menyimpan semua Transaksi.")
                 st.code(str(e))
 
     
         # =========================
         # PILIH DRAFT
         # =========================
-        st.markdown("### ✏️ Pilih Draft untuk Diedit")
+        st.markdown("### ✏️ Pilih Transaksi untuk Diedit")
         draft_id = st.selectbox(
-            "Draft ID",
+            "Transaksi ID",
             df_draft["id"].tolist(),
             format_func=lambda x: f"Draft #{x}",
             key="draft_pick_edit"
@@ -2864,7 +2864,7 @@ def page_admin():
     
         code_db = (row.get("code") or "").strip()
     
-        st.markdown("### 🧾 Header Draft")
+        st.markdown("### 🧾 Status Transaksi")
         c1, c2, c3, c4 = st.columns([1.2, 1.2, 1, 1])
         with c1:
             branch = st.selectbox(
@@ -2900,7 +2900,7 @@ def page_admin():
         # =========================
         price_map, menu_options = get_price_map_for_branch(branch)
     
-        st.markdown("### 🍽️ Items (pilih menu + qty, tanpa typo)")
+        st.markdown("### 🍽️ Edit Transaksi")
         df_items = parse_items_str(row.get("items", ""))
         if df_items.empty:
             df_items = pd.DataFrame([{"menu": "", "qty": 0.0}], columns=["menu", "qty"])
@@ -2968,7 +2968,7 @@ def page_admin():
             )
     
         else:
-            st.markdown("### 🎟️ Kupon")
+            st.markdown("### 🎟️ Edit Kupon")
             kw = st.text_input("Cari kode kupon", value="", key=kw_key).strip()
     
             options = search_active_voucher(engine, kw)
@@ -3010,7 +3010,7 @@ def page_admin():
                 st.session_state[tunai_key] = float(shortage)
     
                 st.number_input(
-                    "Tunai (cash dibayar) — otomatis = total - saldo kupon",
+                    "Total",
                     min_value=0.0,
                     step=1000.0,
                     value=float(st.session_state[tunai_key]),
@@ -3025,7 +3025,7 @@ def page_admin():
         colA, colB, colC = st.columns(3)
     
         with colA:
-            if st.button("🗑️ Hapus Draft Ini", use_container_width=True, key=f"btn_del_{draft_id}"):
+            if st.button("🗑️ Hapus Transaksi Ini", use_container_width=True, key=f"btn_del_{draft_id}"):
                 try:
                     with engine.begin() as conn:
                         conn.execute(text("""
@@ -3041,13 +3041,13 @@ def page_admin():
 
     
         with colB:
-            if st.button("💾 Simpan Draft", type="primary", use_container_width=True, key=f"btn_save_{draft_id}"):
+            if st.button("💾 Simpan Transaksi ini", type="primary", use_container_width=True, key=f"btn_save_{draft_id}"):
                 # validasi kupon
                 final_code = None
                 if isvoucher == "yes":
                     c = (st.session_state.get(code_key) or "").strip()
                     if not c:
-                        st.error("Kalau pakai kupon, kode kupon wajib dipilih.")
+                        st.error("Jika menggunakan kupon, anda wajib memasukan nomor kupon valid.")
                         st.stop()
                     final_code = c
     
@@ -3078,18 +3078,18 @@ def page_admin():
                         "id": int(draft_id),
                     })
     
-                st.success("Draft tersimpan.")
+                st.success("Transaksi tersimpan.")
                 st.rerun()
     
         with colC:
-            if st.button("🔒 LOCK Draft Ini", use_container_width=True, key=f"btn_lock_{draft_id}"):
+            if st.button("🔒 Simpan Transaksi Ini", use_container_width=True, key=f"btn_lock_{draft_id}"):
                 # optional: kalau kupon wajib pilih code sebelum lock
                 if isvoucher == "yes" and not (st.session_state.get(code_key) or code_db).strip():
-                    st.error("Sebelum LOCK, pilih kode kupon dulu.")
+                    st.error("Sebelum menyimpan wajib memilih kupon dulu.")
                     st.stop()
     
                 lock_draft_to_final(draft_id, locked_by="admin")
-                st.success("Draft di-lock dan masuk histori (transactions).")
+                st.success("Transaksi disimpan.")
                 st.rerun()
 
 
@@ -3924,6 +3924,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
