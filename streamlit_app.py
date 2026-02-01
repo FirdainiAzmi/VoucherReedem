@@ -2842,18 +2842,38 @@ def page_admin():
             key="draft_pick_edit"
         )
         row = df_draft[df_draft["id"] == draft_id].iloc[0]
-    
-        # Key unik per draft biar gak nyangkut
-        items_key = f"items_editor_{draft_id}"
-        diskon_key = f"edit_diskon_{draft_id}"
-        tunai_key  = f"edit_tunai_{draft_id}"
-        code_key   = f"edit_code_{draft_id}"
-        kw_key     = f"kw_voucher_{draft_id}"
-        sel_code_key = f"sel_voucher_{draft_id}"
-        tgl_key    = f"edit_tgl_{draft_id}"
-        kupon_key  = f"edit_kupon_{draft_id}"
-        branch_key = f"edit_branch_{draft_id}"
-    
+        
+        # Key unik per draft utk editor items & angka biar aman
+        items_key     = f"items_editor_{draft_id}"
+        diskon_key    = f"edit_diskon_{draft_id}"
+        tunai_key     = f"edit_tunai_{draft_id}"
+        code_key      = f"edit_code_{draft_id}"
+        kw_key        = f"kw_voucher_{draft_id}"
+        sel_code_key  = f"sel_voucher_{draft_id}"
+        tgl_key       = f"edit_tgl_{draft_id}"
+        branch_key    = f"edit_branch_{draft_id}"
+        
+        # ⚠️ PENTING: key untuk "Kupon?" jangan per draft (biar gak nyangkut)
+        # tapi tetap bisa direset manual ketika ganti draft
+        kupon_key = "edit_kupon_global"
+        
+        # Kalau draft berubah, reset kupon global ke nilai row (biar selalu sesuai row aktif)
+        # Simpan last draft id
+        last_draft = st.session_state.get("_last_draft_id")
+        if last_draft != draft_id:
+            st.session_state["_last_draft_id"] = draft_id
+        
+            # normalize nilai dari db
+            row_isvoucher = str(row.get("isvoucher") or "no").strip().lower()
+            if row_isvoucher not in ("yes", "no"):
+                row_isvoucher = "no"
+        
+            st.session_state[kupon_key] = row_isvoucher
+        
+            # juga sync code select (biar gak kebawa dari draft sebelumnya)
+            st.session_state[code_key] = (row.get("code") or "").strip()
+            st.session_state[sel_code_key] = (row.get("code") or "").strip() or "-- pilih kupon --"
+        
         # =========================
         # HEADER
         # =========================
@@ -2861,11 +2881,12 @@ def page_admin():
         branch_now = str(row.get("branch") or "")
         if branch_now and branch_now not in branch_options:
             branch_options = [branch_now] + branch_options
-    
+        
         code_db = (row.get("code") or "").strip()
-    
+        
         st.markdown("### 🧾 Status Transaksi")
         c1, c2, c3, c4 = st.columns([1.2, 1.2, 1, 1])
+        
         with c1:
             branch = st.selectbox(
                 "Cabang",
@@ -2873,19 +2894,23 @@ def page_admin():
                 index=branch_options.index(branch_now) if branch_now in branch_options else 0,
                 key=branch_key
             )
+        
         with c2:
             tanggal_transaksi = st.date_input(
                 "Tanggal",
                 value=row["tanggal_transaksi"],
                 key=tgl_key
             )
+        
         with c3:
+            # tetap yes/no (string)
             isvoucher = st.selectbox(
                 "Kupon?",
                 ["no", "yes"],
-                index=0 if str(row.get("isvoucher", "no")) == "no" else 1,
+                index=0 if st.session_state.get(kupon_key, "no") == "no" else 1,
                 key=kupon_key
             )
+        
         with c4:
             diskon = st.number_input(
                 "Diskon",
@@ -2894,17 +2919,17 @@ def page_admin():
                 value=float(st.session_state.get(diskon_key, row.get("diskon") or 0)),
                 key=diskon_key
             )
-    
+        
         # =========================
         # MENU + ITEMS EDITOR
         # =========================
         price_map, menu_options = get_price_map_for_branch(branch)
-    
+        
         st.markdown("### 🍽️ Edit Transaksi")
         df_items = parse_items_str(row.get("items", ""))
         if df_items.empty:
             df_items = pd.DataFrame([{"menu": "", "qty": 0.0}], columns=["menu", "qty"])
-    
+        
         edited = st.data_editor(
             df_items,
             use_container_width=True,
@@ -2924,7 +2949,7 @@ def page_admin():
             },
             key=items_key
         )
-    
+        
         # =========================
         # HITUNG SUBTOTAL + TOTAL
         # =========================
@@ -2941,23 +2966,24 @@ def page_admin():
                 continue
             harga = float(price_map.get(menu, 0) or 0)
             subtotal += harga * qty
-    
+        
         if math.isnan(subtotal) or math.isinf(subtotal):
             subtotal = 0.0
-    
+        
         st.info(f"Subtotal (menu x qty): Rp {int(round(subtotal)):,}")
-    
+        
         total_bersih = max(subtotal - float(diskon), 0.0)
         st.success(f"Total bersih (subtotal - diskon): Rp {int(round(total_bersih)):,}")
-    
+        
         # =========================
         # KUPON + TUNAI AUTO
         # =========================
         if isvoucher == "no":
-            # non-kupon: code kosong & tunai = total
+            # ✅ NON-KUPON: paksa reset kupon biar DB gak nyangkut
             st.session_state[code_key] = ""
+            st.session_state[sel_code_key] = "-- pilih kupon --"
             st.session_state[tunai_key] = float(total_bersih)
-    
+        
             st.number_input(
                 "Tunai (cash dibayar) — otomatis = total",
                 min_value=0.0,
@@ -2966,27 +2992,28 @@ def page_admin():
                 key=tunai_key,
                 disabled=True
             )
-    
+        
         else:
             st.markdown("### 🎟️ Edit Kupon")
             kw = st.text_input("Cari kode kupon", value="", key=kw_key).strip()
-    
+        
             options = search_active_voucher(engine, kw)
             code_list = ["-- pilih kupon --"] + [c for c, _ in options]
-    
+        
             default_code = (st.session_state.get(code_key) or code_db).strip()
             if default_code and default_code not in code_list:
                 code_list = [default_code] + code_list
-    
+        
             selected_code = st.selectbox(
                 "Pilih kode kupon (ketik untuk cari)",
                 code_list,
                 index=code_list.index(default_code) if default_code in code_list else 0,
                 key=sel_code_key
             )
-    
+        
             if selected_code == "-- pilih kupon --":
                 st.warning("Pilih kode kupon dulu.")
+                st.session_state[code_key] = ""
                 st.session_state[tunai_key] = float(total_bersih)
                 st.number_input(
                     "Tunai (cash dibayar)",
@@ -2998,17 +3025,17 @@ def page_admin():
                 )
             else:
                 st.session_state[code_key] = selected_code
-    
+        
                 bal, status = get_voucher_balance(engine, selected_code)
                 if bal is None:
                     st.error("Kode kupon tidak ditemukan.")
                     bal = 0
                 else:
                     st.info(f"Saldo kupon: Rp {bal:,} | Status: {status}")
-    
+        
                 shortage = max(float(total_bersih) - float(bal), 0.0)
                 st.session_state[tunai_key] = float(shortage)
-    
+        
                 st.number_input(
                     "Total",
                     min_value=0.0,
@@ -3017,13 +3044,13 @@ def page_admin():
                     key=tunai_key,
                     disabled=True
                 )
-    
+        
         # =========================
         # ACTION BUTTONS
         # =========================
         st.markdown("---")
         colA, colB, colC = st.columns(3)
-    
+        
         with colA:
             if st.button("🗑️ Hapus Transaksi Ini", use_container_width=True, key=f"btn_del_{draft_id}"):
                 try:
@@ -3032,27 +3059,33 @@ def page_admin():
                             DELETE FROM public.transactions_draft
                             WHERE id=:id AND is_locked=false
                         """), {"id": int(draft_id)})
-            
+        
                     st.warning("Draft berhasil dihapus.")
                     st.rerun()
                 except Exception as e:
                     st.error("Gagal hapus draft.")
                     st.code(str(e))
-
-    
+        
         with colB:
             if st.button("💾 Simpan Transaksi ini", type="primary", use_container_width=True, key=f"btn_save_{draft_id}"):
-                # validasi kupon
+        
+                # final isvoucher tetap string yes/no
+                final_isvoucher = "yes" if isvoucher == "yes" else "no"
+        
+                # validasi + tentukan code
                 final_code = None
-                if isvoucher == "yes":
+                if final_isvoucher == "yes":
                     c = (st.session_state.get(code_key) or "").strip()
                     if not c:
                         st.error("Jika menggunakan kupon, anda wajib memasukan nomor kupon valid.")
                         st.stop()
                     final_code = c
-    
+                else:
+                    # non-kupon: paksa null
+                    final_code = None
+        
                 items_str = serialize_items_df(edited)
-    
+        
                 with engine.begin() as conn:
                     conn.execute(text("""
                         UPDATE public.transactions_draft
@@ -3072,29 +3105,29 @@ def page_admin():
                         "items": items_str,
                         "used_amount": float(total_bersih),
                         "tunai": float(st.session_state.get(tunai_key, 0)),
-                        "isvoucher": isvoucher,
-                        "code": final_code,     # None untuk non-kupon
+                        "isvoucher": final_isvoucher,   # ✅ "yes"/"no"
+                        "code": final_code,             # ✅ NULL kalau non-kupon
                         "diskon": float(diskon),
                         "id": int(draft_id),
                     })
-    
+        
                 st.success("Transaksi tersimpan.")
                 st.rerun()
-    
+        
         with colC:
             if st.button("🔒 Simpan Transaksi Ini", use_container_width=True, key=f"btn_lock_{draft_id}"):
-                # optional: kalau kupon wajib pilih code sebelum lock
-                if isvoucher == "yes" and not (st.session_state.get(code_key) or code_db).strip():
-                    st.error("Sebelum menyimpan wajib memilih kupon dulu.")
-                    st.stop()
-    
+        
+                # kalau kupon wajib pilih code sebelum lock
+                if isvoucher == "yes":
+                    c = (st.session_state.get(code_key) or code_db).strip()
+                    if not c:
+                        st.error("Sebelum menyimpan wajib memilih kupon dulu.")
+                        st.stop()
+        
                 lock_draft_to_final(draft_id, locked_by="admin")
                 st.success("Transaksi disimpan.")
                 st.rerun()
 
-
-    
-    
 
 # ---------------------------
 # Page: Seller Activation (seller-only)
@@ -3924,6 +3957,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
