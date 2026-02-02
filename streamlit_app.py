@@ -2989,7 +2989,7 @@ def page_admin():
         with col2:
             start_date = st.date_input(
                 "Tanggal Mulai",
-                value=min_date,
+                value=max_date,
                 min_value=min_date,
                 max_value=max_date
             )
@@ -3958,6 +3958,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
