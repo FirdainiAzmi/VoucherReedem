@@ -302,12 +302,15 @@ def find_voucher(code):
                     v.no_hp,
                     v.status,
                     v.seller,
+                    v.tanggal_penjualan,
                     v.tanggal_aktivasi,
+                    v.tunai,
+                    v.jenis_kupon,
                     j.awal_berlaku,
                     j.akhir_berlaku
                 FROM public.vouchers v
                 JOIN public.jenis_db j 
-                ON v.jenis_kupon = j.jenis_kupon
+                  ON v.jenis_kupon = j.jenis_kupon
                 WHERE v.code = :code
                 LIMIT 1
             """), {"code": code}).fetchone()
@@ -315,6 +318,7 @@ def find_voucher(code):
     except Exception as e:
         st.error(f"DB error saat cari voucher: {e}")
         return None
+
 
 def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
     try:
@@ -3963,9 +3967,6 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
-
-
 
 
 
