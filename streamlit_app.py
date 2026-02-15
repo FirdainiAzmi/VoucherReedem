@@ -3808,20 +3808,28 @@ def page_kasir():
                 if st.button("⬅️ Kembali"):
                     st.session_state.redeem_step = 1
                     st.rerun()
-
             with c2:
                 st.subheader("💳 Pembayaran")
-                # Kupon Logic
+
                 code_in = st.text_input("Kode Kupon", value=st.session_state.entered_code).strip().upper()
                 st.session_state.entered_code = code_in
+
                 if st.button("Cek Kupon"):
+                    # reset dulu
                     st.session_state.isvoucher = "no"
                     st.session_state.voucher_row = None
+                    st.session_state["redeem_error"] = ""
+
                     row = find_voucher(code_in)
+
                     if row:
-                        st.session_state.isvoucher = "yes"
-                        st.session_state.voucher_row = row
-                        st.success(f"Voucher: {row[3]} (Saldo: {row[2]:,})")
+                        validate_voucher_and_show_info(row, total)
+
+                        if st.session_state.get("redeem_error"):
+                            st.error(st.session_state["redeem_error"])
+                        else:
+                            # sukses: tampilkan kode voucher + saldo
+                            st.success(f"Voucher: {row[0]} (Saldo: {row[2]:,})")
                     else:
                         st.error("Kupon tidak valid")
 
@@ -3960,4 +3968,9 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
 
 
 
-page_kasir
+
+
+
+
+
+
