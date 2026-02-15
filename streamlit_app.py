@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import time
@@ -15,9 +14,7 @@ import smtplib
 from email.mime.text import MIMEText
 import re
 import unicodedata
-# ---------------------------
-# Config / Secrets
-# ---------------------------
+
 DB_URL = st.secrets["DB_URL"]
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD")  
 SELLER_PASSWORD = st.secrets.get("SELLER_PASSWORD")
@@ -28,9 +25,6 @@ ADMIN_EMAIL = st.secrets["ADMIN_EMAIL"]
 
 engine = create_engine(DB_URL, future=True)
 
-# ---------------------------
-# Database initialization
-# ---------------------------
 def init_db():
     try:
         with engine.begin() as conn:
@@ -81,8 +75,7 @@ def init_db():
                     status_kategori TEXT
                 );
             """))
-
-            # FINAL TRANSACTIONS (harus match atomic_redeem)
+            
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS public.transactions (
                     id SERIAL PRIMARY KEY,
@@ -98,7 +91,6 @@ def init_db():
                 );
             """))
 
-            # DRAFT TRANSACTIONS
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS public.transactions_draft (
                     id BIGSERIAL PRIMARY KEY,
@@ -119,7 +111,6 @@ def init_db():
                 );
             """))
 
-            # kalau kamu tetap mau pastikan kolom draft_id ada (opsional, karena sudah dibuat di CREATE)
             conn.execute(text("""
                 ALTER TABLE public.transactions
                 ADD COLUMN IF NOT EXISTS draft_id BIGINT UNIQUE;
@@ -252,12 +243,10 @@ def show_back_to_login_button(role=""):
 
 
 def generate_code(length=6):
-    """Generate kode kombinasi huruf + angka sepanjang 6 karakter."""
     characters = string.ascii_uppercase + string.digits
     return ''.join(random.choice(characters) for _ in range(length))
 
 def kode_exists(kode):
-    """Cek apakah kode sudah ada di vouchers."""
     with engine.connect() as conn:
         r = conn.execute(
             text("SELECT 1 FROM vouchers WHERE code = :c"),
@@ -267,7 +256,6 @@ def kode_exists(kode):
 
 
 def insert_jenis_if_not_exists(jenis, awal, akhir):
-    """Insert data jenis ke jenis_db hanya jika belum ada."""
     with engine.begin() as conn:
         exists = conn.execute(
             text("SELECT 1 FROM public.jenis_db WHERE jenis_kupon = :j"),
@@ -285,7 +273,6 @@ def insert_jenis_if_not_exists(jenis, awal, akhir):
 
 
 def insert_voucher(code, initial_value, jenis, awal, akhir):
-    """Insert satu voucher baru."""
     with engine.begin() as conn:
         conn.execute(
             text("""
@@ -303,10 +290,6 @@ def insert_voucher(code, initial_value, jenis, awal, akhir):
             }
         )
 
-
-# ---------------------------
-# DB helpers
-# ---------------------------
 def find_voucher(code):
     try:
         with engine.connect() as conn:
@@ -351,12 +334,8 @@ def update_voucher_detail(code, nama, no_hp, status, tanggal_aktivasi):
     
 def atomic_redeem(code, amount, branch, items_str, diskon):
     try:
-        # =====================================================
-        # =================== TANPA VOUCHER ===================
-        # =====================================================
         if code is None:
             with engine.begin() as conn:
-                # SIMPAN TRANSAKSI KE DRAFT
                 conn.execute(text("""
                     INSERT INTO public.transactions_draft
                     (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
@@ -914,15 +893,6 @@ def serialize_items(items):
 # Seller activation helper
 # ---------------------------
 def seller_activate_voucher(code, seller_input, buyer_name, buyer_phone):
-    """
-    Attempts to activate voucher by seller.
-    Returns (ok: bool, message: str)
-    Rules:
-      - voucher must exist
-      - voucher.seller must be present (assigned by admin) and equal to seller_input
-      - voucher.status must not be 'active'
-      - on success: set nama, no_hp, status='active', tanggal_penjualan = CURRENT_DATE
-    """
     try:
         with engine.begin() as conn:
             row = conn.execute(text("""
@@ -3958,6 +3928,7 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
 
 
