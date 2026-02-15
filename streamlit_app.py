@@ -3248,19 +3248,42 @@ def reset_redeem_state():
     ]:
         st.session_state.pop(key, None)
 
+SQL_JOIN = text("""
+SELECT
+  v.code,
+  v.initial_value,
+  v.balance,
+  v.nama,
+  v.no_hp,
+  v.status,
+  v.seller,
+  v.tanggal_penjualan,
+  v.tanggal_aktivasi,
+  v.tunai,
+  v.jenis_kupon,
+  j.awal_berlaku,
+  j.akhir_berlaku
+FROM public.vouchers v
+JOIN public.jenis_db j
+  ON j.jenis_kupon = v.jenis_kupon
+WHERE v.code = :code
+LIMIT 1;
+""")
+
 def validate_voucher_and_show_info(row, total):
-    """
-    row = hasil query voucher
-    total = total pembayaran
-    Fungsi ini akan mengupdate session_state:
-    - isvoucher
-    - voucher_row
-    - redeem_error
-    """
-    code, initial_value, balance, nama, no_hp, status, seller, tanggal_aktivasi, awal_berlaku, akhir_berlaku = row
+    (
+        code, initial_value, balance, nama, no_hp, status, seller,
+        tanggal_penjualan, tanggal_aktivasi, tunai, jenis_kupon,
+        awal_berlaku, akhir_berlaku
+    ) = row
+
     today = date.today()
 
-    # Cek masa berlaku
+    # --- Validasi masa berlaku (dari jenis_db) ---
+    if awal_berlaku is None or akhir_berlaku is None:
+        st.session_state["redeem_error"] = "⛔ Masa berlaku jenis kupon belum diset."
+        return
+
     if today < awal_berlaku:
         st.session_state["redeem_error"] = (
             f"⛔ Kupon belum dapat digunakan.\n"
@@ -3275,14 +3298,14 @@ def validate_voucher_and_show_info(row, total):
         )
         return
 
-    # Normalisasi status
+    # --- Validasi status & saldo ---
     status_normalized = (status or "").strip().lower()
 
     if status_normalized == "inactive":
         st.session_state["redeem_error"] = "⛔ Kupon belum aktif."
         return
 
-    if status_normalized == "habis" or balance <= 0:
+    if status_normalized == "habis" or (balance or 0) <= 0:
         st.session_state["redeem_error"] = "⛔ Saldo kupon sudah habis."
         return
 
@@ -3294,11 +3317,12 @@ def validate_voucher_and_show_info(row, total):
         st.session_state["redeem_error"] = f"⛔ Status kupon tidak valid: {status}"
         return
 
-    # Cek apakah H+1
+    # --- Validasi tanggal aktivasi & aturan H+1 ---
     if tanggal_aktivasi is None:
-        st.session_state["redeem_error"] = "⛔ kupon belum diaktifkan."
+        st.session_state["redeem_error"] = "⛔ Kupon belum diaktifkan."
         return
 
+    # SQLAlchemy biasanya sudah date; ini pengaman
     if hasattr(tanggal_aktivasi, "date"):
         tgl_aktivasi = tanggal_aktivasi.date()
     else:
@@ -3307,24 +3331,64 @@ def validate_voucher_and_show_info(row, total):
         except:
             tgl_aktivasi = None
 
-    if tgl_aktivasi == date.today():
+    if tgl_aktivasi is None:
+        st.session_state["redeem_error"] = "⛔ Format tanggal aktivasi tidak valid."
+        return
+
+    if tgl_aktivasi == today:
         st.session_state["redeem_error"] = "⛔ Kupon hanya bisa digunakan H+1 setelah aktivasi."
         return
 
-    # Jika semua OK → simpan data voucher
+    # --- Lolos validasi ---
     st.session_state.isvoucher = "yes"
     st.session_state.voucher_row = row
+    st.session_state["redeem_error"] = ""
 
-    # Tampilkan info voucher
+    # --- Tampilkan info voucher ---
     st.write(f"Kupon: {code}")
+    st.write(f"- Jenis kupon: {jenis_kupon}")
     st.write(f"- Atas nama: {nama}")
     st.write(f"- No HP: {no_hp}")
     st.write(f"- Nilai awal: Rp {int(initial_value):,}")
     st.write(f"**Sisa Saldo Kupon: Rp {int(balance):,}**")
 
-    saldo = int(balance)
+    saldo = int(balance or 0)
     if total > saldo:
         st.warning(f"Saldo kupon kurang {total - saldo:,} — sisanya harus bayar cash.")
+
+
+# Pastikan session_state ada default (biar gak KeyError)
+if "redeem_error" not in st.session_state:
+    st.session_state["redeem_error"] = ""
+if "isvoucher" not in st.session_state:
+    st.session_state["isvoucher"] = "no"
+if "voucher_row" not in st.session_state:
+    st.session_state["voucher_row"] = None
+
+kode_voucher = st.text_input("Masukkan kode voucher")
+
+# GANTI ini dengan total pembayaran asli dari keranjang/transaksi kamu
+total = st.number_input("Total pembayaran", min_value=0, value=0, step=1000)
+
+if st.button("Cek Voucher"):
+    if not kode_voucher.strip():
+        st.session_state["redeem_error"] = "⛔ Kode voucher wajib diisi."
+        st.session_state["isvoucher"] = "no"
+        st.session_state["voucher_row"] = None
+    else:
+ 
+        with engine.connect() as conn:
+            row = conn.execute(SQL_JOIN, {"code": kode_voucher.strip()}).fetchone()
+
+        if row is None:
+            st.session_state["redeem_error"] = "⛔ Kupon tidak ditemukan."
+            st.session_state["isvoucher"] = "no"
+            st.session_state["voucher_row"] = None
+        else:
+            validate_voucher_and_show_info(row, total)
+
+if st.session_state.get("redeem_error"):
+    st.error(st.session_state["redeem_error"])
 
 import streamlit as st
 import pandas as pd
@@ -3335,13 +3399,9 @@ from sqlalchemy import text
 
 st.set_page_config(
     page_title="Pawon Sappitoe",
-    layout="wide",                    # Opsional: biar tampilan melebar
     initial_sidebar_state="expanded" 
 )
 
-# ============================================
-# 1. HELPER: GENERATOR STRUK (LOGIKA ASLI)
-# ============================================
 def create_receipt_image(receipt):
     W, H = 500, 800
     bg_color = "white"
@@ -3578,13 +3638,9 @@ def apply_custom_css():
 
     </style>
     """, unsafe_allow_html=True)
-# ============================================
-# 3. FUNGSI UTAMA (GABUNGAN LOGIKA ASLI + UI BARU)
-# ============================================
+
 def page_kasir():
     apply_custom_css()
-    
-    # --- A. SIDEBAR NAVIGASI (GANTINYA TAB UTAMA) ---
     if "active_page" not in st.session_state: 
         st.session_state.active_page = "Pemesanan"
 
@@ -3598,24 +3654,13 @@ def page_kasir():
 
             curr = st.session_state.get("cabang", "Pusat")
             st.info(f"📍 Cabang: **{curr}**")
-    
-            # --- TAMBAHAN TOMBOL LOGOUT DISINI ---
+
             st.markdown("---")
-            
-            # Tombol Logout
+
             if st.button("🚪 KELUAR / LOGOUT", use_container_width=True):
-                # 1. Hapus semua session state (bersih-bersih)
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
-                
-                # 2. Rerun agar kembali ke halaman login (jika ada logic login di main.py)
                 st.rerun()
-
-    # --- B. KONTEN HALAMAN ---
-
-    # -----------------------------------------------------
-    # HALAMAN 1: PEMESANAN (UI BARU, DATA ASLI)
-    # -----------------------------------------------------
     if st.session_state.active_page == "Pemesanan":
         st.header("Kasir / Transaksi")
         
@@ -3626,14 +3671,12 @@ def page_kasir():
         if "diskon" not in st.session_state: st.session_state.diskon = 0
         if "isvoucher" not in st.session_state: st.session_state.isvoucher = "no"
        
-        # --- STEP 1: PILIH MENU ---
         if st.session_state.redeem_step == 1:
             if "redeem_error" in st.session_state: del st.session_state["redeem_error"]
 
             selected_branch = st.session_state.get("cabang", "Pusat")
             st.session_state.selected_branch = selected_branch
             
-            # 1. AMBIL DATA DARI DB ASLI
             raw_menu_items = get_menu_from_db(selected_branch)
             menu_items = []
             if raw_menu_items:
@@ -3712,17 +3755,12 @@ def page_kasir():
                         st.session_state.order_items[id_menu] = qty
                         st.write("") # Spacer bawah card
 
-            # --- 4. LOGIKA UTAMA: SEARCH vs TABS ---
             if search_query:
-                # KONDISI A: User sedang mencari sesuatu
-                # Tampilkan semua hasil pencarian tanpa sekat Tab Kategori
                 filtered_search = [m for m in menu_items if search_query in m["nama"].lower()]
                 st.caption(f"Hasil pencarian: {len(filtered_search)} menu")
                 render_grid(filtered_search, "search_mode")
             
             else:
-                # KONDISI B: Tampilan Normal (Tabs Kategori)
-                # Ambil daftar kategori unik & urutkan
                 categories = sorted({item["kategori"] for item in menu_items}) 
                 tabs = st.tabs(categories)
 
@@ -3732,8 +3770,7 @@ def page_kasir():
                         filtered_tab = [m for m in menu_items if m["kategori"] == tab_name]
                         render_grid(filtered_tab, "tab_mode")
 
-            # --- 5. FOOTER (TOTAL HARGA & TOMBOL LANJUT) ---
-            # Hitung total belanja sementara
+
             price_map = {m["id_menu"]: m["harga"] for m in menu_items}
             total_sementara = sum(price_map.get(k,0)*v for k,v in st.session_state.order_items.items())
             
@@ -3741,12 +3778,10 @@ def page_kasir():
                 st.markdown("---")
                 st.success(f"💰 Total Sementara: **Rp {total_sementara:,}**")
                 
-                # Tombol Lanjut ke Step 2
                 if st.button("Lanjut Bayar ➡️", type="primary", use_container_width=True):
                     st.session_state.redeem_step = 2
                     st.rerun()
-           
-        # --- STEP 2: KONFIRMASI (LOGIKA ASLI UTUH) ---
+
         elif st.session_state.redeem_step == 2:
             menu_db = get_menu_from_db(st.session_state.selected_branch)
             price_map = {m["id_menu"]: float(m["harga"]) for m in menu_db}
@@ -3792,9 +3827,8 @@ def page_kasir():
 
                 # Diskon Manual Logic
                 is_vou = (st.session_state.isvoucher == "yes")
-                disc = st.number_input("Diskon Manual", min_value=0, step=1000, key="diskon", disabled=is_vou)
+                disc = st.number_input("Diskon", min_value=0, step=1000, key="diskon", disabled=is_vou)
                 
-                # Hitung Final
                 saldo_vou = 0
                 if is_vou: 
                     saldo_vou = int(st.session_state.voucher_row[2])
@@ -3859,7 +3893,7 @@ def page_kasir():
                     else:
                         st.error(msg)
 
-        # --- STEP 3: STRUK (LOGIKA ASLI) ---
+
         elif st.session_state.redeem_step == 3:
             receipt = st.session_state.get("final_receipt")
             st.success("Transaksi Berhasil!")
@@ -3872,23 +3906,16 @@ def page_kasir():
             with col_btn:
                 st.download_button("💾 Simpan Gambar", img_bytes, "struk.png", "image/png")
                 if st.button("🏠 Transaksi Baru"):
-                    # 1. Kosongkan Keranjang (Reset jadi list kosong)
                     st.session_state['order_items'] = {}
-                    
-                    # 2. Kembalikan ke Langkah 1 (Pilih Menu)
+ 
                     st.session_state['redeem_step'] = 1
-                    
-                    # 3. Hapus data struk lama (Cek dulu biar gak error)
+
                     if 'final_receipt' in st.session_state:
                         del st.session_state['final_receipt']
                     
-                    # 4. Refresh Halaman
                     st.rerun()
 
-    # -----------------------------------------------------
-    # HALAMAN 2: RIWAYAT (PLACEHOLDER FUNGSI ASLI)
-    # -----------------------------------------------------
-    # ... (lanjutan dari if active_page == "Pemesanan") ...
+
     elif st.session_state.active_page == "Riwayat":
         st.header("📜 Riwayat Transaksi (Draft)")
     
@@ -3933,21 +3960,4 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+page_kasir
