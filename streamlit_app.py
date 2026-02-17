@@ -3369,28 +3369,6 @@ if "isvoucher" not in st.session_state:
 if "voucher_row" not in st.session_state:
     st.session_state["voucher_row"] = None
 
-kode_voucher = st.text_input("Masukkan kode voucher")
-
-# GANTI ini dengan total pembayaran asli dari keranjang/transaksi kamu
-total = st.number_input("Total pembayaran", min_value=0, value=0, step=1000)
-
-if st.button("Cek Voucher"):
-    if not kode_voucher.strip():
-        st.session_state["redeem_error"] = "⛔ Kode voucher wajib diisi."
-        st.session_state["isvoucher"] = "no"
-        st.session_state["voucher_row"] = None
-    else:
- 
-        with engine.connect() as conn:
-            row = conn.execute(SQL_JOIN, {"code": kode_voucher.strip()}).fetchone()
-
-        if row is None:
-            st.session_state["redeem_error"] = "⛔ Kupon tidak ditemukan."
-            st.session_state["isvoucher"] = "no"
-            st.session_state["voucher_row"] = None
-        else:
-            validate_voucher_and_show_info(row, total)
-
 if st.session_state.get("redeem_error"):
     st.error(st.session_state["redeem_error"])
 
@@ -3975,3 +3953,4 @@ if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
 
 
 
+masukkan kode voucher
