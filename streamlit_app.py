@@ -3805,7 +3805,7 @@ def page_kasir():
                     row = find_voucher(code_in)
 
                     if row:
-                        validate_voucher_and_show_info(row, total)
+                        validate_voucher_and_show_info(row, subtotal)
 
                         if st.session_state.get("redeem_error"):
                             st.error(st.session_state["redeem_error"])
@@ -3945,4 +3945,5 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
+
 
