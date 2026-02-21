@@ -975,7 +975,20 @@ def ensure_session_state():
         if k not in st.session_state:
             st.session_state[k] = v
 
+def get_last_draft_date(engine, branch=None):
+    q = """
+        SELECT MAX(tanggal_transaksi)
+        FROM public.transactions_draft
+        WHERE is_locked = false
+    """
+    params = {}
+    if branch and branch != "Semua":
+        q += " AND branch = :b"
+        params["b"] = branch
 
+    with engine.connect() as conn:
+        return conn.execute(text(q), params).scalar()
+    
 def admin_logout():
     st.session_state.admin_logged_in = False
     st.session_state.page = None
@@ -2574,19 +2587,20 @@ def page_admin():
 
     with tab_lock:
         st.subheader("🔒 close day")
-    
-        # =========================
-        # FILTER DRAFT
-        # =========================
         f1, f2 = st.columns([1, 1])
-        with f1:
-            tgl = st.date_input("Tanggal Transaksi", value=date.today(), key="draft_tgl_admin")
         with f2:
             cabang_filter = st.selectbox(
                 "Cabang (filter)",
                 ["Semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"],
                 key="draft_cbg_filter"
             )
+        last_date = get_last_draft_date(engine, cabang_filter)
+        if st.session_state.get("_last_cbg_filter") != cabang_filter:
+            st.session_state["_last_cbg_filter"] = cabang_filter
+            st.session_state["draft_tgl_admin"] = last_date or date.today()
+
+        with f1:
+            tgl = st.date_input("Tanggal Transaksi", key="draft_tgl_admin")
     
         # =========================
         # LOAD DRAFT (BELUM LOCK)
@@ -3945,5 +3959,4 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
 
