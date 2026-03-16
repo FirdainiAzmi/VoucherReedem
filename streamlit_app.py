@@ -2320,17 +2320,12 @@ def page_admin():
                 df_menu = df_menu[df_menu["kategori"] == kategori]
         
             st.dataframe(df_menu, use_container_width=True, height=500)
-        
 
-        # ============================
-        # TAB 2 — ADD MENU
-        # ============================
         with tab2:
             st.header("➕ Tambah Menu Baru")
 
             kategori = get_kategori_list()
 
-            # Tambahkan opsi dummy di awal
             options = ["-- Pilih Kategori --"] + kategori + ["+ Tambah kategori baru"]
 
             kategori_selected = st.selectbox(
@@ -2367,7 +2362,6 @@ def page_admin():
             harga_tulangan = st.text_input("Harga Tulangan (boleh kosong)")
 
             if st.button("Simpan Menu"):
-            # validasi sederhana
                 if not kategori_value:
                     st.error("Kategori belum dipilih / diisi.")
                 else:
@@ -2384,40 +2378,41 @@ def page_admin():
                     st.success("Menu berhasil ditambahkan!")
                     st.rerun()
 
-
-        # ============================
-        # TAB 3 — EDIT / DELETE MENU
-        # ============================
         with tab3:
             st.header("✏️ Edit atau Hapus Menu")
 
             tab21, tab22 = st.tabs(["Edit Menu", "Edit Kategori"])
-
             with tab21:
                 menu_list = list_all_menu()
-    
+            
                 if not menu_list:
                     st.info("Belum ada menu untuk diedit.")
                 else:
-                    # Dropdown pilih item berdasarkan ID + nama
-                    pilih = st.selectbox(
-                        "Pilih menu yang akan diedit",
-                        [(m["id_menu"], f"{m['nama_item']} - {m['kategori']}") for m in menu_list],
-                        format_func=lambda x: x[1]
+                    kategori_list = sorted(set(m["kategori"] for m in menu_list))
+                    pilih_kategori = st.selectbox(
+                        "Pilih Kategori",
+                        kategori_list,
+                        key="edit_pilih_kategori"
                     )
-    
-                    id_menu = pilih[0]
-    
-                    # Ambil data lama
+                    menu_filtered = [m for m in menu_list if m["kategori"] == pilih_kategori]
+            
+                    pilih_menu = st.selectbox(
+                        "Pilih Menu",
+                        [(m["id_menu"], m["nama_item"]) for m in menu_filtered],
+                        format_func=lambda x: x[1],
+                        key="edit_pilih_menu"
+                    )
+            
+                    id_menu = pilih_menu[0]
                     selected = next(m for m in menu_list if m["id_menu"] == id_menu)
-    
-                    # FORM EDIT
+            
+                    st.divider()
                     kategori = st.text_input("Kategori", value=selected["kategori"])
                     nama_item = st.text_input("Nama Item", value=selected["nama_item"])
                     keterangan = st.text_area("Keterangan", value=selected["keterangan"])
+            
                     satuan_options = ["pcs", "kg"]
                     default_satuan = (selected.get("satuan") or "pcs").lower()
-
                     satuan = st.selectbox(
                         "Satuan",
                         satuan_options,
@@ -2425,39 +2420,28 @@ def page_admin():
                             if default_satuan in satuan_options else 0,
                         key=f"satuan_edit_{id_menu}"
                     )
-
-
+            
                     status_options = ["aktif", "inaktif"]
                     default_status = (selected.get("status") or "").strip().lower()
-                    
                     default_index = (
                         status_options.index(default_status)
                         if default_status in status_options
                         else 0
                     )
-                    
                     status = st.selectbox(
                         "Status",
                         status_options,
                         index=default_index,
                         key=f"status_menu_{id_menu}"
                     )
-
-                    # status_options = ["aktif", "inaktif"]
-                    # default_status = (selected.get("status") or "").strip().lower()
-                    # status = st.selectbox(
-                    #     "Status",
-                    #     status_options,
-                    #     index=status_options.index(default_status)
-                    # )
-    
-                    harga_sedati = st.text_input("Harga Sedati", value=str(selected["harga_sedati"] or ""))
-                    harga_twsari = st.text_input("Harga Tawangsari", value=str(selected["harga_twsari"] or ""))
-                    harga_kesambi = st.text_input("Harga Kesambi", value=str(selected["harga_kesambi"] or ""))
-                    harga_tulangan = st.text_input("Harga Tulangan", value=str(selected["harga_tulangan"] or ""))
-    
+            
+                    harga_sedati   = st.text_input("Harga Sedati",     value=str(selected["harga_sedati"]   or ""))
+                    harga_twsari   = st.text_input("Harga Tawangsari", value=str(selected["harga_twsari"]   or ""))
+                    harga_kesambi  = st.text_input("Harga Kesambi",    value=str(selected["harga_kesambi"]  or ""))
+                    harga_tulangan = st.text_input("Harga Tulangan",   value=str(selected["harga_tulangan"] or ""))
+            
                     col1, col2 = st.columns(2)
-    
+            
                     with col1:
                         if st.button("Simpan Perubahan"):
                             update_menu_item(
@@ -2466,13 +2450,13 @@ def page_admin():
                             )
                             st.success("Menu berhasil diperbarui!")
                             st.rerun()
-    
+            
                     with col2:
-                        if st.button("Hapus Menu 🗑️"):
+                        if st.button("Hapus Menu"):
                             delete_menu_item(id_menu)
                             st.warning("Menu berhasil dihapus!")
                             st.rerun()
-
+        
             with tab22:
                 kategori_list = list_all_kategori()
                  
