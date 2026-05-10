@@ -63,7 +63,7 @@ def init_db():
                     harga_sedati INTEGER,
                     harga_twsari INTEGER,
                     harga_kesambi INTEGER,
-                    harga_tulangan INTEGER,
+                    harga_seller INTEGER,
                     status TEXT
                 );
             """))
@@ -227,15 +227,10 @@ def reset_redeem_state():
 def show_back_to_login_button(role=""):
     st.markdown("---")
     if st.button("⬅️ Kembali ke Halaman Login"):
-        # Reset semua state login
         st.session_state.admin_logged_in = False
         st.session_state.seller_logged_in = False
         st.session_state.kasir_logged_in = False
-
-        # Reset page/page flags
         st.session_state.page = None
-
-        # Reset transaksi (jika kasir)
         if role == "kasir":
             reset_redeem_state()
 
@@ -360,7 +355,7 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                     "tawangsari": "terjual_twsari",
                     "sedati": "terjual_sedati",
                     "kesambi": "terjual_kesambi",
-                    "tulangan": "terjual_tulangan"
+                    "Seller": "terjual_Seller"
                 }
 
                 col = mapping.get(branch.lower())
@@ -380,10 +375,6 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                     """), {"qty": qty, "item": nama_item})
 
                 return True, "Transaksi cash berhasil 💸 (draft)", None
-
-        # =====================================================
-        # ===================== DENGAN VOUCHER =================
-        # =====================================================
         else:
             with engine.begin() as conn:
                 r = conn.execute(text("""
@@ -424,7 +415,6 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                     "c": code
                 })
 
-                # SIMPAN TRANSAKSI KE DRAFT
                 conn.execute(text("""
                     INSERT INTO public.transactions_draft
                     (code, used_amount, tanggal_transaksi, branch, items, tunai, isvoucher, diskon)
@@ -439,14 +429,13 @@ def atomic_redeem(code, amount, branch, items_str, diskon):
                     "diskon": diskon
                 })
 
-                # UPDATE TERJUAL MENU
                 items = [x.strip() for x in items_str.split(",")]
 
                 mapping = {
                     "tawangsari": "terjual_twsari",
                     "sedati": "terjual_sedati",
                     "kesambi": "terjual_kesambi",
-                    "tulangan": "terjual_tulangan"
+                    "Seller": "terjual_Seller"
                 }
 
                 col = mapping.get(branch.lower())
@@ -492,7 +481,6 @@ def list_transactions_draft(engine, tanggal=None, branch="Semua"):
         return pd.read_sql(text(q), conn, params=params)
 
 def update_transaction_draft(engine, draft_id, data: dict):
-    # data keys harus sesuai kolom
     sql = """
     UPDATE public.transactions_draft
     SET code=:code,
@@ -617,15 +605,15 @@ def list_all_kategori():
     return res
 
 def add_menu_item(kategori, nama_item, keterangan,
-                  harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, satuan):
+                  harga_sedati, harga_twsari, harga_kesambi, harga_Seller, satuan):
 
     query = """
         INSERT INTO public.menu_items (
             kategori, nama_item, keterangan,
-            harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, satuan
+            harga_sedati, harga_twsari, harga_kesambi, harga_Seller, satuan
         ) VALUES (
             :kategori, :nama_item, :keterangan,
-            :harga_sedati, :harga_twsari, :harga_kesambi, :harga_tulangan, :satuan
+            :harga_sedati, :harga_twsari, :harga_kesambi, :harga_Seller, :satuan
         )
     """
 
@@ -636,7 +624,7 @@ def add_menu_item(kategori, nama_item, keterangan,
         "harga_sedati": to_int_or_none(harga_sedati),
         "harga_twsari": to_int_or_none(harga_twsari),
         "harga_kesambi": to_int_or_none(harga_kesambi),
-        "harga_tulangan": to_int_or_none(harga_tulangan),
+        "harga_Seller": to_int_or_none(harga_Seller),
         "satuan" : to_upper_or_none(satuan)
     }
 
@@ -645,7 +633,7 @@ def add_menu_item(kategori, nama_item, keterangan,
 
 
 def update_menu_item(id_menu, kategori, nama_item, keterangan,
-                     harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status, satuan):
+                     harga_sedati, harga_twsari, harga_kesambi, harga_Seller, status, satuan):
 
     query = """
         UPDATE public.menu_items SET
@@ -655,7 +643,7 @@ def update_menu_item(id_menu, kategori, nama_item, keterangan,
             harga_sedati = :harga_sedati,
             harga_twsari = :harga_twsari,
             harga_kesambi = :harga_kesambi,
-            harga_tulangan = :harga_tulangan,
+            harga_Seller = :harga_Seller,
             status = :status,
             satuan = :satuan
         WHERE id_menu = :id_menu
@@ -669,7 +657,7 @@ def update_menu_item(id_menu, kategori, nama_item, keterangan,
         "harga_sedati": to_int_or_none(harga_sedati),
         "harga_twsari": to_int_or_none(harga_twsari),
         "harga_kesambi": to_int_or_none(harga_kesambi),
-        "harga_tulangan": to_int_or_none(harga_tulangan),
+        "harga_Seller": to_int_or_none(harga_Seller),
         "status": status,
         "satuan" : to_upper_or_none(satuan)
     }
@@ -736,7 +724,7 @@ def list_all_menu():
                     "harga_sedati": r[3],
                     "harga_twsari": r[4],
                     "harga_kesambi" : r[8],
-                    "harga_tulangan" : r[10],
+                    "harga_Seller" : r[10],
                     "status" : r[12],
                     "satuan" : r[13]
                 })
@@ -759,7 +747,7 @@ def get_menu_from_db(branch):
                     m.harga_sedati,
                     m.harga_twsari,
                     m.harga_kesambi,
-                    m.harga_tulangan,
+                    m.harga_Seller,
                     m.status,
                     m.satuan,
                     k.status_kategori
@@ -777,7 +765,7 @@ def get_menu_from_db(branch):
             "Tawangsari": "harga_twsari",
             "Sedati": "harga_sedati",
             "Kesambi": "harga_kesambi",
-            "Tulangan": "harga_tulangan"
+            "Seller": "harga_Seller"
         }
         harga_col = mapping_harga.get(branch)
         if not harga_col:
@@ -819,13 +807,13 @@ def get_full_menu():
             harga_twsari,
             harga_sedati,
             harga_kesambi,
-            harga_tulangan,
+            harga_Seller,
             status,
             satuan,
             COALESCE(terjual_twsari, 0) AS terjual_twsari,
             COALESCE(terjual_sedati, 0) AS terjual_sedati,
             COALESCE(terjual_kesambi, 0) AS terjual_kesambi,
-            COALESCE(terjual_tulangan, 0) AS terjual_tulangan
+            COALESCE(terjual_Seller, 0) AS terjual_Seller
         FROM public.menu_items
         ORDER BY id_menu;
     """
@@ -1927,7 +1915,7 @@ def page_admin():
                 # Filter cabang
                 branch_filter = colf1.selectbox(
                     "Pilih Cabang",
-                    ["Semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"]
+                    ["Semua", "Sedati", "Tawangsari", "Kesambi", "Seller"]
                 )
         
                 # Filter tanggal
@@ -2359,7 +2347,7 @@ def page_admin():
             harga_sedati = st.text_input("Harga Sedati (boleh kosong)")
             harga_twsari = st.text_input("Harga Tawangsari (boleh kosong)")
             harga_kesambi = st.text_input("Harga Kesambi (boleh kosong)")
-            harga_tulangan = st.text_input("Harga Tulangan (boleh kosong)")
+            harga_Seller = st.text_input("Harga Seller (boleh kosong)")
 
             if st.button("Simpan Menu"):
                 if not kategori_value:
@@ -2373,7 +2361,7 @@ def page_admin():
                         harga_sedati=harga_sedati,
                         harga_twsari=harga_twsari,
                         harga_kesambi=harga_kesambi,
-                        harga_tulangan=harga_tulangan,
+                        harga_Seller=harga_Seller,
                     )
                     st.success("Menu berhasil ditambahkan!")
                     st.rerun()
@@ -2438,7 +2426,7 @@ def page_admin():
                     harga_sedati   = st.text_input("Harga Sedati",     value=str(selected["harga_sedati"]   or ""))
                     harga_twsari   = st.text_input("Harga Tawangsari", value=str(selected["harga_twsari"]   or ""))
                     harga_kesambi  = st.text_input("Harga Kesambi",    value=str(selected["harga_kesambi"]  or ""))
-                    harga_tulangan = st.text_input("Harga Tulangan",   value=str(selected["harga_tulangan"] or ""))
+                    harga_Seller = st.text_input("Harga Seller",   value=str(selected["harga_Seller"] or ""))
             
                     col1, col2 = st.columns(2)
             
@@ -2446,7 +2434,7 @@ def page_admin():
                         if st.button("Simpan Perubahan"):
                             update_menu_item(
                                 id_menu, kategori, nama_item, keterangan,
-                                harga_sedati, harga_twsari, harga_kesambi, harga_tulangan, status, satuan
+                                harga_sedati, harga_twsari, harga_kesambi, harga_Seller, status, satuan
                             )
                             st.success("Menu berhasil diperbarui!")
                             st.rerun()
@@ -2575,7 +2563,7 @@ def page_admin():
         with f2:
             cabang_filter = st.selectbox(
                 "Cabang (filter)",
-                ["Semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"],
+                ["Semua", "Sedati", "Tawangsari", "Kesambi", "Seller"],
                 key="draft_cbg_filter"
             )
         last_date = get_last_draft_date(engine, cabang_filter)
@@ -2675,7 +2663,7 @@ def page_admin():
             # =========================
             # HEADER
             # =========================
-            branch_options = ["Sedati", "Tawangsari", "Kesambi", "Tulangan"]
+            branch_options = ["Sedati", "Tawangsari", "Kesambi", "Seller"]
             branch_now = str(row.get("branch") or "")
             if branch_now and branch_now not in branch_options:
                 branch_options = [branch_now] + branch_options
@@ -2973,7 +2961,7 @@ def page_admin():
                 max_value=max_date
             )
         with col4:
-            filter_cabang = st.selectbox("Filter Cabang", ["semua", "Sedati", "Tawangsari", "Kesambi", "Tulangan"])
+            filter_cabang = st.selectbox("Filter Cabang", ["semua", "Sedati", "Tawangsari", "Kesambi", "Seller"])
         with col5:
             filter_kupon = st.selectbox("Filter Kupon", ["semua", "Kupon", "Non Kupon"])
 
@@ -3543,7 +3531,6 @@ def apply_custom_css():
             color: #ffffff !important;
         }
 
-        /* B. TOMBOL BIASA (Kembali, Cek Kupon, dll) */
         div[data-testid="stButton"] button {
             background-color: #3b82f6 !important; /* Biru */
             color: #ffffff !important;            /* PUTIH MUTLAK */
@@ -3556,12 +3543,10 @@ def apply_custom_css():
             color: #ffffff !important;
             box-shadow: 0 4px 6px rgba(59, 130, 246, 0.4);
         }
-        /* Khusus teks di dalam tombol biasa dipaksa putih */
         div[data-testid="stButton"] button p {
             color: #ffffff !important;
         }
 
-        /* C. TOMBOL PROSES (Primary) */
         button[kind="primary"] {
             background-color: #dc2626 !important; /* Merah/Sesuai selera */
             color: #ffffff !important;
@@ -3570,10 +3555,6 @@ def apply_custom_css():
             color: #ffffff !important;
         }
 
-        /* =============================================
-           4. CARD MENU (TIDAK DIUBAH - SESUAI PERMINTAAN)
-           ============================================= */
-        /* --- MENU CARD DESIGN (Shadow & Hover) --- */
         .menu-card {
             background-color: white;
             border-radius: 12px;
@@ -3677,14 +3658,12 @@ def page_kasir():
                 st.stop()
 
 
-            # --- 2. SEARCH BAR UI ---
             col_search, _ = st.columns([2, 1]) 
             with col_search:
                 search_query = st.text_input("🔍 Cari Menu", placeholder="Ketik nama menu...").strip().lower()
             
             st.write("") # Jarak dikit biar rapi
 
-            # --- 3. FUNGSI RENDER GRID (HELPER) ---
             # Fungsi ini dibuat biar kita gak nulis kode HTML Card berulang-ulang
             def render_grid(items_to_show, key_suffix):
                 if not items_to_show:
@@ -3813,7 +3792,6 @@ def page_kasir():
                     else:
                         st.error("Kupon tidak valid")
 
-                # Diskon Manual Logic
                 is_vou = (st.session_state.isvoucher == "yes")
                 disc = st.number_input("Diskon", min_value=0, step=1000, key="diskon", disabled=is_vou)
                 
@@ -3930,12 +3908,9 @@ def page_kasir():
             height=450
         )
 
-# Jika admin login → langsung ke halaman admin
 if st.session_state.admin_logged_in and not st.session_state.seller_logged_in:
     page_admin()
     st.stop()
-
-# Jika seller login → langsung ke halaman seller
 if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
     page_seller_activation()
     st.stop()
@@ -3943,4 +3918,3 @@ if st.session_state.seller_logged_in and not st.session_state.admin_logged_in:
 if st.session_state.kasir_logged_in and not st.session_state.admin_logged_in:
     page_kasir()
     st.stop()
-
