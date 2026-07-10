@@ -1043,8 +1043,8 @@ def inject_blue_theme():
         /* Teks di dalam input: Putih Kebiruan (Jelas terbaca) */
         input[type="text"], input[type="password"], input[type="number"] {
             color: #000000 !important; 
-            -webkit-text-fill-color: #e6f1ff !important;
-            caret-color: #00f2ff !important; 
+            -webkit-text-fill-color: #000000 !important;
+            caret-color: #000000 !important; 
         }
 
         /* ============================================================
